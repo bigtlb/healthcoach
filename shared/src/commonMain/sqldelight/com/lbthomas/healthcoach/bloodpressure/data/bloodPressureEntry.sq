@@ -1,0 +1,63 @@
+CREATE TABLE bloodPressureEntry (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    dateTime TEXT NOT NULL,
+    systolic INTEGER NOT NULL,
+    diastolic INTEGER NOT NULL,
+    pulse INTEGER
+);
+
+insert {
+INSERT INTO bloodPressureEntry (dateTime, systolic, diastolic, pulse) VALUES (?, ?, ?, ?);
+SELECT last_insert_rowid();
+}
+
+update:
+UPDATE bloodPressureEntry SET dateTime = ?, systolic = ?, diastolic = ?, pulse = ? WHERE id = ?;
+
+delete:
+DELETE FROM bloodPressureEntry WHERE id = ?;
+
+selectByDateRange:
+SELECT * FROM bloodPressureEntry WHERE dateTime >= ? AND dateTime <= ?;
+
+selectAll:
+SELECT * FROM bloodPressureEntry ORDER BY dateTime DESC;
+
+selectById:
+SELECT * FROM bloodPressureEntry WHERE id = ?;
+
+selectByDate:
+SELECT * FROM bloodPressureEntry WHERE date(dateTime) = date(?) ORDER BY dateTime DESC;
+
+selectLatestEntry:
+SELECT * FROM bloodPressureEntry ORDER BY dateTime DESC LIMIT 1;
+
+selectDailyAverages:
+SELECT *
+FROM (
+    SELECT
+        date(dateTime) AS day,
+        AVG(systolic) AS avgSystolic,
+        AVG(diastolic) AS avgDiastolic,
+        AVG(pulse) AS avgPulse,
+        COUNT(*) AS readingCount
+    FROM bloodPressureEntry
+    GROUP BY date(dateTime)
+) AS summary
+ORDER BY day DESC;
+
+
+selectMonthlyAverages:
+SELECT *
+FROM (
+    SELECT
+        strftime('%Y-%m', dateTime) AS month,
+        AVG(systolic) AS avgSystolic,
+        AVG(diastolic) AS avgDiastolic,
+        AVG(pulse) AS avgPulse,
+        COUNT(*) AS readingCount
+    FROM bloodPressureEntry
+    GROUP BY strftime('%Y-%m', dateTime)
+) AS monthly_summary
+ORDER BY month DESC;
+

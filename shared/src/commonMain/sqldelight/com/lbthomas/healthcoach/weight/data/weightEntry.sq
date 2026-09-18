@@ -1,0 +1,25 @@
+CREATE TABLE weightEntry (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT NOT NULL,
+    weight REAL NOT NULL
+);
+
+insert {
+INSERT INTO weightEntry (date, weight) VALUES (?, ?);
+SELECT last_insert_rowid();
+}
+
+update:
+UPDATE weightEntry SET date = ?, weight = ? WHERE id = ?;
+
+delete:
+DELETE FROM weightEntry WHERE id = ?;
+
+selectByDateRange:
+SELECT * FROM weightEntry WHERE date >= ? AND date <= ?;
+
+selectAll:
+SELECT * FROM weightEntry;
+
+selectById:
+SELECT * FROM weightEntry WHERE id = ?;

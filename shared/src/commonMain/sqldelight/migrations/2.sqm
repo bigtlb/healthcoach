@@ -1,0 +1,9 @@
+-- Add bloodPressureEntry table
+CREATE TABLE bloodPressureEntry (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    dateTime TEXT NOT NULL,
+    systolic INTEGER NOT NULL,
+    diastolic INTEGER NOT NULL,
+    pulse INTEGER
+);
+
