@@ -1,11 +1,11 @@
-package com.lbthomas.healthcoach.features.settings
+package com.lbthomas.healthcoach.features.settings.data
 
 import com.lbthomas.healthcoach.core.enums.WeightUnit
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class SettingsData(
-    val weightUnit: WeightUnit = WeightUnit.METRIC,
+    val weightUnit: WeightUnit = WeightUnit.US,
     val windowX: Int = 100,
     val windowY: Int = 100,
     val windowWidth: Int = 800,

@@ -74,6 +74,7 @@ kotlin {
             implementation(libs.compose.material.icons.extended)
             implementation(libs.kermit)
             implementation(libs.koin.core)
+            implementation(libs.kotlinx.datetime)
             implementation(libs.kotlinx.serialization)
             implementation(libs.sqldelight.coroutines.extensions)
         }

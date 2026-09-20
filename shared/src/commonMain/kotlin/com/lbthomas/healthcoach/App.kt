@@ -2,7 +2,6 @@ package com.lbthomas.healthcoach
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -11,20 +10,7 @@ import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Scale
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconToggleButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PlainTooltip
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TooltipAnchorPosition
-import androidx.compose.material3.TooltipBox
-import androidx.compose.material3.TooltipDefaults
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberTooltipState
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,17 +18,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.lbthomas.healthcoach.core.di.appModule
-import com.lbthomas.healthcoach.core.di.configurePlatformContext
-import com.lbthomas.healthcoach.core.getPlatformContext
+import com.lbthomas.healthcoach.core.di.previewAppModule
+import com.lbthomas.healthcoach.core.ui.Tooltip
+import com.lbthomas.healthcoach.features.bloodpressure.BloodPressureView
+import com.lbthomas.healthcoach.features.graphs.GraphsView
 import com.lbthomas.healthcoach.features.settings.SettingsDialog
 import com.lbthomas.healthcoach.features.settings.SettingsViewModel
+import com.lbthomas.healthcoach.features.weight.WeightView
 import healthcoach.shared.generated.resources.Res
 import healthcoach.shared.generated.resources.scales
 import org.jetbrains.compose.resources.painterResource
+import org.koin.compose.KoinApplication
 import org.koin.compose.koinInject
-import org.koin.core.context.GlobalContext
-import org.koin.core.context.startKoin
+import org.koin.dsl.koinConfiguration
 
 private object AppDefaults {
     val Tabs = listOf(
@@ -55,19 +43,11 @@ private object AppDefaults {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-@Preview
 fun App() {
-    val platformContext = getPlatformContext()
-    // Initialize Koin for previews if not already started
-    if (GlobalContext.getOrNull() == null) {
-        startKoin {
-            configurePlatformContext(platformContext)
-            modules(appModule)
-        }
-    }
+    val settingsViewModel = koinInject<SettingsViewModel>()
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     var showSettings by remember { mutableStateOf(false) }
-    val settingsViewModel: SettingsViewModel = koinInject()
+
 
     MaterialTheme {
         Scaffold(
@@ -102,10 +82,10 @@ private fun AppContent(selectedTabIndex: Int, modifier: Modifier = Modifier) {
             .padding(top = 5.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        when (selectedTabIndex) {
-            0 -> Text(AppDefaults.Tabs[0].first)
-            1 -> Text(AppDefaults.Tabs[1].first)
-            2 -> Text(AppDefaults.Tabs[2].first)
+        when (AppDefaults.Tabs[selectedTabIndex].first) {
+            "Weight" -> WeightView()
+            "Blood Pressure" -> BloodPressureView()
+            "Graphs" -> GraphsView()
         }
     }
 }
@@ -155,15 +135,7 @@ private fun AppActionButtons(
 
 @Composable
 private fun SettingsButton(onShowSettings: () -> Unit) {
-    TooltipBox(
-        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
-        tooltip = {
-            PlainTooltip {
-                Text("Settings")
-            }
-        },
-        state = rememberTooltipState()
-    ) {
+    Tooltip("Settings") {
         IconButton(onClick = { onShowSettings() }) {
             Icon(
                 imageVector = Icons.Default.Settings,
@@ -181,15 +153,7 @@ private fun AppFeatureButton(
     selectedTabIndex: Int,
     tabIcon: ImageVector
 ) {
-    TooltipBox(
-        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
-        tooltip = {
-            PlainTooltip {
-                Text(tabTitle)
-            }
-        },
-        state = rememberTooltipState()
-    ) {
+    Tooltip(tabTitle) {
         IconToggleButton(
             onCheckedChange = { checked -> if (checked) onSelection(index) },
             checked = selectedTabIndex == index
@@ -200,4 +164,14 @@ private fun AppFeatureButton(
             )
         }
     }
+}
+
+@Preview
+@Composable
+fun AppPreview() {
+    KoinApplication(
+        configuration = koinConfiguration(declaration = { modules(previewAppModule)}),
+        content = {
+            App()
+        })
 }

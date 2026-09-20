@@ -13,9 +13,13 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.lbthomas.healthcoach.core.di.previewAppModule
 import com.lbthomas.healthcoach.core.enums.WeightUnit
 import com.lbthomas.healthcoach.core.ui.onDialogKeyEvents
-import java.io.File
+import com.lbthomas.healthcoach.features.settings.data.SettingsData
+import org.koin.compose.KoinApplication
+import org.koin.compose.koinInject
+import org.koin.dsl.koinConfiguration
 
 private object SettingsDialogDefaults {
     val DialogPadding = 8.dp
@@ -205,14 +209,16 @@ private fun SettingCheckboxRow(
 @Preview
 @Composable
 fun SettingsDialogPreview() {
-    // Create dependencies directly using constructor injection
-    val previewFile = File("preview_settings.json")
-    val settingsPersistence = SettingsStore(previewFile)
-    val settingsViewModel = SettingsViewModel(settingsPersistence)
+    KoinApplication(
+        configuration = koinConfiguration(declaration = { modules(previewAppModule)}),
+        content = {
+            val settingsViewModel = koinInject<SettingsViewModel>()
 
-    // Create a preview of the SettingsDialog
-    SettingsDialog(
-        settingsViewModel = settingsViewModel,
-        onDismiss = {}
-    )
+            // Create a preview of the SettingsDialog
+            SettingsDialog(
+                settingsViewModel = settingsViewModel,
+                onDismiss = {}
+            )
+        })
 }
+

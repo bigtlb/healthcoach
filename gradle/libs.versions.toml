@@ -19,6 +19,7 @@ composeMaterialIconsVersion = "1.7.3"
 kermitVersion = "2.1.0"
 koinAnnotationsVersion = "4.2.2"
 koinVersion = "4.2.2"
+kotlinxDatetimeVersion = "0.8.0"
 kotlinxSerializationVersion = "1.11.0"
 slf4jVersion = "2.0.18"
 sqlDelightVersion = "2.3.2"
@@ -51,6 +52,7 @@ koin-compose = { group = "io.insert-koin", name = "koin-compose", version.ref = 
 koin-core = { group = "io.insert-koin", name = "koin-core", version.ref = "koinVersion" }
 koin-test = { group = "io.insert-koin", name = "koin-test", version.ref = "koinVersion" }
 koin-test-junit5 = { group = "io.insert-koin", name = "koin-test-junit5", version.ref = "koinVersion" }
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetimeVersion" }
 kotlinx-serialization = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerializationVersion" }
 slf4j = { group = "org.slf4j", name = "slf4j-simple", version.ref = "slf4jVersion" }
 sqldelight-coroutines-extensions = { group = "app.cash.sqldelight", name = "coroutines-extensions", version.ref = "sqlDelightVersion" }

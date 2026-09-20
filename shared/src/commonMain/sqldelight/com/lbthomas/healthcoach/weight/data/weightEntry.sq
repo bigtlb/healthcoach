@@ -1,6 +1,8 @@
 CREATE TABLE weightEntry (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    -- Date format is ISO-8601 YYYY-MM-DD
     date TEXT NOT NULL,
+    -- weight is always stored in Kg
     weight REAL NOT NULL
 );
 

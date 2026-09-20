@@ -1,30 +1,43 @@
 package com.lbthomas.healthcoach.features.settings
 
 import com.lbthomas.healthcoach.core.enums.WeightUnit
+import com.lbthomas.healthcoach.features.settings.data.SettingsData
+import com.lbthomas.healthcoach.features.settings.data.SettingsStore
 import kotlinx.coroutines.flow.StateFlow
 
-open class SettingsViewModel(private val persistence: SettingsStore)  {
-    open val settings: StateFlow<SettingsData> get() = persistence.settings
+class SettingsViewModel  {
+    val settings: StateFlow<SettingsData>
+    val persistence: SettingsStore?
 
-    open fun updateSettings(transform: (SettingsData) -> SettingsData) {
-        persistence.updateSettings(transform)
+    constructor(persistence: SettingsStore): super(){
+        this.persistence = persistence
+        this.settings = persistence.settings
     }
 
-    open fun setWeightUnit(unit: WeightUnit) {
-        persistence.setWeightUnit(unit)
+    constructor(settings: StateFlow<SettingsData>):super() {
+        this.persistence = null
+        this.settings = settings
     }
 
-    open fun setWindowState(x: Int, y: Int, width: Int, height: Int, maximized: Boolean) {
-        persistence.setWindowState(x, y, width, height, maximized)
+    fun updateSettings(transform: (SettingsData) -> SettingsData) {
+        persistence!!.updateSettings(transform)
     }
 
-    open fun setBloodPressureDisplaySettings(
+    fun setWeightUnit(unit: WeightUnit) {
+        persistence!!.setWeightUnit(unit)
+    }
+
+    fun setWindowState(x: Int, y: Int, width: Int, height: Int, maximized: Boolean) {
+        persistence!!.setWindowState(x, y, width, height, maximized)
+    }
+
+    fun setBloodPressureDisplaySettings(
         showDailyAverages: Boolean,
         showMonthlyAverages: Boolean,
         showDailyChanges: Boolean,
         showMonthlyChanges: Boolean
     ) {
-        persistence.setBloodPressureDisplaySettings(
+        persistence!!.setBloodPressureDisplaySettings(
             showDailyAverages,
             showMonthlyAverages,
             showDailyChanges,

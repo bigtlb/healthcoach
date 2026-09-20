@@ -1,4 +1,4 @@
-package com.lbthomas.healthcoach.features.settings
+package com.lbthomas.healthcoach.features.settings.data
 
 import com.lbthomas.healthcoach.core.enums.WeightUnit
 import kotlinx.coroutines.flow.MutableStateFlow
