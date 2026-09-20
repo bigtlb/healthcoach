@@ -15,6 +15,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -53,16 +56,52 @@ fun WeightView(modifier: Modifier = Modifier) {
     val settings by koinInject<SettingsViewModel>().settings.collectAsState()
     val entries by viewModel.entries.collectAsState()
 
+    var entryToDelete by remember { mutableStateOf<WeightEntryData?>(null) }
+    var entryToEdit by remember { mutableStateOf<WeightEntryData?>(null) }
+
+    entryToDelete?.let { entry ->
+        DeleteConfirmation(
+            entry = entry,
+            onConfirm = {
+                entryToDelete = null
+            },
+            onDismiss = {
+                entryToDelete = null
+            }
+        )
+    }
+
+    entryToEdit?.let { entry ->
+        WeightEntryEditDialog(
+            entry = entry,
+            onConfirm = { updatedEntry ->
+                entryToEdit = null
+            },
+            onDismiss = {
+                entryToEdit = null
+            }
+        )
+    }
+
     Column(
         modifier = modifier.fillMaxSize()
     ) {
         AddWeightEntryButton(
             onClick = {
-                // Show entry dialog here
+                entryToEdit = WeightEntryData(id = 0, date = today, weight = 0.0)
             },
             Modifier.align(Alignment.End)
         )
-        WeightEntryList(entries, settings)
+        WeightEntryList(
+            entries = entries,
+            settings = settings,
+            onClickEntry = { entry ->
+                entryToEdit = entry
+            },
+            onDeleteEntry = { entry ->
+                entryToDelete = entry
+            }
+        )
     }
 }
 
@@ -90,7 +129,12 @@ private fun AddWeightEntryButton(
 }
 
 @Composable
-fun WeightEntryList(entries: List<WeightEntryData>, settings: SettingsData) {
+fun WeightEntryList(
+    entries: List<WeightEntryData>,
+    settings: SettingsData,
+    onClickEntry: (WeightEntryData) -> Unit = {},
+    onDeleteEntry: (WeightEntryData) -> Unit = {}
+) {
     val listState = rememberLazyListState()
     VerticalScrollbarBox(
         state = listState,
@@ -122,8 +166,8 @@ fun WeightEntryList(entries: List<WeightEntryData>, settings: SettingsData) {
                         WeightEntryRow(
                             currentAndPriorEntry = currentAndPrior,
                             settings = settings,
-                            onClick = {},
-                            onDelete = {}
+                            onClick = { onClickEntry(currentAndPrior.first) },
+                            onDelete = { onDeleteEntry(currentAndPrior.first) }
                         )
                     }
                 }
