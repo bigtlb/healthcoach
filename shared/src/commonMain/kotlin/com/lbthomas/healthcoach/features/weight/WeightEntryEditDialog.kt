@@ -9,7 +9,11 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -28,10 +32,17 @@ fun WeightEntryEditDialog(
     modifier: Modifier = Modifier
 ) {
     val title = if (entry.id == 0L) "Add Weight Entry" else "Edit Weight Entry"
+    val focusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+
 
     AlertDialog(
         onDismissRequest = onDismiss,
         modifier = modifier
+            .focusRequester(focusRequester)
             .focusable()
             .testTag("weight_entry_edit_dialog")
             .onDialogKeyEvents(

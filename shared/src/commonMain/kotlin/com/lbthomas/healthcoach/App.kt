@@ -1,6 +1,7 @@
 package com.lbthomas.healthcoach
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -14,8 +15,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.key.*
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.lbthomas.healthcoach.core.di.previewAppModule
@@ -48,9 +52,34 @@ fun App() {
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     var showSettings by remember { mutableStateOf(false) }
 
+    val focusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(selectedTabIndex) {
+        focusRequester.requestFocus()
+    }
 
     MaterialTheme {
         Scaffold(
+            modifier = Modifier
+                .focusRequester(focusRequester)
+
+                .focusable()
+                .onPreviewKeyEvent { keyEvent ->
+                    if (keyEvent.type == KeyEventType.KeyDown &&
+                        (keyEvent.isCtrlPressed || keyEvent.isMetaPressed)
+                    ) {
+                        when (keyEvent.key) {
+                            Key.W -> selectedTabIndex = 0
+                            Key.B -> selectedTabIndex = 1
+                            Key.G -> selectedTabIndex = 2
+                            Key.S, Key.Comma -> showSettings = true
+                            else -> {}
+                        }
+                        true
+                    } else {
+                        false
+                    }
+                },
             topBar = {
                 AppBar(
                     selectedTabIndex,
@@ -59,8 +88,8 @@ fun App() {
             }
         ) { innerPadding ->
             AppContent(
+                modifier = Modifier.padding(innerPadding),
                 selectedTabIndex = selectedTabIndex,
-                modifier = Modifier.padding(innerPadding)
             )
         }
 
@@ -135,7 +164,7 @@ private fun AppActionButtons(
 
 @Composable
 private fun SettingsButton(onShowSettings: () -> Unit) {
-    Tooltip("Settings") {
+    Tooltip("Settings (Ctrl + S or ,)") {
         IconButton(onClick = { onShowSettings() }) {
             Icon(
                 imageVector = Icons.Default.Settings,
@@ -153,7 +182,7 @@ private fun AppFeatureButton(
     selectedTabIndex: Int,
     tabIcon: ImageVector
 ) {
-    Tooltip(tabTitle) {
+    Tooltip("$tabTitle (Ctrl + ${tabTitle.first()})") {
         IconToggleButton(
             onCheckedChange = { checked -> if (checked) onSelection(index) },
             checked = selectedTabIndex == index
@@ -170,7 +199,7 @@ private fun AppFeatureButton(
 @Composable
 fun AppPreview() {
     KoinApplication(
-        configuration = koinConfiguration(declaration = { modules(previewAppModule)}),
+        configuration = koinConfiguration(declaration = { modules(previewAppModule) }),
         content = {
             App()
         })
