@@ -51,10 +51,11 @@ fun App() {
     val settingsViewModel = koinInject<SettingsViewModel>()
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     var showSettings by remember { mutableStateOf(false) }
+    var showAddWeightEntry by remember { mutableStateOf(false) }
 
     val focusRequester = remember { FocusRequester() }
 
-    LaunchedEffect(selectedTabIndex) {
+    LaunchedEffect(selectedTabIndex, showSettings, showAddWeightEntry) {
         focusRequester.requestFocus()
     }
 
@@ -73,7 +74,14 @@ fun App() {
                             Key.B -> selectedTabIndex = 1
                             Key.G -> selectedTabIndex = 2
                             Key.S, Key.Comma -> showSettings = true
-                            else -> {}
+                            Key.N, Key.Plus, Key.NumPadAdd, Key.Equals -> {
+                                if (selectedTabIndex == 0) {
+                                    showAddWeightEntry = true
+                                }
+                            }
+                            else -> {
+                                return@onPreviewKeyEvent false
+                            }
                         }
                         true
                     } else {
@@ -90,6 +98,8 @@ fun App() {
             AppContent(
                 modifier = Modifier.padding(innerPadding),
                 selectedTabIndex = selectedTabIndex,
+                showAddWeightEntry = showAddWeightEntry,
+                onAddDismiss = { showAddWeightEntry = false }
             )
         }
 
@@ -103,7 +113,10 @@ fun App() {
 }
 
 @Composable
-private fun AppContent(selectedTabIndex: Int, modifier: Modifier = Modifier) {
+private fun AppContent(selectedTabIndex: Int,
+                       showAddWeightEntry: Boolean,
+                       modifier: Modifier = Modifier,
+                       onAddDismiss: () -> Unit = {}) {
     Column(
         modifier = modifier
             .background(MaterialTheme.colorScheme.primaryContainer)
@@ -112,7 +125,10 @@ private fun AppContent(selectedTabIndex: Int, modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         when (AppDefaults.Tabs[selectedTabIndex].first) {
-            "Weight" -> WeightView()
+            "Weight" -> WeightView(
+                showAddWeightEntry = showAddWeightEntry,
+                onAddDismiss = onAddDismiss
+            )
             "Blood Pressure" -> BloodPressureView()
             "Graphs" -> GraphsView()
         }

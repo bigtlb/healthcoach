@@ -12,7 +12,7 @@ import androidx.compose.ui.input.key.*
 fun Modifier.onDialogKeyEvents(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
-): Modifier = this.onKeyEvent { keyEvent ->
+): Modifier = this.onPreviewKeyEvent { keyEvent ->
     if (keyEvent.type == KeyEventType.KeyDown) {
         when (keyEvent.key) {
             Key.Escape -> {

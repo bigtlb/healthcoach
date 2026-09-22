@@ -9,5 +9,5 @@ data class WeightEntryData(
     val weight: Double,
 ){
     fun getWeightInCurrentUnits(weightUnit: WeightUnit) = if (weightUnit == WeightUnit.METRIC) weight else weight * 2.20462
-    fun convertToKilograms(enteredWeight: Double, weightUnit: WeightUnit) = if (weightUnit == WeightUnit.METRIC) enteredWeight else enteredWeight * 2.20462
+    fun convertToKilograms(enteredWeight: Double, weightUnit: WeightUnit) = if (weightUnit == WeightUnit.METRIC) enteredWeight else enteredWeight / 2.20462
 }

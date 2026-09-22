@@ -30,15 +30,15 @@ class WeightRepository(private val database: Database) {
     }
 
     fun addEntry(date: LocalDate, weight: Double): Long {
-        TODO("Not yet implemented")
+        return database.weightEntryQueries.insert(date.toString(), weight).executeAsOne()
     }
 
     fun updateEntry(entry: WeightEntryData): QueryResult<Long> {
-        TODO("Not yet implemented")
+        return database.weightEntryQueries.update(entry.date.toString(), entry.weight, entry.id)
     }
 
     fun deleteEntry(id: Long): QueryResult<Long> {
-        TODO("Not yet implemented")
+        return database.weightEntryQueries.delete(id)
     }
 }
 

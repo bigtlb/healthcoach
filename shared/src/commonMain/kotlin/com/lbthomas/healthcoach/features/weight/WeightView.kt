@@ -63,7 +63,11 @@ private object WeightViewDefaults {
 }
 
 @Composable
-fun WeightView(modifier: Modifier = Modifier) {
+fun WeightView(
+    showAddWeightEntry: Boolean,
+    modifier: Modifier = Modifier,
+    onAddDismiss: () -> Unit = {}
+) {
     val viewModel = koinInject<WeightViewModel>()
     val settings by koinInject<SettingsViewModel>().settings.collectAsState()
     val entries by viewModel.entries.collectAsState()
@@ -71,16 +75,17 @@ fun WeightView(modifier: Modifier = Modifier) {
     var entryToDelete by remember { mutableStateOf<WeightEntryData?>(null) }
     var entryToEdit by remember { mutableStateOf<WeightEntryData?>(null) }
 
-    val focusRequester = remember { FocusRequester() }
-
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
+    LaunchedEffect(showAddWeightEntry) {
+        if (showAddWeightEntry) {
+            entryToEdit = WeightEntryData(id = 0, date = today, weight = 0.0)
+        }
     }
 
     entryToDelete?.let { entry ->
         DeleteConfirmation(
             entry = entry,
             onConfirm = {
+                viewModel.deleteEntry(entry.id)
                 entryToDelete = null
             },
             onDismiss = {
@@ -93,36 +98,23 @@ fun WeightView(modifier: Modifier = Modifier) {
         WeightEntryEditDialog(
             entry = entry,
             onConfirm = { updatedEntry ->
+                if (updatedEntry.id == 0L)
+                    viewModel.addEntry(updatedEntry.date, updatedEntry.weight)
+                else
+                    viewModel.updateEntry(updatedEntry)
                 entryToEdit = null
             },
             onDismiss = {
                 entryToEdit = null
-            }
+                if (showAddWeightEntry) onAddDismiss()
+            },
+            settings
         )
     }
 
     Column(
         modifier = modifier
-            .focusRequester(focusRequester)
-            .focusProperties{
-                canFocus = false
-            }
-            .focusable()
             .fillMaxSize()
-            .onPreviewKeyEvent { keyEvent ->
-                if (keyEvent.type == KeyEventType.KeyDown &&
-                    (keyEvent.isCtrlPressed || keyEvent.isMetaPressed) &&
-                    when (keyEvent.key){
-                        Key.Plus, Key.NumPadAdd, Key.Equals, Key.N -> true
-                        else -> false
-                    }
-                ) {
-                    entryToEdit = WeightEntryData(id = 0, date = today, weight = 0.0)
-                    true
-                } else {
-                    false
-                }
-            }
     ) {
         AddWeightEntryButton(
             onClick = {
@@ -148,7 +140,7 @@ private fun AddWeightEntryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Tooltip("Add new weight entry", modifier = modifier) {
+    Tooltip("Add new weight\n(Ctrl + N or '+')", modifier = modifier) {
         FloatingActionButton(
             onClick = onClick,
             modifier = Modifier
@@ -160,7 +152,7 @@ private fun AddWeightEntryButton(
         ) {
             Icon(
                 imageVector = Icons.Default.Add,
-                contentDescription = "Add new weight entry",
+                contentDescription = "Add new weight",
             )
         }
     }
@@ -427,7 +419,7 @@ fun WeightViewPreview() {
     KoinApplication(
         configuration = koinConfiguration(declaration = { modules(previewAppModule) }),
         content = {
-            WeightView()
+            WeightView(false)
         })
 }
 
