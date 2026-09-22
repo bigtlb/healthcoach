@@ -162,6 +162,11 @@ private object WeightChartRangeProvider : CartesianLayerRangeProvider {
         val padding = if (diff <= 0.0) 5.0 else max(1.0, diff * 0.15)
         return maxY + padding
     }
+
+    override fun getMaxX(minX: Double, maxX: Double, extraStore: ExtraStore): Double {
+        // Add 1-2 days of padding on the right for comfortable hovering and marker display
+        return maxX + 2.0
+    }
 }
 
 @Composable
@@ -250,10 +255,34 @@ private fun WeightLineChart(
         guideline = null
     )
 
-    val bottomAxisValueFormatter = remember {
+
+    val daySpan = remember(entries) {
+        if (entries.size >= 2) {
+            entries.last().date.toEpochDays() - entries.first().date.toEpochDays()
+        } else {
+            0
+        }
+    }
+
+    val horizontalAxisSpacing = remember(daySpan) {
+        when {
+            daySpan <= 30 -> 7     // 1 week
+            daySpan <= 120 -> 14   // 2 weeks
+            daySpan <= 365 -> 30   // ~1 month
+            daySpan <= 730 -> 90   // ~1 quarter
+            else -> 180            // ~6 months
+        }
+    }
+
+    val bottomAxisValueFormatter = remember(daySpan) {
         CartesianValueFormatter { _, value, _ ->
             val date = LocalDate.fromEpochDays(value.toLong())
-            "${date.month.ordinal + 1}/${date.day}"
+            when {
+                daySpan <= 120 -> "${date.monthNumber}/${date.dayOfMonth}"
+                daySpan <= 365 -> "${date.month.name.take(3)} ${date.dayOfMonth}"
+                daySpan <= 730 -> "${date.month.name.take(3)} '${date.year % 100}"
+                else -> "${date.year}"
+            }
         }
     }
 
@@ -281,6 +310,9 @@ private fun WeightLineChart(
             guideline = null
         ),
         bottomAxis = HorizontalAxis.rememberBottom(
+            itemPlacer = remember(horizontalAxisSpacing) {
+                HorizontalAxis.ItemPlacer.aligned(spacing = { horizontalAxisSpacing })
+            },
             valueFormatter = bottomAxisValueFormatter,
             label = rememberAxisLabelComponent(
                 style = TextStyle(
@@ -293,6 +325,7 @@ private fun WeightLineChart(
         marker = marker,
         markerController = CartesianMarkerController.rememberShowOnHover()
     )
+
 
     CartesianChartHost(
         chart = chart,
