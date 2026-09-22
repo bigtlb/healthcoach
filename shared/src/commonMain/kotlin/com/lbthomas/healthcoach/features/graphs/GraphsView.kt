@@ -22,6 +22,7 @@ import com.lbthomas.healthcoach.core.utils.displayDate
 import com.lbthomas.healthcoach.features.settings.SettingsViewModel
 import com.lbthomas.healthcoach.features.weight.WeightViewModel
 import com.lbthomas.healthcoach.features.weight.data.WeightEntryData
+import kotlinx.datetime.LocalDate
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
@@ -172,7 +173,7 @@ private fun WeightLineChart(
     val modelProducer = remember { CartesianChartModelProducer() }
 
     LaunchedEffect(entries, weightUnit) {
-        val xValues = entries.indices.map { it.toDouble() }
+        val xValues = entries.map { it.date.toEpochDays().toDouble() }
         val yValues = entries.map { it.getWeightInCurrentUnits(weightUnit) }
         modelProducer.runTransaction {
             lineModel {
@@ -210,19 +211,24 @@ private fun WeightLineChart(
             fontWeight = FontWeight.Medium,
             textAlign = TextAlign.Center
         ),
+        lineCount = 2,
         padding = Insets(horizontal = 10.dp, vertical = 6.dp),
         background = markerLabelBackground
     )
 
-    val markerValueFormatter = remember(entries, weightUnit) {
+    val markerValueFormatter = remember(weightUnit) {
         DefaultCartesianMarker.ValueFormatter { _, targets ->
             val lineTarget = targets.filterIsInstance<LineCartesianLayerMarkerTarget>().firstOrNull()
             val point = lineTarget?.points?.firstOrNull()
             if (point != null) {
-                val index = point.entry.x.roundToInt().coerceIn(0, entries.lastIndex)
-                val entry = entries.getOrNull(index)
-                val dateText = entry?.date?.displayDate() ?: ""
-                val weightFormatted = (round(point.entry.y * 10) / 10.0).toString()
+                val date = LocalDate.fromEpochDays(point.entry.x.toLong())
+                val dateText = date.displayDate()
+                val roundedWeight = round(point.entry.y * 10) / 10.0
+                val weightFormatted = if (roundedWeight % 1.0 == 0.0) {
+                    roundedWeight.toInt().toString()
+                } else {
+                    roundedWeight.toString()
+                }
                 "$dateText\n$weightFormatted $unitLabel"
             } else {
                 ""
@@ -233,6 +239,7 @@ private fun WeightLineChart(
     val marker = rememberDefaultCartesianMarker(
         label = markerLabel,
         valueFormatter = markerValueFormatter,
+        labelPosition = DefaultCartesianMarker.LabelPosition.AroundPoint,
         indicator = { color ->
             ShapeComponent(
                 fill = Fill(color),
@@ -240,13 +247,12 @@ private fun WeightLineChart(
             )
         },
         indicatorSize = 8.dp,
-        guideline = rememberAxisGuidelineComponent()
+        guideline = null
     )
 
-    val bottomAxisValueFormatter = remember(entries) {
+    val bottomAxisValueFormatter = remember {
         CartesianValueFormatter { _, value, _ ->
-            val index = value.roundToInt().coerceIn(0, entries.lastIndex)
-            val date = entries[index].date
+            val date = LocalDate.fromEpochDays(value.toLong())
             "${date.month.ordinal + 1}/${date.day}"
         }
     }
@@ -271,7 +277,8 @@ private fun WeightLineChart(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 11.sp
                 )
-            )
+            ),
+            guideline = null
         ),
         bottomAxis = HorizontalAxis.rememberBottom(
             valueFormatter = bottomAxisValueFormatter,
@@ -280,7 +287,8 @@ private fun WeightLineChart(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 11.sp
                 )
-            )
+            ),
+            guideline = null
         ),
         marker = marker,
         markerController = CartesianMarkerController.rememberShowOnHover()
