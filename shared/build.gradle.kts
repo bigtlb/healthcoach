@@ -77,6 +77,8 @@ kotlin {
             implementation(libs.kotlinx.datetime)
             implementation(libs.kotlinx.serialization)
             implementation(libs.sqldelight.coroutines.extensions)
+            implementation(libs.vico.compose)
+            implementation(libs.vico.compose.m3)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
