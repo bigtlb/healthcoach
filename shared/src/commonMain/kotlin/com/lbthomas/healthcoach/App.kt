@@ -23,6 +23,7 @@ import androidx.compose.ui.input.key.*
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.lbthomas.healthcoach.core.di.previewAppModule
+import com.lbthomas.healthcoach.core.enums.SelectedPage
 import com.lbthomas.healthcoach.core.ui.Tooltip
 import com.lbthomas.healthcoach.features.bloodpressure.BloodPressureView
 import com.lbthomas.healthcoach.features.graphs.GraphsView
@@ -36,11 +37,17 @@ import org.koin.compose.KoinApplication
 import org.koin.compose.koinInject
 import org.koin.dsl.koinConfiguration
 
+private data class AppTab(
+    val page: SelectedPage,
+    val title: String,
+    val icon: ImageVector
+)
+
 private object AppDefaults {
     val Tabs = listOf(
-        "Weight" to Icons.Default.Scale,
-        "Blood Pressure" to Icons.Default.Favorite,
-        "Graphs" to Icons.AutoMirrored.Filled.ShowChart
+        AppTab(SelectedPage.WeightView, "Weight", Icons.Default.Scale),
+        AppTab(SelectedPage.BloodPressureView, "Blood Pressure", Icons.Default.Favorite),
+        AppTab(SelectedPage.GraphsView, "Graphs", Icons.AutoMirrored.Filled.ShowChart)
     )
     val TitleIconSize = 32.dp
 }
@@ -49,13 +56,14 @@ private object AppDefaults {
 @Composable
 fun App() {
     val settingsViewModel = koinInject<SettingsViewModel>()
-    var selectedTabIndex by remember { mutableIntStateOf(0) }
+    val settings by settingsViewModel.settings.collectAsState()
+    val selectedPage = settings.selectedPage
     var showSettings by remember { mutableStateOf(false) }
     var showAddWeightEntry by remember { mutableStateOf(false) }
 
     val focusRequester = remember { FocusRequester() }
 
-    LaunchedEffect(selectedTabIndex, showSettings, showAddWeightEntry) {
+    LaunchedEffect(selectedPage, showSettings, showAddWeightEntry) {
         focusRequester.requestFocus()
     }
 
@@ -70,12 +78,12 @@ fun App() {
                         (keyEvent.isCtrlPressed || keyEvent.isMetaPressed)
                     ) {
                         when (keyEvent.key) {
-                            Key.W -> selectedTabIndex = 0
-                            Key.B -> selectedTabIndex = 1
-                            Key.G -> selectedTabIndex = 2
+                            Key.W -> settingsViewModel.setSelectedPage(SelectedPage.WeightView)
+                            Key.B -> settingsViewModel.setSelectedPage(SelectedPage.BloodPressureView)
+                            Key.G -> settingsViewModel.setSelectedPage(SelectedPage.GraphsView)
                             Key.S, Key.Comma -> showSettings = true
                             Key.N, Key.Plus, Key.NumPadAdd, Key.Equals -> {
-                                if (selectedTabIndex == 0) {
+                                if (selectedPage == SelectedPage.WeightView) {
                                     showAddWeightEntry = true
                                 }
                             }
@@ -90,14 +98,14 @@ fun App() {
                 },
             topBar = {
                 AppBar(
-                    selectedTabIndex,
-                    onSelection = { selectedTabIndex = it },
+                    selectedPage = selectedPage,
+                    onSelection = { settingsViewModel.setSelectedPage(it) },
                     onShowSettings = { showSettings = true })
             }
         ) { innerPadding ->
             AppContent(
                 modifier = Modifier.padding(innerPadding),
-                selectedTabIndex = selectedTabIndex,
+                selectedPage = selectedPage,
                 showAddWeightEntry = showAddWeightEntry,
                 onAddDismiss = { showAddWeightEntry = false }
             )
@@ -113,10 +121,12 @@ fun App() {
 }
 
 @Composable
-private fun AppContent(selectedTabIndex: Int,
-                       showAddWeightEntry: Boolean,
-                       modifier: Modifier = Modifier,
-                       onAddDismiss: () -> Unit = {}) {
+private fun AppContent(
+    selectedPage: SelectedPage,
+    showAddWeightEntry: Boolean,
+    modifier: Modifier = Modifier,
+    onAddDismiss: () -> Unit = {}
+) {
     Column(
         modifier = modifier
             .background(MaterialTheme.colorScheme.primaryContainer)
@@ -124,13 +134,13 @@ private fun AppContent(selectedTabIndex: Int,
             .padding(top = 5.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        when (AppDefaults.Tabs[selectedTabIndex].first) {
-            "Weight" -> WeightView(
+        when (selectedPage) {
+            SelectedPage.WeightView -> WeightView(
                 showAddWeightEntry = showAddWeightEntry,
                 onAddDismiss = onAddDismiss
             )
-            "Blood Pressure" -> BloodPressureView()
-            "Graphs" -> GraphsView()
+            SelectedPage.BloodPressureView -> BloodPressureView()
+            SelectedPage.GraphsView -> GraphsView()
         }
     }
 }
@@ -138,8 +148,8 @@ private fun AppContent(selectedTabIndex: Int,
 
 @Composable
 fun AppBar(
-    selectedTabIndex: Int,
-    onSelection: (Int) -> Unit,
+    selectedPage: SelectedPage,
+    onSelection: (SelectedPage) -> Unit,
     onShowSettings: () -> Unit
 ) {
 
@@ -155,7 +165,7 @@ fun AppBar(
         colors = TopAppBarDefaults.topAppBarColors()
             .copy(MaterialTheme.colorScheme.primaryFixedDim),
         actions = {
-            AppActionButtons(onSelection, selectedTabIndex, onShowSettings)
+            AppActionButtons(onSelection, selectedPage, onShowSettings)
         }
     )
 
@@ -164,15 +174,17 @@ fun AppBar(
 
 @Composable
 private fun AppActionButtons(
-    onSelection: (Int) -> Unit,
-    selectedTabIndex: Int,
+    onSelection: (SelectedPage) -> Unit,
+    selectedPage: SelectedPage,
     onShowSettings: () -> Unit
 ) {
-    AppDefaults.Tabs.forEachIndexed { index, pair ->
-        val tabTitle = pair.first
-        val tabIcon = pair.second
-
-        AppFeatureButton(tabTitle, onSelection, index, selectedTabIndex, tabIcon)
+    AppDefaults.Tabs.forEach { tab ->
+        AppFeatureButton(
+            tabTitle = tab.title,
+            onSelection = { onSelection(tab.page) },
+            isSelected = selectedPage == tab.page,
+            tabIcon = tab.icon
+        )
     }
 
     SettingsButton(onShowSettings)
@@ -193,15 +205,14 @@ private fun SettingsButton(onShowSettings: () -> Unit) {
 @Composable
 private fun AppFeatureButton(
     tabTitle: String,
-    onSelection: (Int) -> Unit,
-    index: Int,
-    selectedTabIndex: Int,
+    onSelection: () -> Unit,
+    isSelected: Boolean,
     tabIcon: ImageVector
 ) {
     Tooltip("$tabTitle (Ctrl + ${tabTitle.first()})") {
         IconToggleButton(
-            onCheckedChange = { checked -> if (checked) onSelection(index) },
-            checked = selectedTabIndex == index
+            onCheckedChange = { checked -> if (checked) onSelection() },
+            checked = isSelected
         ) {
             Icon(
                 imageVector = tabIcon,

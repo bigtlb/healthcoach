@@ -1,5 +1,7 @@
 package com.lbthomas.healthcoach.features.settings.data
 
+import com.lbthomas.healthcoach.core.enums.GraphTimeFrame
+import com.lbthomas.healthcoach.core.enums.SelectedPage
 import com.lbthomas.healthcoach.core.enums.WeightUnit
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,6 +33,14 @@ open class SettingsStore(private val settingsFile: File) {
     fun updateSettings(transform: (SettingsData) -> SettingsData) {
         val updated = _settings.updateAndGet(transform)
         saveSettings(updated)
+    }
+
+    fun setSelectedPage(page: SelectedPage) {
+        updateSettings { it.copy(selectedPage = page) }
+    }
+
+    fun setSelectedGraphTimeFrame(timeFrame: GraphTimeFrame) {
+        updateSettings { it.copy(selectedGraphTimeFrame = timeFrame) }
     }
 
     fun setWeightUnit(unit: WeightUnit) {

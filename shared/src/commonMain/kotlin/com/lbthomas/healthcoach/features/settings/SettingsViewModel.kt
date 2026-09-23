@@ -1,8 +1,11 @@
 package com.lbthomas.healthcoach.features.settings
 
+import com.lbthomas.healthcoach.core.enums.GraphTimeFrame
+import com.lbthomas.healthcoach.core.enums.SelectedPage
 import com.lbthomas.healthcoach.core.enums.WeightUnit
 import com.lbthomas.healthcoach.features.settings.data.SettingsData
 import com.lbthomas.healthcoach.features.settings.data.SettingsStore
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 class SettingsViewModel  {
@@ -20,15 +23,35 @@ class SettingsViewModel  {
     }
 
     fun updateSettings(transform: (SettingsData) -> SettingsData) {
-        persistence!!.updateSettings(transform)
+        if (persistence != null) {
+            persistence.updateSettings(transform)
+        } else if (settings is MutableStateFlow<SettingsData>) {
+            settings.value = transform(settings.value)
+        }
+    }
+
+    fun setSelectedPage(page: SelectedPage) {
+        updateSettings { it.copy(selectedPage = page) }
+    }
+
+    fun setSelectedGraphTimeFrame(timeFrame: GraphTimeFrame) {
+        updateSettings { it.copy(selectedGraphTimeFrame = timeFrame) }
     }
 
     fun setWeightUnit(unit: WeightUnit) {
-        persistence!!.setWeightUnit(unit)
+        updateSettings { it.copy(weightUnit = unit) }
     }
 
     fun setWindowState(x: Int, y: Int, width: Int, height: Int, maximized: Boolean) {
-        persistence!!.setWindowState(x, y, width, height, maximized)
+        updateSettings {
+            it.copy(
+                windowX = x,
+                windowY = y,
+                windowWidth = width,
+                windowHeight = height,
+                windowMaximized = maximized
+            )
+        }
     }
 
     fun setBloodPressureDisplaySettings(
@@ -37,11 +60,13 @@ class SettingsViewModel  {
         showDailyChanges: Boolean,
         showMonthlyChanges: Boolean
     ) {
-        persistence!!.setBloodPressureDisplaySettings(
-            showDailyAverages,
-            showMonthlyAverages,
-            showDailyChanges,
-            showMonthlyChanges
-        )
+        updateSettings {
+            it.copy(
+                showDailyAverages = showDailyAverages,
+                showMonthlyAverages = showMonthlyAverages,
+                showDailyChanges = showDailyChanges,
+                showMonthlyChanges = showMonthlyChanges
+            )
+        }
     }
 }

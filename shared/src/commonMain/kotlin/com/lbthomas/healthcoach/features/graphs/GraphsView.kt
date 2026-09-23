@@ -17,16 +17,15 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lbthomas.healthcoach.core.di.previewAppModule
+import com.lbthomas.healthcoach.core.enums.GraphTimeFrame
 import com.lbthomas.healthcoach.core.enums.WeightUnit
 import com.lbthomas.healthcoach.core.utils.displayDate
 import com.lbthomas.healthcoach.features.settings.SettingsViewModel
 import com.lbthomas.healthcoach.features.weight.WeightViewModel
 import com.lbthomas.healthcoach.features.weight.data.WeightEntryData
-import kotlinx.datetime.LocalDate
-import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
+import com.patrykandpatrick.vico.compose.cartesian.*
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisGuidelineComponent
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLabelComponent
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianLayerRangeProvider
@@ -39,10 +38,6 @@ import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarkerControl
 import com.patrykandpatrick.vico.compose.cartesian.marker.DefaultCartesianMarker
 import com.patrykandpatrick.vico.compose.cartesian.marker.LineCartesianLayerMarkerTarget
 import com.patrykandpatrick.vico.compose.cartesian.marker.rememberDefaultCartesianMarker
-import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
-import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
-import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
-import com.patrykandpatrick.vico.compose.cartesian.Zoom
 import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.Insets
 import com.patrykandpatrick.vico.compose.common.MarkerCornerBasedShape
@@ -50,12 +45,80 @@ import com.patrykandpatrick.vico.compose.common.component.ShapeComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
 import com.patrykandpatrick.vico.compose.common.data.ExtraStore
+import kotlinx.datetime.LocalDate
 import org.koin.compose.KoinApplication
 import org.koin.compose.koinInject
 import org.koin.dsl.koinConfiguration
 import kotlin.math.max
 import kotlin.math.round
-import kotlin.math.roundToInt
+
+private data class GraphEntries(
+    val entries: List<WeightEntryData>,
+    val minEpochDay: Double?,
+    val maxEpochDay: Double?
+)
+
+private fun buildGraphEntries(
+    rawEntries: List<WeightEntryData>,
+    timeFrame: GraphTimeFrame
+): GraphEntries {
+    val sorted = rawEntries.sortedBy { it.date }
+
+    if (sorted.isEmpty()) {
+        return GraphEntries(
+            entries = emptyList(),
+            minEpochDay = null,
+            maxEpochDay = null
+        )
+    }
+
+    val days = timeFrame.days
+
+    if (days == null) {
+        return GraphEntries(
+            entries = sorted,
+            minEpochDay = null,
+            maxEpochDay = null
+        )
+    }
+
+    val latestEpochDay = sorted.last().date.toEpochDays()
+    val minEpochDay = latestEpochDay - days
+    val maxEpochDay = latestEpochDay.toDouble()
+
+    val entriesInRange = sorted.filter { it.date.toEpochDays() >= minEpochDay }
+
+    val previousEntry = sorted.lastOrNull { it.date.toEpochDays() < minEpochDay }
+    val firstEntryInRange = entriesInRange.firstOrNull()
+
+    val boundaryEntry = if (previousEntry != null && firstEntryInRange != null) {
+        val previousX = previousEntry.date.toEpochDays()
+        val firstX = firstEntryInRange.date.toEpochDays()
+        val rangeWidth = firstX - previousX
+
+        if (rangeWidth > 0) {
+            val progress = (minEpochDay - previousX).toDouble() / rangeWidth.toDouble()
+            val interpolatedWeight =
+                previousEntry.weight + ((firstEntryInRange.weight - previousEntry.weight) * progress)
+
+            WeightEntryData(
+                id = Long.MIN_VALUE,
+                date = LocalDate.fromEpochDays(minEpochDay),
+                weight = interpolatedWeight
+            )
+        } else {
+            null
+        }
+    } else {
+        null
+    }
+
+    return GraphEntries(
+        entries = listOfNotNull(boundaryEntry) + entriesInRange,
+        minEpochDay = minEpochDay.toDouble(),
+        maxEpochDay = maxEpochDay
+    )
+}
 
 @Composable
 fun GraphsView(modifier: Modifier = Modifier) {
@@ -64,16 +127,20 @@ fun GraphsView(modifier: Modifier = Modifier) {
 
     val rawEntries by weightViewModel.entries.collectAsState()
     val settings by settingsViewModel.settings.collectAsState()
+    val selectedTimeFrame = settings.selectedGraphTimeFrame
 
-    val sortedEntries = remember(rawEntries) {
-        rawEntries.sortedBy { it.date }
+    val graphEntries = remember(rawEntries, selectedTimeFrame) {
+        buildGraphEntries(
+            rawEntries = rawEntries,
+            timeFrame = selectedTimeFrame
+        )
     }
 
     Surface(
         modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
-        if (sortedEntries.isEmpty()) {
+        if (graphEntries.entries.isEmpty())  {
             EmptyGraphState()
         } else {
             Column(
@@ -81,12 +148,24 @@ fun GraphsView(modifier: Modifier = Modifier) {
                     .fillMaxSize()
                     .padding(16.dp)
             ) {
-                Text(
-                    text = "Weight History",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Weight History",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    GraphTimeFrameDropdown(
+                        selectedTimeFrame = selectedTimeFrame,
+                        onTimeFrameSelected = { settingsViewModel.setSelectedGraphTimeFrame(it) }
+                    )
+
+                }
 
                 Card(
                     modifier = Modifier
@@ -103,8 +182,10 @@ fun GraphsView(modifier: Modifier = Modifier) {
                             .padding(16.dp)
                     ) {
                         WeightLineChart(
-                            entries = sortedEntries,
+                            entries = graphEntries.entries,
                             weightUnit = settings.weightUnit,
+                            minEpochDay = graphEntries.minEpochDay,
+                            maxEpochDay = graphEntries.maxEpochDay,
                             modifier = Modifier.fillMaxSize()
                         )
                     }
@@ -113,6 +194,52 @@ fun GraphsView(modifier: Modifier = Modifier) {
         }
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GraphTimeFrameDropdown(
+    selectedTimeFrame: GraphTimeFrame,
+    onTimeFrameSelected: (GraphTimeFrame) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        modifier = modifier.width(160.dp)
+    ) {
+        OutlinedTextField(
+            value = selectedTimeFrame.label,
+            onValueChange = {},
+            readOnly = true,
+            singleLine = true,
+            label = { Text("Time frame") },
+            trailingIcon = {
+                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+            },
+            modifier = Modifier
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable, enabled = true)
+                .fillMaxWidth()
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            GraphTimeFrame.entries.forEach { timeFrame ->
+                DropdownMenuItem(
+                    text = { Text(timeFrame.label) },
+                    onClick = {
+                        onTimeFrameSelected(timeFrame)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
 
 @Composable
 private fun EmptyGraphState(modifier: Modifier = Modifier) {
@@ -150,7 +277,18 @@ private fun EmptyGraphState(modifier: Modifier = Modifier) {
     }
 }
 
-private object WeightChartRangeProvider : CartesianLayerRangeProvider {
+private class TimeFrameChartRangeProvider(
+    private val forcedMinX: Double?,
+    private val forcedMaxX: Double?
+) : CartesianLayerRangeProvider {
+    override fun getMinX(minX: Double, maxX: Double, extraStore: ExtraStore): Double {
+        return forcedMinX ?: minX
+    }
+
+    override fun getMaxX(minX: Double, maxX: Double, extraStore: ExtraStore): Double {
+        return (forcedMaxX ?: maxX)+ 2.0
+    }
+
     override fun getMinY(minY: Double, maxY: Double, extraStore: ExtraStore): Double {
         val diff = maxY - minY
         val padding = if (diff <= 0.0) 5.0 else max(1.0, diff * 0.15)
@@ -162,17 +300,15 @@ private object WeightChartRangeProvider : CartesianLayerRangeProvider {
         val padding = if (diff <= 0.0) 5.0 else max(1.0, diff * 0.15)
         return maxY + padding
     }
-
-    override fun getMaxX(minX: Double, maxX: Double, extraStore: ExtraStore): Double {
-        // Add 1-2 days of padding on the right for comfortable hovering and marker display
-        return maxX + 2.0
-    }
 }
+
 
 @Composable
 private fun WeightLineChart(
     entries: List<WeightEntryData>,
     weightUnit: WeightUnit,
+    minEpochDay: Double?,
+    maxEpochDay: Double?,
     modifier: Modifier = Modifier
 ) {
     val modelProducer = remember { CartesianChartModelProducer() }
@@ -197,9 +333,16 @@ private fun WeightLineChart(
         areaFill = null
     )
 
+    val rangeProvider = remember(minEpochDay, maxEpochDay) {
+        TimeFrameChartRangeProvider(
+            forcedMinX = minEpochDay,
+            forcedMaxX = maxEpochDay
+        )
+    }
+
     val lineLayer = rememberLineCartesianLayer(
         lineProvider = LineCartesianLayer.LineProvider.series(line),
-        rangeProvider = remember { WeightChartRangeProvider }
+        rangeProvider = rangeProvider
     )
 
     val markerLabelBackground = rememberShapeComponent(
@@ -278,8 +421,8 @@ private fun WeightLineChart(
         CartesianValueFormatter { _, value, _ ->
             val date = LocalDate.fromEpochDays(value.toLong())
             when {
-                daySpan <= 120 -> "${date.monthNumber}/${date.dayOfMonth}"
-                daySpan <= 365 -> "${date.month.name.take(3)} ${date.dayOfMonth}"
+                daySpan <= 120 -> "${date.month}/${date.day}"
+                daySpan <= 365 -> "${date.month.name.take(3)} ${date.day}"
                 daySpan <= 730 -> "${date.month.name.take(3)} '${date.year % 100}"
                 else -> "${date.year}"
             }
