@@ -26,6 +26,7 @@ import com.lbthomas.healthcoach.features.weight.data.WeightEntryData
 import com.patrykandpatrick.vico.compose.cartesian.*
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisGuidelineComponent
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLabelComponent
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianLayerRangeProvider
@@ -38,6 +39,7 @@ import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarkerControl
 import com.patrykandpatrick.vico.compose.cartesian.marker.DefaultCartesianMarker
 import com.patrykandpatrick.vico.compose.cartesian.marker.LineCartesianLayerMarkerTarget
 import com.patrykandpatrick.vico.compose.cartesian.marker.rememberDefaultCartesianMarker
+import com.patrykandpatrick.vico.compose.common.DashedShape
 import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.Insets
 import com.patrykandpatrick.vico.compose.common.MarkerCornerBasedShape
@@ -52,13 +54,13 @@ import org.koin.dsl.koinConfiguration
 import kotlin.math.max
 import kotlin.math.round
 
-private data class GraphEntries(
+internal data class GraphEntries(
     val entries: List<WeightEntryData>,
     val minEpochDay: Double?,
     val maxEpochDay: Double?
 )
 
-private fun buildGraphEntries(
+internal fun buildGraphEntries(
     rawEntries: List<WeightEntryData>,
     timeFrame: GraphTimeFrame
 ): GraphEntries {
@@ -72,9 +74,7 @@ private fun buildGraphEntries(
         )
     }
 
-    val days = timeFrame.days
-
-    if (days == null) {
+    if (timeFrame == GraphTimeFrame.ALL) {
         return GraphEntries(
             entries = sorted,
             minEpochDay = null,
@@ -82,8 +82,18 @@ private fun buildGraphEntries(
         )
     }
 
-    val latestEpochDay = sorted.last().date.toEpochDays()
-    val minEpochDay = latestEpochDay - days
+    val latestDate = sorted.last().date
+    val latestEpochDay = latestDate.toEpochDays()
+    val minEpochDay = if (timeFrame == GraphTimeFrame.YEAR_TO_DATE) {
+        LocalDate(latestDate.year, 1, 1).toEpochDays()
+    } else {
+        val days = timeFrame.days ?: return GraphEntries(
+            entries = sorted,
+            minEpochDay = null,
+            maxEpochDay = null
+        )
+        latestEpochDay - days
+    }
     val maxEpochDay = latestEpochDay.toDouble()
 
     val entriesInRange = sorted.filter { it.date.toEpochDays() >= minEpochDay }
@@ -91,7 +101,7 @@ private fun buildGraphEntries(
     val previousEntry = sorted.lastOrNull { it.date.toEpochDays() < minEpochDay }
     val firstEntryInRange = entriesInRange.firstOrNull()
 
-    val boundaryEntry = if (previousEntry != null && firstEntryInRange != null) {
+    fun interpolateEdgeEntry(): WeightEntryData? = if (previousEntry != null && firstEntryInRange != null && firstEntryInRange.date.toEpochDays() > minEpochDay) {
         val previousX = previousEntry.date.toEpochDays()
         val firstX = firstEntryInRange.date.toEpochDays()
         val rangeWidth = firstX - previousX
@@ -113,8 +123,9 @@ private fun buildGraphEntries(
         null
     }
 
+
     return GraphEntries(
-        entries = listOfNotNull(boundaryEntry) + entriesInRange,
+        entries = listOfNotNull(interpolateEdgeEntry()) + entriesInRange,
         minEpochDay = minEpochDay.toDouble(),
         maxEpochDay = maxEpochDay
     )
@@ -140,7 +151,7 @@ fun GraphsView(modifier: Modifier = Modifier) {
         modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
-        if (graphEntries.entries.isEmpty())  {
+        if (graphEntries.entries.isEmpty()) {
             EmptyGraphState()
         } else {
             Column(
@@ -148,24 +159,7 @@ fun GraphsView(modifier: Modifier = Modifier) {
                     .fillMaxSize()
                     .padding(16.dp)
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Weight History",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    GraphTimeFrameDropdown(
-                        selectedTimeFrame = selectedTimeFrame,
-                        onTimeFrameSelected = { settingsViewModel.setSelectedGraphTimeFrame(it) }
-                    )
-
-                }
+                GraphHeader(selectedTimeFrame, settingsViewModel)
 
                 Card(
                     modifier = Modifier
@@ -192,6 +186,31 @@ fun GraphsView(modifier: Modifier = Modifier) {
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun GraphHeader(
+    selectedTimeFrame: GraphTimeFrame,
+    settingsViewModel: SettingsViewModel
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "Weight History",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
+        GraphTimeFrameDropdown(
+            selectedTimeFrame = selectedTimeFrame,
+            onTimeFrameSelected = { settingsViewModel.setSelectedGraphTimeFrame(it) }
+        )
+
     }
 }
 
@@ -286,18 +305,18 @@ private class TimeFrameChartRangeProvider(
     }
 
     override fun getMaxX(minX: Double, maxX: Double, extraStore: ExtraStore): Double {
-        return (forcedMaxX ?: maxX)+ 2.0
+        return (forcedMaxX ?: maxX) + 2.0
     }
 
     override fun getMinY(minY: Double, maxY: Double, extraStore: ExtraStore): Double {
         val diff = maxY - minY
-        val padding = if (diff <= 0.0) 5.0 else max(1.0, diff * 0.15)
+        val padding = if (diff <= 0.0) 5.0 else max(1.0, diff * 0.05)
         return (minY - padding).coerceAtLeast(0.0)
     }
 
     override fun getMaxY(minY: Double, maxY: Double, extraStore: ExtraStore): Double {
         val diff = maxY - minY
-        val padding = if (diff <= 0.0) 5.0 else max(1.0, diff * 0.15)
+        val padding = if (diff <= 0.0) 5.0 else max(1.0, diff * 0.05)
         return maxY + padding
     }
 }
@@ -450,7 +469,15 @@ private fun WeightLineChart(
                     fontSize = 11.sp
                 )
             ),
-            guideline = null
+            guideline = rememberAxisGuidelineComponent(
+                fill = Fill(MaterialTheme.colorScheme.outlineVariant),
+                thickness = 1.5.dp,
+                shape = DashedShape(
+                    shape = CircleShape,
+                    dashLength = 3.dp,
+                    gapLength = 4.dp
+                )
+            )
         ),
         bottomAxis = HorizontalAxis.rememberBottom(
             itemPlacer = remember(horizontalAxisSpacing) {

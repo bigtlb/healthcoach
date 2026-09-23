@@ -35,7 +35,7 @@ class SettingsDataTest {
 
         val original = SettingsData(
             selectedPage = SelectedPage.GraphsView,
-            selectedGraphTimeFrame = GraphTimeFrame.ONE_MONTH,
+            selectedGraphTimeFrame = GraphTimeFrame.YEAR_TO_DATE,
             themeMode = ThemeMode.DARK,
             adaptiveDisplay = false,
             splitterPosition = 0.42f
@@ -45,7 +45,7 @@ class SettingsDataTest {
         val deserialized = json.decodeFromString(SettingsData.serializer(), serialized)
 
         assertEquals(SelectedPage.GraphsView, deserialized.selectedPage)
-        assertEquals(GraphTimeFrame.ONE_MONTH, deserialized.selectedGraphTimeFrame)
+        assertEquals(GraphTimeFrame.YEAR_TO_DATE, deserialized.selectedGraphTimeFrame)
         assertEquals(ThemeMode.DARK, deserialized.themeMode)
         assertEquals(false, deserialized.adaptiveDisplay)
         assertEquals(0.42f, deserialized.splitterPosition)
@@ -58,6 +58,9 @@ class SettingsDataTest {
 
         viewModel.setSelectedPage(SelectedPage.BloodPressureView)
         assertEquals(SelectedPage.BloodPressureView, viewModel.settings.value.selectedPage)
+
+        viewModel.setSelectedGraphTimeFrame(GraphTimeFrame.YEAR_TO_DATE)
+        assertEquals(GraphTimeFrame.YEAR_TO_DATE, viewModel.settings.value.selectedGraphTimeFrame)
 
         viewModel.setSelectedGraphTimeFrame(GraphTimeFrame.THREE_MONTHS)
         assertEquals(GraphTimeFrame.THREE_MONTHS, viewModel.settings.value.selectedGraphTimeFrame)

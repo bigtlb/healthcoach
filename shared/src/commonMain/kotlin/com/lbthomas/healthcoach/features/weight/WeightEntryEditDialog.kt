@@ -36,6 +36,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.yield
 import com.lbthomas.healthcoach.core.di.previewAppModule
 import com.lbthomas.healthcoach.core.enums.WeightUnit
 import com.lbthomas.healthcoach.core.ui.onDialogKeyEvents
@@ -94,6 +95,7 @@ fun WeightEntryEditDialog(
     val weightInputFocusRequester = remember { FocusRequester() }
 
     LaunchedEffect(entry) {
+        yield()
         weightInputFocusRequester.requestFocus()
     }
 
@@ -124,8 +126,7 @@ fun WeightEntryEditDialog(
                 }
 
                 // Weight Input Field (nnn.n)
-                weightFieldValue =
-                    EnterWeightValue(
+                EnterWeightValue(
                         weightFieldValue = weightFieldValue,
                         onValueChanged = { weightFieldValue = it },
                         weightPattern = weightPattern,
@@ -212,8 +213,7 @@ private fun EnterWeightValue(
     units: String,
     isWeightValid: Boolean,
     weightInputFocusRequester: FocusRequester
-): TextFieldValue {
-    var weightFieldValue1 = weightFieldValue
+) {
     OutlinedTextField(
         value = weightFieldValue,
         onValueChange = { input ->
@@ -225,9 +225,9 @@ private fun EnterWeightValue(
         placeholder = { Text("000.0") },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-        isError = weightFieldValue1.text.isNotEmpty() && !isWeightValid,
+        isError = weightFieldValue.text.isNotEmpty() && !isWeightValid,
         supportingText = {
-            if (weightFieldValue1.text.isNotEmpty() && !isWeightValid) {
+            if (weightFieldValue.text.isNotEmpty() && !isWeightValid) {
                 Text("Enter a valid weight (e.g. 175.5)")
             }
         },
@@ -235,7 +235,6 @@ private fun EnterWeightValue(
             .fillMaxWidth()
             .focusRequester(weightInputFocusRequester)
     )
-    return weightFieldValue1
 }
 
 @Composable

@@ -12,6 +12,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.tooling.preview.Preview
+import kotlinx.coroutines.yield
 import com.lbthomas.healthcoach.core.di.previewAppModule
 import com.lbthomas.healthcoach.core.ui.onDialogKeyEvents
 import com.lbthomas.healthcoach.core.utils.today
@@ -29,6 +30,7 @@ fun DeleteConfirmation(
     val focusRequester = remember { FocusRequester() }
 
     LaunchedEffect(Unit) {
+        yield()
         focusRequester.requestFocus()
     }
 

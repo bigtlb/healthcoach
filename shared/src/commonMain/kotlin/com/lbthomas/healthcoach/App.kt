@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.yield
 import com.lbthomas.healthcoach.core.di.previewAppModule
 import com.lbthomas.healthcoach.core.enums.SelectedPage
 import com.lbthomas.healthcoach.core.enums.ThemeMode
@@ -65,11 +66,6 @@ fun App() {
     var showSettings by remember { mutableStateOf(false) }
     var showAddWeightEntry by remember { mutableStateOf(false) }
 
-    val focusRequester = remember { FocusRequester() }
-
-    LaunchedEffect(selectedPage, showSettings, showAddWeightEntry) {
-        focusRequester.requestFocus()
-    }
 
     val isDark = when (settings.themeMode) {
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
@@ -82,6 +78,14 @@ fun App() {
     MaterialTheme(colorScheme = colorScheme) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             val isWideLayout = settings.adaptiveDisplay && maxWidth >= 600.dp
+            val focusRequester = remember { FocusRequester() }
+
+            LaunchedEffect(selectedPage, showSettings, showAddWeightEntry) {
+                yield()
+                runCatching {
+                    focusRequester.requestFocus()
+                }
+            }
 
             LaunchedEffect(isWideLayout, selectedPage) {
                 if (isWideLayout && selectedPage == SelectedPage.GraphsView) {
@@ -92,7 +96,6 @@ fun App() {
             Scaffold(
                 modifier = Modifier
                     .focusRequester(focusRequester)
-
                     .focusable()
                     .onPreviewKeyEvent { keyEvent ->
                         if (keyEvent.type == KeyEventType.KeyDown &&

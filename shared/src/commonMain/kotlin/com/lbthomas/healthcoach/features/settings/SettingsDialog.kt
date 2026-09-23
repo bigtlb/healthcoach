@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.yield
 import com.lbthomas.healthcoach.core.di.previewAppModule
 import com.lbthomas.healthcoach.core.enums.ThemeMode
 import com.lbthomas.healthcoach.core.enums.WeightUnit
@@ -44,6 +45,7 @@ fun SettingsDialog(
     val focusRequester = remember { FocusRequester() }
 
     LaunchedEffect(Unit) {
+        yield()
         focusRequester.requestFocus()
     }
 
