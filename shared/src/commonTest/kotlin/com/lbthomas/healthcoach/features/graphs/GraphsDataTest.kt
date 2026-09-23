@@ -2,6 +2,7 @@ package com.lbthomas.healthcoach.features.graphs
 
 import com.lbthomas.healthcoach.core.enums.GraphTimeFrame
 import com.lbthomas.healthcoach.core.enums.WeightUnit
+import com.lbthomas.healthcoach.features.bloodpressure.data.BloodPressureEntryData
 import com.lbthomas.healthcoach.features.weight.data.WeightEntryData
 import kotlinx.datetime.LocalDate
 import kotlin.math.max
@@ -39,14 +40,14 @@ class GraphsDataTest {
     }
 
     @Test
-    fun testBuildGraphEntriesYearToDateWithInterpolation() {
+    fun testBuildWeightGraphEntriesYearToDateWithInterpolation() {
         val entries = listOf(
             WeightEntryData(id = 1, date = LocalDate(2025, 12, 1), weight = 80.0),
             WeightEntryData(id = 2, date = LocalDate(2026, 1, 31), weight = 70.0),
             WeightEntryData(id = 3, date = LocalDate(2026, 3, 1), weight = 68.0)
         )
 
-        val result = buildGraphEntries(entries, GraphTimeFrame.YEAR_TO_DATE)
+        val result = buildWeightGraphEntries(entries, GraphTimeFrame.YEAR_TO_DATE)
 
         val expectedMinEpochDay = LocalDate(2026, 1, 1).toEpochDays().toDouble()
         val expectedMaxEpochDay = LocalDate(2026, 3, 1).toEpochDays().toDouble()
@@ -61,42 +62,34 @@ class GraphsDataTest {
     }
 
     @Test
-    fun testBuildGraphEntriesYearToDateStartingOnJanFirst() {
+    fun testBuildBpGraphEntries() {
         val entries = listOf(
-            WeightEntryData(id = 1, date = LocalDate(2026, 1, 1), weight = 80.0),
-            WeightEntryData(id = 2, date = LocalDate(2026, 2, 1), weight = 78.0)
+            BloodPressureEntryData(id = 1, dateTime = "2026-01-15T08:00:00Z", systolic = 120, diastolic = 80, pulse = 70),
+            BloodPressureEntryData(id = 2, dateTime = "2026-01-15T20:00:00Z", systolic = 125, diastolic = 82, pulse = 72),
+            BloodPressureEntryData(id = 3, dateTime = "2026-02-10", systolic = 130, diastolic = 85, pulse = null)
         )
 
-        val result = buildGraphEntries(entries, GraphTimeFrame.YEAR_TO_DATE)
-
-        val expectedMinEpochDay = LocalDate(2026, 1, 1).toEpochDays().toDouble()
-        val expectedMaxEpochDay = LocalDate(2026, 2, 1).toEpochDays().toDouble()
-
-        assertEquals(expectedMinEpochDay, result.minEpochDay)
-        assertEquals(expectedMaxEpochDay, result.maxEpochDay)
-        assertEquals(2, result.entries.size)
-        assertEquals(LocalDate(2026, 1, 1), result.entries[0].date)
-        assertEquals(LocalDate(2026, 2, 1), result.entries[1].date)
+        val result = buildBpGraphEntries(entries, GraphTimeFrame.ALL)
+        assertEquals(3, result.points.size)
+        assertTrue(result.points[0].x < result.points[1].x)
+        assertEquals(120.0, result.points[0].systolic)
+        assertEquals(80.0, result.points[0].diastolic)
+        assertEquals(70, result.points[0].pulse)
+        assertEquals(72, result.points[1].pulse)
+        assertNull(result.points[2].pulse)
     }
 
     @Test
     fun testBuildGraphEntriesEmpty() {
-        val result = buildGraphEntries(emptyList(), GraphTimeFrame.YEAR_TO_DATE)
+        val result = buildWeightGraphEntries(emptyList(), GraphTimeFrame.YEAR_TO_DATE)
         assertTrue(result.entries.isEmpty())
         assertNull(result.minEpochDay)
         assertNull(result.maxEpochDay)
-    }
 
-    @Test
-    fun testBuildGraphEntriesAll() {
-        val entries = listOf(
-            WeightEntryData(id = 1, date = LocalDate(2024, 5, 1), weight = 85.0),
-            WeightEntryData(id = 2, date = LocalDate(2026, 2, 1), weight = 75.0)
-        )
-        val result = buildGraphEntries(entries, GraphTimeFrame.ALL)
-        assertEquals(2, result.entries.size)
-        assertNull(result.minEpochDay)
-        assertNull(result.maxEpochDay)
+        val bpResult = buildBpGraphEntries(emptyList(), GraphTimeFrame.ALL)
+        assertTrue(bpResult.points.isEmpty())
+        assertNull(bpResult.minEpochDay)
+        assertNull(bpResult.maxEpochDay)
     }
 
     @Test

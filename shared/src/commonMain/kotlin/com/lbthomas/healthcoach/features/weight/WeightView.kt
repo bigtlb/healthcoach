@@ -2,7 +2,6 @@ package com.lbthomas.healthcoach.features.weight
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -13,26 +12,10 @@ import androidx.compose.material.icons.outlined.KeyboardDoubleArrowDown
 import androidx.compose.material.icons.outlined.KeyboardDoubleArrowUp
 import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusProperties
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.isCtrlPressed
-import androidx.compose.ui.input.key.isMetaPressed
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -66,7 +49,8 @@ private object WeightViewDefaults {
 fun WeightView(
     showAddWeightEntry: Boolean,
     modifier: Modifier = Modifier,
-    onAddDismiss: () -> Unit = {}
+    onAddDismiss: () -> Unit = {},
+    onRequestFocus: () -> Unit = {}
 ) {
     val viewModel = koinInject<WeightViewModel>()
     val settings by koinInject<SettingsViewModel>().settings.collectAsState()
@@ -87,9 +71,11 @@ fun WeightView(
             onConfirm = {
                 viewModel.deleteEntry(entry.id)
                 entryToDelete = null
+                onRequestFocus()
             },
             onDismiss = {
                 entryToDelete = null
+                onRequestFocus()
             }
         )
     }
@@ -103,10 +89,13 @@ fun WeightView(
                 else
                     viewModel.updateEntry(updatedEntry)
                 entryToEdit = null
+                if (showAddWeightEntry) onAddDismiss()
+                onRequestFocus()
             },
             onDismiss = {
                 entryToEdit = null
                 if (showAddWeightEntry) onAddDismiss()
+                onRequestFocus()
             },
             settings
         )
@@ -259,7 +248,6 @@ private fun RowData(
     modifier: Modifier = Modifier
 ) {
     val units = if (settings.weightUnit == WeightUnit.METRIC) "kgs" else "lbs"
-    val singleUnit = units.dropLast(1)
 
     val change = prior?.let { prior ->
         entry.getWeightInCurrentUnits(settings.weightUnit) - prior.getWeightInCurrentUnits(settings.weightUnit)

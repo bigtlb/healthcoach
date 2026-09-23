@@ -65,6 +65,7 @@ fun App() {
     val selectedPage = settings.selectedPage
     var showSettings by remember { mutableStateOf(false) }
     var showAddWeightEntry by remember { mutableStateOf(false) }
+    var showAddBloodPressureEntry by remember { mutableStateOf(false) }
 
 
     val isDark = when (settings.themeMode) {
@@ -80,7 +81,7 @@ fun App() {
             val isWideLayout = settings.adaptiveDisplay && maxWidth >= 600.dp
             val focusRequester = remember { FocusRequester() }
 
-            LaunchedEffect(selectedPage, showSettings, showAddWeightEntry) {
+            LaunchedEffect(selectedPage, showSettings, showAddWeightEntry, showAddBloodPressureEntry) {
                 yield()
                 runCatching {
                     focusRequester.requestFocus()
@@ -115,6 +116,8 @@ fun App() {
                                 Key.N, Key.Plus, Key.NumPadAdd, Key.Equals -> {
                                     if (selectedPage == SelectedPage.WeightView) {
                                         showAddWeightEntry = true
+                                    } else if (selectedPage == SelectedPage.BloodPressureView) {
+                                        showAddBloodPressureEntry = true
                                     }
                                 }
                                 else -> {
@@ -142,14 +145,28 @@ fun App() {
                     splitterPosition = settings.splitterPosition,
                     onSplitterPositionChange = { settingsViewModel.setSplitterPosition(it) },
                     showAddWeightEntry = showAddWeightEntry,
-                    onAddDismiss = { showAddWeightEntry = false }
+                    onAddWeightDismiss = {
+                        showAddWeightEntry = false
+                        runCatching { focusRequester.requestFocus() }
+                    },
+                    showAddBloodPressureEntry = showAddBloodPressureEntry,
+                    onAddBloodPressureDismiss = {
+                        showAddBloodPressureEntry = false
+                        runCatching { focusRequester.requestFocus() }
+                    },
+                    onRequestFocus = {
+                        runCatching { focusRequester.requestFocus() }
+                    }
                 )
             }
 
             if (showSettings) {
                 SettingsDialog(
                     settingsViewModel = settingsViewModel,
-                    onDismiss = { showSettings = false }
+                    onDismiss = {
+                        showSettings = false
+                        runCatching { focusRequester.requestFocus() }
+                    }
                 )
             }
         }
@@ -163,8 +180,11 @@ private fun AppContent(
     splitterPosition: Float = 0.5f,
     onSplitterPositionChange: (Float) -> Unit = {},
     showAddWeightEntry: Boolean,
-    modifier: Modifier = Modifier,
-    onAddDismiss: () -> Unit = {}
+    onAddWeightDismiss: () -> Unit = {},
+    showAddBloodPressureEntry: Boolean,
+    onAddBloodPressureDismiss: () -> Unit = {},
+    onRequestFocus: () -> Unit = {},
+    modifier: Modifier = Modifier
 ) {
     Column(
         modifier = modifier
@@ -173,16 +193,25 @@ private fun AppContent(
             .padding(top = 5.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        if (isWideLayout && selectedPage == SelectedPage.WeightView) {
+        if (isWideLayout && (selectedPage == SelectedPage.WeightView || selectedPage == SelectedPage.BloodPressureView)) {
             HorizontalSplitPane(
                 modifier = Modifier.fillMaxSize(),
                 initialFraction = splitterPosition,
                 onFractionChange = onSplitterPositionChange,
                 first = {
-                    WeightView(
-                        showAddWeightEntry = showAddWeightEntry,
-                        onAddDismiss = onAddDismiss
-                    )
+                    if (selectedPage == SelectedPage.WeightView) {
+                        WeightView(
+                            showAddWeightEntry = showAddWeightEntry,
+                            onAddDismiss = onAddWeightDismiss,
+                            onRequestFocus = onRequestFocus
+                        )
+                    } else {
+                        BloodPressureView(
+                            showAddBloodPressureEntry = showAddBloodPressureEntry,
+                            onAddDismiss = onAddBloodPressureDismiss,
+                            onRequestFocus = onRequestFocus
+                        )
+                    }
                 },
                 second = {
                     GraphsView()
@@ -192,9 +221,14 @@ private fun AppContent(
             when (selectedPage) {
                 SelectedPage.WeightView -> WeightView(
                     showAddWeightEntry = showAddWeightEntry,
-                    onAddDismiss = onAddDismiss
+                    onAddDismiss = onAddWeightDismiss,
+                    onRequestFocus = onRequestFocus
                 )
-                SelectedPage.BloodPressureView -> BloodPressureView()
+                SelectedPage.BloodPressureView -> BloodPressureView(
+                    showAddBloodPressureEntry = showAddBloodPressureEntry,
+                    onAddDismiss = onAddBloodPressureDismiss,
+                    onRequestFocus = onRequestFocus
+                )
                 SelectedPage.GraphsView -> GraphsView()
             }
         }

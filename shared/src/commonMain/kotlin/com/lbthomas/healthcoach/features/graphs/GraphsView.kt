@@ -1,5 +1,6 @@
 package com.lbthomas.healthcoach.features.graphs
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,14 +21,15 @@ import com.lbthomas.healthcoach.core.di.previewAppModule
 import com.lbthomas.healthcoach.core.enums.GraphTimeFrame
 import com.lbthomas.healthcoach.core.enums.WeightUnit
 import com.lbthomas.healthcoach.core.utils.displayDate
+import com.lbthomas.healthcoach.core.utils.formatTime
+import com.lbthomas.healthcoach.features.bloodpressure.BloodPressureViewModel
+import com.lbthomas.healthcoach.features.bloodpressure.data.BloodPressureEntryData
 import com.lbthomas.healthcoach.features.settings.SettingsViewModel
+import com.lbthomas.healthcoach.features.settings.data.SettingsData
 import com.lbthomas.healthcoach.features.weight.WeightViewModel
 import com.lbthomas.healthcoach.features.weight.data.WeightEntryData
 import com.patrykandpatrick.vico.compose.cartesian.*
-import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
-import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisGuidelineComponent
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLabelComponent
+import com.patrykandpatrick.vico.compose.cartesian.axis.*
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianLayerRangeProvider
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
@@ -54,20 +56,36 @@ import org.koin.dsl.koinConfiguration
 import kotlin.math.max
 import kotlin.math.round
 
-internal data class GraphEntries(
+internal data class WeightGraphEntries(
     val entries: List<WeightEntryData>,
     val minEpochDay: Double?,
     val maxEpochDay: Double?
 )
 
-internal fun buildGraphEntries(
+internal data class BpGraphPoint(
+    val id: Long,
+    val x: Double,
+    val date: LocalDate,
+    val systolic: Double,
+    val diastolic: Double,
+    val pulse: Int? = null,
+    val timeFormatted: String? = null
+)
+
+internal data class BpGraphEntries(
+    val points: List<BpGraphPoint>,
+    val minEpochDay: Double?,
+    val maxEpochDay: Double?
+)
+
+internal fun buildWeightGraphEntries(
     rawEntries: List<WeightEntryData>,
     timeFrame: GraphTimeFrame
-): GraphEntries {
+): WeightGraphEntries {
     val sorted = rawEntries.sortedBy { it.date }
 
     if (sorted.isEmpty()) {
-        return GraphEntries(
+        return WeightGraphEntries(
             entries = emptyList(),
             minEpochDay = null,
             maxEpochDay = null
@@ -75,7 +93,7 @@ internal fun buildGraphEntries(
     }
 
     if (timeFrame == GraphTimeFrame.ALL) {
-        return GraphEntries(
+        return WeightGraphEntries(
             entries = sorted,
             minEpochDay = null,
             maxEpochDay = null
@@ -87,7 +105,7 @@ internal fun buildGraphEntries(
     val minEpochDay = if (timeFrame == GraphTimeFrame.YEAR_TO_DATE) {
         LocalDate(latestDate.year, 1, 1).toEpochDays()
     } else {
-        val days = timeFrame.days ?: return GraphEntries(
+        val days = timeFrame.days ?: return WeightGraphEntries(
             entries = sorted,
             minEpochDay = null,
             maxEpochDay = null
@@ -123,9 +141,73 @@ internal fun buildGraphEntries(
         null
     }
 
-
-    return GraphEntries(
+    return WeightGraphEntries(
         entries = listOfNotNull(interpolateEdgeEntry()) + entriesInRange,
+        minEpochDay = minEpochDay.toDouble(),
+        maxEpochDay = maxEpochDay
+    )
+}
+
+internal fun buildBpGraphEntries(
+    rawEntries: List<BloodPressureEntryData>,
+    timeFrame: GraphTimeFrame
+): BpGraphEntries {
+    val sorted = rawEntries.sortedWith(
+        compareBy<BloodPressureEntryData> { it.date }
+            .thenBy { it.time?.toString() ?: "" }
+    )
+
+    if (sorted.isEmpty()) {
+        return BpGraphEntries(
+            points = emptyList(),
+            minEpochDay = null,
+            maxEpochDay = null
+        )
+    }
+
+    val points = sorted.map { entry ->
+        val fractionOfDay = if (entry.hasTime && entry.time != null) {
+            (entry.time!!.hour * 3600 + entry.time!!.minute * 60 + entry.time!!.second) / 86400.0
+        } else {
+            0.0
+        }
+        BpGraphPoint(
+            id = entry.id,
+            x = entry.date.toEpochDays().toDouble() + fractionOfDay,
+            date = entry.date,
+            systolic = entry.systolic.toDouble(),
+            diastolic = entry.diastolic.toDouble(),
+            pulse = entry.pulse,
+            timeFormatted = entry.time?.formatTime()
+        )
+    }
+
+    if (timeFrame == GraphTimeFrame.ALL) {
+        return BpGraphEntries(
+            points = points,
+            minEpochDay = null,
+            maxEpochDay = null
+        )
+    }
+
+    val latestDate = sorted.last().date
+    val latestEpochDay = latestDate.toEpochDays()
+    val minEpochDay = if (timeFrame == GraphTimeFrame.YEAR_TO_DATE) {
+        LocalDate(latestDate.year, 1, 1).toEpochDays()
+    } else {
+        val days = timeFrame.days ?: return BpGraphEntries(
+            points = points,
+            minEpochDay = null,
+            maxEpochDay = null
+        )
+        latestEpochDay - days
+    }
+    val maxEpochDay = latestEpochDay.toDouble()
+
+    val filteredPoints = points.filter { it.x >= minEpochDay.toDouble() }
+
+    return BpGraphEntries(
+        points = filteredPoints,
         minEpochDay = minEpochDay.toDouble(),
         maxEpochDay = maxEpochDay
     )
@@ -134,52 +216,84 @@ internal fun buildGraphEntries(
 @Composable
 fun GraphsView(modifier: Modifier = Modifier) {
     val weightViewModel = koinInject<WeightViewModel>()
+    val bloodPressureViewModel = koinInject<BloodPressureViewModel>()
     val settingsViewModel = koinInject<SettingsViewModel>()
 
-    val rawEntries by weightViewModel.entries.collectAsState()
+    val rawWeightEntries by weightViewModel.entries.collectAsState()
+    val rawBpEntries by bloodPressureViewModel.entries.collectAsState()
     val settings by settingsViewModel.settings.collectAsState()
     val selectedTimeFrame = settings.selectedGraphTimeFrame
 
-    val graphEntries = remember(rawEntries, selectedTimeFrame) {
-        buildGraphEntries(
-            rawEntries = rawEntries,
+    val showWeight = settings.showWeightInGraph
+    val showBp = settings.showBloodPressureInGraph
+
+    val weightGraphEntries = remember(rawWeightEntries, selectedTimeFrame) {
+        buildWeightGraphEntries(
+            rawEntries = rawWeightEntries,
             timeFrame = selectedTimeFrame
         )
     }
+
+    val bpGraphEntries = remember(rawBpEntries, selectedTimeFrame) {
+        buildBpGraphEntries(
+            rawEntries = rawBpEntries,
+            timeFrame = selectedTimeFrame
+        )
+    }
+
+    val hasWeightData = showWeight && weightGraphEntries.entries.isNotEmpty()
+    val hasBpData = showBp && bpGraphEntries.points.isNotEmpty()
+    val hasAnyData = hasWeightData || hasBpData
 
     Surface(
         modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
-        if (graphEntries.entries.isEmpty()) {
-            EmptyGraphState()
-        } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
-            ) {
-                GraphHeader(selectedTimeFrame, settingsViewModel)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
+            GraphHeader(
+                selectedTimeFrame = selectedTimeFrame,
+                settings = settings,
+                settingsViewModel = settingsViewModel
+            )
 
-                Card(
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        .fillMaxSize()
+                        .padding(16.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp)
-                    ) {
-                        WeightLineChart(
-                            entries = graphEntries.entries,
+                    if (!hasAnyData) {
+                        EmptyGraphState(
+                            message = if (!showWeight && !showBp) {
+                                "Enable Weight or Blood Pressure above to view graph."
+                            } else {
+                                "No data available for the selected series and timeframe."
+                            }
+                        )
+                    } else {
+                        CompoundHealthChart(
+                            showWeight = showWeight,
+                            showBp = showBp,
+                            showPulse = settings.showPulseInGraph,
+                            weightEntries = if (showWeight) weightGraphEntries.entries else emptyList(),
+                            bpPoints = if (showBp) bpGraphEntries.points else emptyList(),
                             weightUnit = settings.weightUnit,
-                            minEpochDay = graphEntries.minEpochDay,
-                            maxEpochDay = graphEntries.maxEpochDay,
+                            weightMinEpoch = weightGraphEntries.minEpochDay,
+                            weightMaxEpoch = weightGraphEntries.maxEpochDay,
+                            bpMinEpoch = bpGraphEntries.minEpochDay,
+                            bpMaxEpoch = bpGraphEntries.maxEpochDay,
                             modifier = Modifier.fillMaxSize()
                         )
                     }
@@ -192,6 +306,7 @@ fun GraphsView(modifier: Modifier = Modifier) {
 @Composable
 private fun GraphHeader(
     selectedTimeFrame: GraphTimeFrame,
+    settings: SettingsData,
     settingsViewModel: SettingsViewModel
 ) {
     Row(
@@ -201,16 +316,47 @@ private fun GraphHeader(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = "Weight History",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-        )
+        // Series Selection Checkboxes
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(
+                    checked = settings.showWeightInGraph,
+                    onCheckedChange = { settingsViewModel.setShowWeightInGraph(it) }
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "Weight",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(
+                    checked = settings.showBloodPressureInGraph,
+                    onCheckedChange = { settingsViewModel.setShowBloodPressureInGraph(it) }
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "Blood Pressure",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+
+        // Time Frame Dropdown
         GraphTimeFrameDropdown(
             selectedTimeFrame = selectedTimeFrame,
             onTimeFrameSelected = { settingsViewModel.setSelectedGraphTimeFrame(it) }
         )
-
     }
 }
 
@@ -259,9 +405,11 @@ private fun GraphTimeFrameDropdown(
     }
 }
 
-
 @Composable
-private fun EmptyGraphState(modifier: Modifier = Modifier) {
+private fun EmptyGraphState(
+    message: String = "Log weight or blood pressure entries to view your progress graph.",
+    modifier: Modifier = Modifier
+) {
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -280,14 +428,14 @@ private fun EmptyGraphState(modifier: Modifier = Modifier) {
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "No Weight Data Available",
+                text = "No Graph Data Available",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Log weight entries in the Weight tab to view your progress graph.",
+                text = message,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
@@ -298,7 +446,9 @@ private fun EmptyGraphState(modifier: Modifier = Modifier) {
 
 private class TimeFrameChartRangeProvider(
     private val forcedMinX: Double?,
-    private val forcedMaxX: Double?
+    private val forcedMaxX: Double?,
+    private val minPadding: Double = 5.0,
+    private val maxPadding: Double = 5.0
 ) : CartesianLayerRangeProvider {
     override fun getMinX(minX: Double, maxX: Double, extraStore: ExtraStore): Double {
         return forcedMinX ?: minX
@@ -310,59 +460,192 @@ private class TimeFrameChartRangeProvider(
 
     override fun getMinY(minY: Double, maxY: Double, extraStore: ExtraStore): Double {
         val diff = maxY - minY
-        val padding = if (diff <= 0.0) 5.0 else max(1.0, diff * 0.05)
+        val padding = if (diff <= 0.0) minPadding else max(1.0, diff * 0.05)
         return (minY - padding).coerceAtLeast(0.0)
     }
 
     override fun getMaxY(minY: Double, maxY: Double, extraStore: ExtraStore): Double {
         val diff = maxY - minY
-        val padding = if (diff <= 0.0) 5.0 else max(1.0, diff * 0.05)
+        val padding = if (diff <= 0.0) maxPadding else max(1.0, diff * 0.05)
         return maxY + padding
     }
 }
 
-
 @Composable
-private fun WeightLineChart(
-    entries: List<WeightEntryData>,
+private fun CompoundHealthChart(
+    showWeight: Boolean,
+    showBp: Boolean,
+    showPulse: Boolean,
+    weightEntries: List<WeightEntryData>,
+    bpPoints: List<BpGraphPoint>,
     weightUnit: WeightUnit,
-    minEpochDay: Double?,
-    maxEpochDay: Double?,
+    weightMinEpoch: Double?,
+    weightMaxEpoch: Double?,
+    bpMinEpoch: Double?,
+    bpMaxEpoch: Double?,
     modifier: Modifier = Modifier
 ) {
     val modelProducer = remember { CartesianChartModelProducer() }
 
-    LaunchedEffect(entries, weightUnit) {
-        val xValues = entries.map { it.date.toEpochDays().toDouble() }
-        val yValues = entries.map { it.getWeightInCurrentUnits(weightUnit) }
+    val hasWeight = showWeight && weightEntries.isNotEmpty()
+    val hasBp = showBp && bpPoints.isNotEmpty()
+    val hasPulseSeries = hasBp && showPulse && bpPoints.any { it.pulse != null }
+    val pulsePoints = remember(hasPulseSeries, bpPoints) {
+        if (hasPulseSeries) bpPoints.filter { it.pulse != null } else emptyList()
+    }
+
+    // Global X min/max calculation across active datasets
+    val globalMinX = remember(hasWeight, hasBp, weightMinEpoch, bpMinEpoch, weightEntries, bpPoints) {
+        val mins = mutableListOf<Double>()
+        if (hasWeight) {
+            weightMinEpoch?.let { mins.add(it) } ?: weightEntries.firstOrNull()?.date?.toEpochDays()?.toDouble()?.let { mins.add(it) }
+        }
+        if (hasBp) {
+            bpMinEpoch?.let { mins.add(it) } ?: bpPoints.firstOrNull()?.x?.let { mins.add(it) }
+        }
+        mins.minOrNull()
+    }
+
+    val globalMaxX = remember(hasWeight, hasBp, weightMaxEpoch, bpMaxEpoch, weightEntries, bpPoints) {
+        val maxs = mutableListOf<Double>()
+        if (hasWeight) {
+            weightMaxEpoch?.let { maxs.add(it) } ?: weightEntries.lastOrNull()?.date?.toEpochDays()?.toDouble()?.let { maxs.add(it) }
+        }
+        if (hasBp) {
+            bpMaxEpoch?.let { maxs.add(it) } ?: bpPoints.lastOrNull()?.x?.let { maxs.add(it) }
+        }
+        maxs.maxOrNull()
+    }
+
+    LaunchedEffect(hasWeight, hasBp, weightEntries, bpPoints, weightUnit, hasPulseSeries, pulsePoints) {
         modelProducer.runTransaction {
-            lineModel {
-                series(x = xValues, y = yValues)
+            if (hasWeight && hasBp) {
+                // Layer 0: Weight (Left/Start Axis)
+                lineModel {
+                    series(
+                        x = weightEntries.map { it.date.toEpochDays().toDouble() },
+                        y = weightEntries.map { it.getWeightInCurrentUnits(weightUnit) }
+                    )
+                }
+                // Layer 1: Blood Pressure and optional Pulse (Right/End Axis)
+                lineModel {
+                    series(
+                        x = bpPoints.map { it.x },
+                        y = bpPoints.map { it.systolic }
+                    )
+                    series(
+                        x = bpPoints.map { it.x },
+                        y = bpPoints.map { it.diastolic }
+                    )
+                    if (hasPulseSeries) {
+                        series(
+                            x = pulsePoints.map { it.x },
+                            y = pulsePoints.map { it.pulse!!.toDouble() }
+                        )
+                    }
+                }
+            } else if (hasWeight) {
+                lineModel {
+                    series(
+                        x = weightEntries.map { it.date.toEpochDays().toDouble() },
+                        y = weightEntries.map { it.getWeightInCurrentUnits(weightUnit) }
+                    )
+                }
+            } else if (hasBp) {
+                lineModel {
+                    series(
+                        x = bpPoints.map { it.x },
+                        y = bpPoints.map { it.systolic }
+                    )
+                    series(
+                        x = bpPoints.map { it.x },
+                        y = bpPoints.map { it.diastolic }
+                    )
+                    if (hasPulseSeries) {
+                        series(
+                            x = pulsePoints.map { it.x },
+                            y = pulsePoints.map { it.pulse!!.toDouble() }
+                        )
+                    }
+                }
             }
         }
     }
 
     val unitLabel = if (weightUnit == WeightUnit.METRIC) "kg" else "lb"
-    val chartLineColor = Color(0xFF1E88E5)
+    val weightLineColor = Color(0xFF1E88E5) // Blue
+    val bpSystolicColor = Color(0xFFF57C00) // Orange
+    val bpDiastolicColor = Color(0xFF4CAF50) // Green
+    val bpPulseColor = Color(0xFFE040FB) // Magenta
 
-    val line = LineCartesianLayer.rememberLine(
-        fill = LineCartesianLayer.LineFill.single(Fill(chartLineColor)),
+    val weightLine = LineCartesianLayer.rememberLine(
+        fill = LineCartesianLayer.LineFill.single(Fill(weightLineColor)),
         stroke = LineCartesianLayer.LineStroke.Continuous(thickness = 2.5.dp),
         pointProvider = null,
         areaFill = null
     )
 
-    val rangeProvider = remember(minEpochDay, maxEpochDay) {
+    val bpSystolicLine = LineCartesianLayer.rememberLine(
+        fill = LineCartesianLayer.LineFill.single(Fill(bpSystolicColor)),
+        stroke = LineCartesianLayer.LineStroke.Continuous(thickness = 2.5.dp),
+        pointProvider = null,
+        areaFill = null
+    )
+
+    val bpDiastolicLine = LineCartesianLayer.rememberLine(
+        fill = LineCartesianLayer.LineFill.single(Fill(bpDiastolicColor)),
+        stroke = LineCartesianLayer.LineStroke.Continuous(thickness = 2.5.dp),
+        pointProvider = null,
+        areaFill = null
+    )
+
+    val bpPulseLine = LineCartesianLayer.rememberLine(
+        fill = LineCartesianLayer.LineFill.single(Fill(bpPulseColor)),
+        stroke = LineCartesianLayer.LineStroke.Continuous(thickness = 2.5.dp),
+        pointProvider = null,
+        areaFill = null
+    )
+
+    val globalRangeProvider = remember(globalMinX, globalMaxX) {
         TimeFrameChartRangeProvider(
-            forcedMinX = minEpochDay,
-            forcedMaxX = maxEpochDay
+            forcedMinX = globalMinX,
+            forcedMaxX = globalMaxX
         )
     }
 
-    val lineLayer = rememberLineCartesianLayer(
-        lineProvider = LineCartesianLayer.LineProvider.series(line),
-        rangeProvider = rangeProvider
-    )
+    val bpLines = if (hasPulseSeries) {
+        listOf(bpSystolicLine, bpDiastolicLine, bpPulseLine)
+    } else {
+        listOf(bpSystolicLine, bpDiastolicLine)
+    }
+
+    val lineLayers = if (hasWeight && hasBp) {
+        val weightLayer = rememberLineCartesianLayer(
+            lineProvider = LineCartesianLayer.LineProvider.series(weightLine),
+            rangeProvider = globalRangeProvider,
+            verticalAxisPosition = Axis.Position.Vertical.Start
+        )
+        val bpLayer = rememberLineCartesianLayer(
+            lineProvider = LineCartesianLayer.LineProvider.series(bpLines),
+            rangeProvider = globalRangeProvider,
+            verticalAxisPosition = Axis.Position.Vertical.End
+        )
+        listOf(weightLayer, bpLayer)
+    } else if (hasWeight) {
+        val weightLayer = rememberLineCartesianLayer(
+            lineProvider = LineCartesianLayer.LineProvider.series(weightLine),
+            rangeProvider = globalRangeProvider,
+            verticalAxisPosition = Axis.Position.Vertical.Start
+        )
+        listOf(weightLayer)
+    } else {
+        val bpLayer = rememberLineCartesianLayer(
+            lineProvider = LineCartesianLayer.LineProvider.series(bpLines),
+            rangeProvider = globalRangeProvider,
+            verticalAxisPosition = Axis.Position.Vertical.Start
+        )
+        listOf(bpLayer)
+    }
 
     val markerLabelBackground = rememberShapeComponent(
         fill = Fill(MaterialTheme.colorScheme.surfaceVariant),
@@ -378,25 +661,32 @@ private fun WeightLineChart(
             fontWeight = FontWeight.Medium,
             textAlign = TextAlign.Center
         ),
-        lineCount = 2,
+        lineCount = 4,
         padding = Insets(horizontal = 10.dp, vertical = 6.dp),
         background = markerLabelBackground
     )
 
-    val markerValueFormatter = remember(weightUnit) {
+    val markerValueFormatter = remember(hasWeight, hasBp, weightUnit) {
         DefaultCartesianMarker.ValueFormatter { _, targets ->
-            val lineTarget = targets.filterIsInstance<LineCartesianLayerMarkerTarget>().firstOrNull()
-            val point = lineTarget?.points?.firstOrNull()
-            if (point != null) {
-                val date = LocalDate.fromEpochDays(point.entry.x.toLong())
-                val dateText = date.displayDate()
-                val roundedWeight = round(point.entry.y * 10) / 10.0
-                val weightFormatted = if (roundedWeight % 1.0 == 0.0) {
-                    roundedWeight.toInt().toString()
-                } else {
-                    roundedWeight.toString()
+            val points = targets.filterIsInstance<LineCartesianLayerMarkerTarget>().flatMap { it.points }
+            if (points.isNotEmpty()) {
+                val firstX = points.first().entry.x
+                val date = LocalDate.fromEpochDays(firstX.toLong())
+                val lines = mutableListOf(date.displayDate())
+
+                points.forEach { point ->
+                    val y = point.entry.y
+                    val rounded = round(y * 10) / 10.0
+                    val formatted = if (rounded % 1.0 == 0.0) rounded.toInt().toString() else rounded.toString()
+                    when (point.color) {
+                        weightLineColor -> lines.add("Weight: $formatted $unitLabel")
+                        bpSystolicColor -> lines.add("Systolic: $formatted mmHg")
+                        bpDiastolicColor -> lines.add("Diastolic: $formatted mmHg")
+                        bpPulseColor -> lines.add("Pulse: $formatted bpm")
+                        else -> lines.add("$formatted")
+                    }
                 }
-                "$dateText\n$weightFormatted $unitLabel"
+                lines.joinToString("\n")
             } else {
                 ""
             }
@@ -417,10 +707,9 @@ private fun WeightLineChart(
         guideline = null
     )
 
-
-    val daySpan = remember(entries) {
-        if (entries.size >= 2) {
-            entries.last().date.toEpochDays() - entries.first().date.toEpochDays()
+    val daySpan = remember(globalMinX, globalMaxX) {
+        if (globalMinX != null && globalMaxX != null) {
+            (globalMaxX - globalMinX).toInt()
         } else {
             0
         }
@@ -448,42 +737,47 @@ private fun WeightLineChart(
         }
     }
 
-    val startAxisValueFormatter = remember(weightUnit) {
+    val startAxisValueFormatter = remember(hasWeight, hasBp, weightUnit) {
         CartesianValueFormatter { _, value, _ ->
             val rounded = round(value * 10) / 10.0
-            if (rounded % 1.0 == 0.0) {
-                "${rounded.toInt()} $unitLabel"
+            val num = if (rounded % 1.0 == 0.0) "${rounded.toInt()}" else "$rounded"
+            if (hasWeight) {
+                "$num $unitLabel"
             } else {
-                "$rounded $unitLabel"
+                "$num mmHg"
             }
         }
     }
 
-    val chart = rememberCartesianChart(
-        lineLayer,
-        startAxis = VerticalAxis.rememberStart(
-            valueFormatter = startAxisValueFormatter,
-            label = rememberAxisLabelComponent(
-                style = TextStyle(
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 11.sp
-                )
-            ),
-            guideline = rememberAxisGuidelineComponent(
-                fill = Fill(MaterialTheme.colorScheme.outlineVariant),
-                thickness = 1.5.dp,
-                shape = DashedShape(
-                    shape = CircleShape,
-                    dashLength = 3.dp,
-                    gapLength = 4.dp
-                )
+    val endAxisValueFormatter = remember {
+        CartesianValueFormatter { _, value, _ ->
+            val rounded = round(value).toInt()
+            "$rounded mmHg"
+        }
+    }
+
+    val startAxis = VerticalAxis.rememberStart(
+        valueFormatter = startAxisValueFormatter,
+        label = rememberAxisLabelComponent(
+            style = TextStyle(
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 11.sp
             )
         ),
-        bottomAxis = HorizontalAxis.rememberBottom(
-            itemPlacer = remember(horizontalAxisSpacing) {
-                HorizontalAxis.ItemPlacer.aligned(spacing = { horizontalAxisSpacing })
-            },
-            valueFormatter = bottomAxisValueFormatter,
+        guideline = rememberAxisGuidelineComponent(
+            fill = Fill(MaterialTheme.colorScheme.outlineVariant),
+            thickness = 1.5.dp,
+            shape = DashedShape(
+                shape = CircleShape,
+                dashLength = 3.dp,
+                gapLength = 4.dp
+            )
+        )
+    )
+
+    val endAxis = if (hasWeight && hasBp) {
+        VerticalAxis.rememberEnd(
+            valueFormatter = endAxisValueFormatter,
             label = rememberAxisLabelComponent(
                 style = TextStyle(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -491,19 +785,85 @@ private fun WeightLineChart(
                 )
             ),
             guideline = null
+        )
+    } else {
+        null
+    }
+
+    val bottomAxis = HorizontalAxis.rememberBottom(
+        itemPlacer = remember(horizontalAxisSpacing) {
+            HorizontalAxis.ItemPlacer.aligned(spacing = { horizontalAxisSpacing })
+        },
+        valueFormatter = bottomAxisValueFormatter,
+        label = rememberAxisLabelComponent(
+            style = TextStyle(
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 11.sp
+            )
         ),
+        guideline = null
+    )
+
+    val chart = rememberCartesianChart(
+        *lineLayers.toTypedArray(),
+        startAxis = startAxis,
+        endAxis = endAxis,
+        bottomAxis = bottomAxis,
         marker = marker,
         markerController = CartesianMarkerController.rememberShowOnHover()
     )
 
+    Column(modifier = modifier) {
+        // Legend
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (hasWeight) {
+                LegendItem(color = weightLineColor, label = "Weight ($unitLabel)")
+            }
+            if (hasWeight && hasBp) {
+                Spacer(modifier = Modifier.width(16.dp))
+            }
+            if (hasBp) {
+                LegendItem(color = bpSystolicColor, label = "Systolic (mmHg)")
+                Spacer(modifier = Modifier.width(12.dp))
+                LegendItem(color = bpDiastolicColor, label = "Diastolic (mmHg)")
+                if (showPulse) {
+                    Spacer(modifier = Modifier.width(12.dp))
+                    LegendItem(color = bpPulseColor, label = "Pulse (bpm)")
+                }
+            }
+        }
 
-    CartesianChartHost(
-        chart = chart,
-        modelProducer = modelProducer,
-        scrollState = rememberVicoScrollState(scrollEnabled = false),
-        zoomState = rememberVicoZoomState(zoomEnabled = false, initialZoom = Zoom.Content),
-        modifier = modifier
-    )
+        CartesianChartHost(
+            chart = chart,
+            modelProducer = modelProducer,
+            scrollState = rememberVicoScrollState(scrollEnabled = false),
+            zoomState = rememberVicoZoomState(zoomEnabled = false, initialZoom = Zoom.Content),
+            modifier = Modifier.weight(1f).fillMaxWidth()
+        )
+    }
+}
+
+@Composable
+private fun LegendItem(color: Color, label: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(10.dp)
+                .background(color, CircleShape)
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
 }
 
 @Preview(

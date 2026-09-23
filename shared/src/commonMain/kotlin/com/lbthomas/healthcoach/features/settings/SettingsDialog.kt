@@ -111,6 +111,13 @@ private fun BloodPressureOptions(
 ) {
     SettingsSection(title = "Blood Pressure Display Options") {
         SettingCheckboxRow(
+            text = "Include Pulse in Graph",
+            checked = settings.showPulseInGraph,
+            onCheckedChange = { checked ->
+                settingsViewModel.setShowPulseInGraph(checked)
+            }
+        )
+        SettingCheckboxRow(
             text = "Show Daily Averages",
             checked = settings.showDailyAverages,
             onCheckedChange = { checked ->

@@ -23,6 +23,9 @@ class SettingsDataTest {
         assertEquals(ThemeMode.SYSTEM, settings.themeMode)
         assertEquals(true, settings.adaptiveDisplay)
         assertEquals(0.5f, settings.splitterPosition)
+        assertEquals(true, settings.showWeightInGraph)
+        assertEquals(true, settings.showBloodPressureInGraph)
+        assertEquals(false, settings.showPulseInGraph)
     }
 
     @Test
@@ -38,7 +41,8 @@ class SettingsDataTest {
             selectedGraphTimeFrame = GraphTimeFrame.YEAR_TO_DATE,
             themeMode = ThemeMode.DARK,
             adaptiveDisplay = false,
-            splitterPosition = 0.42f
+            splitterPosition = 0.42f,
+            showPulseInGraph = true
         )
 
         val serialized = json.encodeToString(SettingsData.serializer(), original)
@@ -49,6 +53,7 @@ class SettingsDataTest {
         assertEquals(ThemeMode.DARK, deserialized.themeMode)
         assertEquals(false, deserialized.adaptiveDisplay)
         assertEquals(0.42f, deserialized.splitterPosition)
+        assertEquals(true, deserialized.showPulseInGraph)
     }
 
     @Test
@@ -73,5 +78,14 @@ class SettingsDataTest {
 
         viewModel.setSplitterPosition(0.65f)
         assertEquals(0.65f, viewModel.settings.value.splitterPosition)
+
+        viewModel.setShowWeightInGraph(false)
+        assertEquals(false, viewModel.settings.value.showWeightInGraph)
+
+        viewModel.setShowBloodPressureInGraph(false)
+        assertEquals(false, viewModel.settings.value.showBloodPressureInGraph)
+
+        viewModel.setShowPulseInGraph(true)
+        assertEquals(true, viewModel.settings.value.showPulseInGraph)
     }
 }

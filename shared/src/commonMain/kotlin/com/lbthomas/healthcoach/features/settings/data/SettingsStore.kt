@@ -67,6 +67,18 @@ open class SettingsStore(private val settingsFile: File) {
         updateSettings { it.copy(splitterPosition = position) }
     }
 
+    fun setShowWeightInGraph(show: Boolean) {
+        updateSettings { it.copy(showWeightInGraph = show) }
+    }
+
+    fun setShowBloodPressureInGraph(show: Boolean) {
+        updateSettings { it.copy(showBloodPressureInGraph = show) }
+    }
+
+    fun setShowPulseInGraph(show: Boolean) {
+        updateSettings { it.copy(showPulseInGraph = show) }
+    }
+
     fun setBloodPressureDisplaySettings(
         showDailyAverages: Boolean,
         showMonthlyAverages: Boolean,

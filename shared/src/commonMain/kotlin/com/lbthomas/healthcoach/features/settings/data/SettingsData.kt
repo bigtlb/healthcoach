@@ -22,7 +22,10 @@ data class SettingsData(
     val showDailyChanges: Boolean = true,
     val showMonthlyChanges: Boolean = true,
     val adaptiveDisplay: Boolean = true,
-    val splitterPosition: Float = 0.5f
+    val splitterPosition: Float = 0.5f,
+    val showWeightInGraph: Boolean = true,
+    val showBloodPressureInGraph: Boolean = true,
+    val showPulseInGraph: Boolean = false
 ) {
     val graphTimeFrame: GraphTimeFrame get() = selectedGraphTimeFrame
 }

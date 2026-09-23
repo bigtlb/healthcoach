@@ -2,6 +2,8 @@ package com.lbthomas.healthcoach.core.di
 
 
 import com.lbthomas.healthcoach.core.database.createDatabase
+import com.lbthomas.healthcoach.features.bloodpressure.BloodPressureViewModel
+import com.lbthomas.healthcoach.features.bloodpressure.data.BloodPressureRepository
 import com.lbthomas.healthcoach.features.settings.SettingsViewModel
 import com.lbthomas.healthcoach.features.settings.data.SettingsStore
 import com.lbthomas.healthcoach.features.weight.WeightViewModel
@@ -23,4 +25,7 @@ val appModule = module {
 
     single { WeightRepository(get()) }
     factory { WeightViewModel(repository = get()) }
+
+    single { BloodPressureRepository(get()) }
+    factory { BloodPressureViewModel(repository = get()) }
 }
