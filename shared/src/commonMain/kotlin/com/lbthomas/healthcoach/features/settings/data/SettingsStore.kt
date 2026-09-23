@@ -2,7 +2,9 @@ package com.lbthomas.healthcoach.features.settings.data
 
 import com.lbthomas.healthcoach.core.enums.GraphTimeFrame
 import com.lbthomas.healthcoach.core.enums.SelectedPage
+import com.lbthomas.healthcoach.core.enums.ThemeMode
 import com.lbthomas.healthcoach.core.enums.WeightUnit
+import com.lbthomas.healthcoach.core.theme.AppTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -45,6 +47,14 @@ open class SettingsStore(private val settingsFile: File) {
 
     fun setWeightUnit(unit: WeightUnit) {
         updateSettings { it.copy(weightUnit = unit) }
+    }
+
+    fun setThemeMode(themeMode: ThemeMode) {
+        updateSettings { it.copy(themeMode = themeMode) }
+    }
+
+    fun setAppTheme(theme: AppTheme) {
+        updateSettings { it.copy(appTheme = theme) }
     }
 
     fun setWindowState(x: Int, y: Int, width: Int, height: Int, maximized: Boolean) {

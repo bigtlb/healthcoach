@@ -17,7 +17,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -27,9 +26,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lbthomas.healthcoach.core.di.previewAppModule
 import com.lbthomas.healthcoach.core.enums.BloodPressureCategory
+import com.lbthomas.healthcoach.core.theme.extendedColors
 import com.lbthomas.healthcoach.core.ui.Tooltip
 import com.lbthomas.healthcoach.core.ui.VerticalScrollbarBox
-import com.lbthomas.healthcoach.core.utils.*
+import com.lbthomas.healthcoach.core.utils.DOW
+import com.lbthomas.healthcoach.core.utils.displayName
+import com.lbthomas.healthcoach.core.utils.formatTime
+import com.lbthomas.healthcoach.core.utils.today
 import com.lbthomas.healthcoach.features.bloodpressure.data.BloodPressureEntryData
 import kotlinx.datetime.YearMonth
 import kotlinx.datetime.yearMonth
@@ -117,18 +120,31 @@ fun BloodPressureView(
         modifier = modifier
             .fillMaxSize()
     ) {
-        AddBloodPressureEntryButton(
-            onClick = {
-                entryToEdit = BloodPressureEntryData(
-                    id = 0,
-                    dateTime = today.toString(),
-                    systolic = 0,
-                    diastolic = 0,
-                    pulse = null
-                )
-            },
-            modifier = Modifier.align(Alignment.End)
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Blood Pressure",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            AddBloodPressureEntryButton(
+                onClick = {
+                    entryToEdit = BloodPressureEntryData(
+                        id = 0,
+                        dateTime = today.toString(),
+                        systolic = 0,
+                        diastolic = 0,
+                        pulse = null
+                    )
+                }
+            )
+        }
 
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             BloodPressureEntryList(
@@ -295,13 +311,14 @@ private fun RowBpData(
     val systolicDiff = prior?.let { entry.systolic - it.systolic } ?: 0
     val diastolicDiff = prior?.let { entry.diastolic - it.diastolic } ?: 0
 
+    val extColors = MaterialTheme.extendedColors
     val (changeIcon, iconColor, changeDescription) = when {
         systolicDiff < 0 && diastolicDiff <= 0 || systolicDiff <= 0 && diastolicDiff < 0 ->
-            Triple(Icons.Outlined.KeyboardDoubleArrowDown, Color(0xFF2E7D32), "Decreased BP")
+            Triple(Icons.Outlined.KeyboardDoubleArrowDown, extColors.weightDecrease.color, "Decreased BP")
         systolicDiff > 0 || diastolicDiff > 0 ->
-            Triple(Icons.Outlined.KeyboardDoubleArrowUp, Color.Red, "Increased BP")
+            Triple(Icons.Outlined.KeyboardDoubleArrowUp, extColors.weightIncrease.color, "Increased BP")
         else ->
-            Triple(Icons.Outlined.Stop, Color.Blue, "No change")
+            Triple(Icons.Outlined.Stop, extColors.weightNoChange.color, "No change")
     }
 
     Row(

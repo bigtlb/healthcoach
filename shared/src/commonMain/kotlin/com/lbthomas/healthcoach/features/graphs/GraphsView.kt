@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.sp
 import com.lbthomas.healthcoach.core.di.previewAppModule
 import com.lbthomas.healthcoach.core.enums.GraphTimeFrame
 import com.lbthomas.healthcoach.core.enums.WeightUnit
+import com.lbthomas.healthcoach.core.theme.extendedColors
 import com.lbthomas.healthcoach.core.utils.displayDate
 import com.lbthomas.healthcoach.core.utils.formatTime
 import com.lbthomas.healthcoach.features.bloodpressure.BloodPressureViewModel
@@ -573,10 +574,11 @@ private fun CompoundHealthChart(
     }
 
     val unitLabel = if (weightUnit == WeightUnit.METRIC) "kg" else "lb"
-    val weightLineColor = Color(0xFF1E88E5) // Blue
-    val bpSystolicColor = Color(0xFFF57C00) // Orange
-    val bpDiastolicColor = Color(0xFF4CAF50) // Green
-    val bpPulseColor = Color(0xFFE040FB) // Magenta
+    val extColors = MaterialTheme.extendedColors
+    val weightLineColor = extColors.graphWeight.color
+    val bpSystolicColor = extColors.graphSystolic.color
+    val bpDiastolicColor = extColors.graphDiastolic.color
+    val bpPulseColor = extColors.graphPulse.color
 
     val weightLine = LineCartesianLayer.rememberLine(
         fill = LineCartesianLayer.LineFill.single(Fill(weightLineColor)),
@@ -683,7 +685,7 @@ private fun CompoundHealthChart(
                         bpSystolicColor -> lines.add("Systolic: $formatted mmHg")
                         bpDiastolicColor -> lines.add("Diastolic: $formatted mmHg")
                         bpPulseColor -> lines.add("Pulse: $formatted bpm")
-                        else -> lines.add("$formatted")
+                        else -> lines.add(formatted)
                     }
                 }
                 lines.joinToString("\n")

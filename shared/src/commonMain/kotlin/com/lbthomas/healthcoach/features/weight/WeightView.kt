@@ -15,13 +15,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.lbthomas.healthcoach.core.di.previewAppModule
 import com.lbthomas.healthcoach.core.enums.WeightUnit
+import com.lbthomas.healthcoach.core.theme.extendedColors
 import com.lbthomas.healthcoach.core.ui.Tooltip
 import com.lbthomas.healthcoach.core.ui.VerticalScrollbarBox
 import com.lbthomas.healthcoach.core.utils.DOW
@@ -105,22 +105,37 @@ fun WeightView(
         modifier = modifier
             .fillMaxSize()
     ) {
-        AddWeightEntryButton(
-            onClick = {
-                entryToEdit = WeightEntryData(id = 0, date = today, weight = 0.0)
-            },
-            Modifier.align(Alignment.End)
-        )
-        WeightEntryList(
-            entries = entries,
-            settings = settings,
-            onClickEntry = { entry ->
-                entryToEdit = entry
-            },
-            onDeleteEntry = { entry ->
-                entryToDelete = entry
-            }
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Weight",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            AddWeightEntryButton(
+                onClick = {
+                    entryToEdit = WeightEntryData(id = 0, date = today, weight = 0.0)
+                }
+            )
+        }
+        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            WeightEntryList(
+                entries = entries,
+                settings = settings,
+                onClickEntry = { entry ->
+                    entryToEdit = entry
+                },
+                onDeleteEntry = { entry ->
+                    entryToDelete = entry
+                }
+            )
+        }
     }
 }
 
@@ -253,10 +268,11 @@ private fun RowData(
         entry.getWeightInCurrentUnits(settings.weightUnit) - prior.getWeightInCurrentUnits(settings.weightUnit)
     } ?: 0.0
 
+    val extColors = MaterialTheme.extendedColors
     val (changeIcon, iconColor, changeDescription) = when {
-        change < 0.0 -> Triple(Icons.Outlined.KeyboardDoubleArrowDown, Color(0xFF2E7D32), "Decrease")
-        change > 0.0 -> Triple(Icons.Outlined.KeyboardDoubleArrowUp, Color.Red, "Increase")
-        else -> Triple(Icons.Outlined.Stop, Color.Blue, "No change")
+        change < 0.0 -> Triple(Icons.Outlined.KeyboardDoubleArrowDown, extColors.weightDecrease.color, "Decrease")
+        change > 0.0 -> Triple(Icons.Outlined.KeyboardDoubleArrowUp, extColors.weightIncrease.color, "Increase")
+        else -> Triple(Icons.Outlined.Stop, extColors.weightNoChange.color, "No change")
     }
 
     val rowIconWidth = 28.dp
@@ -279,7 +295,7 @@ private fun RowData(
             text = String.format("%+.1f $units", change),
             maxLines = 1,
             fontWeight = FontWeight.Bold,
-            color = if (change > 0) Color.Red else Color.Blue,
+            color = if (change > 0) extColors.weightIncrease.color else if (change < 0) extColors.weightDecrease.color else extColors.weightNoChange.color,
             textAlign = TextAlign.End,
             modifier = Modifier.width(rowChangeWidth)
         )

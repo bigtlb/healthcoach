@@ -4,6 +4,7 @@ import com.lbthomas.healthcoach.core.enums.GraphTimeFrame
 import com.lbthomas.healthcoach.core.enums.SelectedPage
 import com.lbthomas.healthcoach.core.enums.ThemeMode
 import com.lbthomas.healthcoach.core.enums.WeightUnit
+import com.lbthomas.healthcoach.core.theme.AppTheme
 import com.lbthomas.healthcoach.features.settings.data.SettingsData
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.serialization.json.Json
@@ -21,6 +22,7 @@ class SettingsDataTest {
         assertEquals(GraphTimeFrame.ALL, settings.graphTimeFrame)
         assertEquals(WeightUnit.US, settings.weightUnit)
         assertEquals(ThemeMode.SYSTEM, settings.themeMode)
+        assertEquals(AppTheme.DEFAULT, settings.appTheme)
         assertEquals(true, settings.adaptiveDisplay)
         assertEquals(0.5f, settings.splitterPosition)
         assertEquals(true, settings.showWeightInGraph)
@@ -40,6 +42,7 @@ class SettingsDataTest {
             selectedPage = SelectedPage.GraphsView,
             selectedGraphTimeFrame = GraphTimeFrame.YEAR_TO_DATE,
             themeMode = ThemeMode.DARK,
+            appTheme = AppTheme.TEAL,
             adaptiveDisplay = false,
             splitterPosition = 0.42f,
             showPulseInGraph = true
@@ -51,6 +54,7 @@ class SettingsDataTest {
         assertEquals(SelectedPage.GraphsView, deserialized.selectedPage)
         assertEquals(GraphTimeFrame.YEAR_TO_DATE, deserialized.selectedGraphTimeFrame)
         assertEquals(ThemeMode.DARK, deserialized.themeMode)
+        assertEquals(AppTheme.TEAL, deserialized.appTheme)
         assertEquals(false, deserialized.adaptiveDisplay)
         assertEquals(0.42f, deserialized.splitterPosition)
         assertEquals(true, deserialized.showPulseInGraph)
@@ -72,6 +76,9 @@ class SettingsDataTest {
 
         viewModel.setThemeMode(ThemeMode.LIGHT)
         assertEquals(ThemeMode.LIGHT, viewModel.settings.value.themeMode)
+
+        viewModel.setAppTheme(AppTheme.BLUE)
+        assertEquals(AppTheme.BLUE, viewModel.settings.value.appTheme)
 
         viewModel.setAdaptiveDisplay(false)
         assertEquals(false, viewModel.settings.value.adaptiveDisplay)

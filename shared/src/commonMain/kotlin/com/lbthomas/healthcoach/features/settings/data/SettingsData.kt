@@ -4,6 +4,7 @@ import com.lbthomas.healthcoach.core.enums.GraphTimeFrame
 import com.lbthomas.healthcoach.core.enums.SelectedPage
 import com.lbthomas.healthcoach.core.enums.ThemeMode
 import com.lbthomas.healthcoach.core.enums.WeightUnit
+import com.lbthomas.healthcoach.core.theme.AppTheme
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -12,6 +13,7 @@ data class SettingsData(
     val selectedPage: SelectedPage = SelectedPage.WeightView,
     val selectedGraphTimeFrame: GraphTimeFrame = GraphTimeFrame.ALL,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val appTheme: AppTheme = AppTheme.DEFAULT,
     val windowX: Int = 100,
     val windowY: Int = 100,
     val windowWidth: Int = 800,

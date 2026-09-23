@@ -25,7 +25,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "com.lbthomas.healthcoach"
-            packageVersion = "1.0.0"
+            packageVersion = libs.versions.app.version.get()
 
             modules("java.sql")
         }

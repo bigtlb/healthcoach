@@ -2,12 +2,7 @@ package com.lbthomas.healthcoach
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.Favorite
@@ -24,10 +19,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.yield
 import com.lbthomas.healthcoach.core.di.previewAppModule
 import com.lbthomas.healthcoach.core.enums.SelectedPage
-import com.lbthomas.healthcoach.core.enums.ThemeMode
+import com.lbthomas.healthcoach.core.theme.HealthCoachTheme
 import com.lbthomas.healthcoach.core.ui.HorizontalSplitPane
 import com.lbthomas.healthcoach.core.ui.Tooltip
 import com.lbthomas.healthcoach.features.bloodpressure.BloodPressureView
@@ -37,6 +31,7 @@ import com.lbthomas.healthcoach.features.settings.SettingsViewModel
 import com.lbthomas.healthcoach.features.weight.WeightView
 import healthcoach.shared.generated.resources.Res
 import healthcoach.shared.generated.resources.scales
+import kotlinx.coroutines.yield
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.KoinApplication
 import org.koin.compose.koinInject
@@ -68,17 +63,12 @@ fun App() {
     var showAddBloodPressureEntry by remember { mutableStateOf(false) }
 
 
-    val isDark = when (settings.themeMode) {
-        ThemeMode.SYSTEM -> isSystemInDarkTheme()
-        ThemeMode.LIGHT -> false
-        ThemeMode.DARK -> true
-    }
-
-    val colorScheme = if (isDark) darkColorScheme() else lightColorScheme()
-
-    MaterialTheme(colorScheme = colorScheme) {
+    HealthCoachTheme(
+        theme = settings.appTheme,
+        themeMode = settings.themeMode
+    ) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val isWideLayout = settings.adaptiveDisplay && maxWidth >= 600.dp
+            val isWideLayout = settings.adaptiveDisplay && maxWidth >= 1200.dp
             val focusRequester = remember { FocusRequester() }
 
             LaunchedEffect(selectedPage, showSettings, showAddWeightEntry, showAddBloodPressureEntry) {
@@ -254,9 +244,9 @@ fun AppBar(
             )
         },
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.primaryFixedDim,
-            titleContentColor = MaterialTheme.colorScheme.onPrimaryFixed,
-            actionIconContentColor = MaterialTheme.colorScheme.onPrimaryFixed
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
         ),
         actions = {
             AppActionButtons(onSelection, selectedPage, isWideLayout, onShowSettings)
@@ -294,7 +284,12 @@ private fun AppActionButtons(
 @Composable
 private fun SettingsButton(onShowSettings: () -> Unit) {
     Tooltip("Settings (Ctrl + S or ,)") {
-        IconButton(onClick = { onShowSettings() }) {
+        IconButton(
+            onClick = { onShowSettings() },
+            colors = IconButtonDefaults.iconButtonColors(
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        ) {
             Icon(
                 imageVector = Icons.Default.Settings,
                 contentDescription = "Settings"
@@ -316,7 +311,7 @@ private fun AppFeatureButton(
             checked = isSelected,
             colors = IconButtonDefaults.iconToggleButtonColors(
                 containerColor = Color.Transparent,
-                contentColor = MaterialTheme.colorScheme.onPrimaryFixed,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 checkedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
                 checkedContentColor = MaterialTheme.colorScheme.onSecondaryContainer
             )
