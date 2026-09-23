@@ -2,6 +2,7 @@ package com.lbthomas.healthcoach.features.settings
 
 import com.lbthomas.healthcoach.core.enums.GraphTimeFrame
 import com.lbthomas.healthcoach.core.enums.SelectedPage
+import com.lbthomas.healthcoach.core.enums.ThemeMode
 import com.lbthomas.healthcoach.core.enums.WeightUnit
 import com.lbthomas.healthcoach.features.settings.data.SettingsData
 import com.lbthomas.healthcoach.features.settings.data.SettingsStore
@@ -36,6 +37,10 @@ class SettingsViewModel  {
 
     fun setSelectedGraphTimeFrame(timeFrame: GraphTimeFrame) {
         updateSettings { it.copy(selectedGraphTimeFrame = timeFrame) }
+    }
+
+    fun setThemeMode(themeMode: ThemeMode) {
+        updateSettings { it.copy(themeMode = themeMode) }
     }
 
     fun setWeightUnit(unit: WeightUnit) {

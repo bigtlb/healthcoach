@@ -18,6 +18,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.lbthomas.healthcoach.core.di.previewAppModule
+import com.lbthomas.healthcoach.core.enums.ThemeMode
 import com.lbthomas.healthcoach.core.enums.WeightUnit
 import com.lbthomas.healthcoach.core.ui.onDialogKeyEvents
 import com.lbthomas.healthcoach.features.settings.data.SettingsData
@@ -64,6 +65,9 @@ fun SettingsDialog(
                     .padding(SettingsDialogDefaults.DialogPadding),
                 verticalArrangement = Arrangement.spacedBy(SettingsDialogDefaults.SectionSpacing)
             ) {
+                // Theme Section
+                ThemeOptions(settings, settingsViewModel)
+
                 // Weight Units Section
                 WeightOptions(settings, settingsViewModel)
 
@@ -113,6 +117,23 @@ private fun BloodPressureOptions(
                 settingsViewModel.updateSettings { it.copy(showMonthlyChanges = checked) }
             }
         )
+    }
+}
+
+@Composable
+private fun ThemeOptions(
+    settings: SettingsData,
+    settingsViewModel: SettingsViewModel
+) {
+    SettingsSection(title = "Theme") {
+        ThemeMode.entries.forEach { mode ->
+            val isSelected = settings.themeMode == mode
+            SettingRadioRow(
+                text = mode.displayName,
+                selected = isSelected,
+                onClick = { settingsViewModel.setThemeMode(mode) }
+            )
+        }
     }
 }
 

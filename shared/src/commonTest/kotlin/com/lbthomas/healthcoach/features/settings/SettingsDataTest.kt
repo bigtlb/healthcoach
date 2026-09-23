@@ -2,6 +2,7 @@ package com.lbthomas.healthcoach.features.settings
 
 import com.lbthomas.healthcoach.core.enums.GraphTimeFrame
 import com.lbthomas.healthcoach.core.enums.SelectedPage
+import com.lbthomas.healthcoach.core.enums.ThemeMode
 import com.lbthomas.healthcoach.core.enums.WeightUnit
 import com.lbthomas.healthcoach.features.settings.data.SettingsData
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +20,7 @@ class SettingsDataTest {
         assertEquals(GraphTimeFrame.ALL, settings.selectedGraphTimeFrame)
         assertEquals(GraphTimeFrame.ALL, settings.graphTimeFrame)
         assertEquals(WeightUnit.US, settings.weightUnit)
+        assertEquals(ThemeMode.SYSTEM, settings.themeMode)
     }
 
     @Test
@@ -31,7 +33,8 @@ class SettingsDataTest {
 
         val original = SettingsData(
             selectedPage = SelectedPage.GraphsView,
-            selectedGraphTimeFrame = GraphTimeFrame.ONE_MONTH
+            selectedGraphTimeFrame = GraphTimeFrame.ONE_MONTH,
+            themeMode = ThemeMode.DARK
         )
 
         val serialized = json.encodeToString(SettingsData.serializer(), original)
@@ -39,6 +42,7 @@ class SettingsDataTest {
 
         assertEquals(SelectedPage.GraphsView, deserialized.selectedPage)
         assertEquals(GraphTimeFrame.ONE_MONTH, deserialized.selectedGraphTimeFrame)
+        assertEquals(ThemeMode.DARK, deserialized.themeMode)
     }
 
     @Test
@@ -51,5 +55,8 @@ class SettingsDataTest {
 
         viewModel.setSelectedGraphTimeFrame(GraphTimeFrame.THREE_MONTHS)
         assertEquals(GraphTimeFrame.THREE_MONTHS, viewModel.settings.value.selectedGraphTimeFrame)
+
+        viewModel.setThemeMode(ThemeMode.LIGHT)
+        assertEquals(ThemeMode.LIGHT, viewModel.settings.value.themeMode)
     }
 }

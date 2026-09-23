@@ -2,6 +2,7 @@ package com.lbthomas.healthcoach
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -24,6 +25,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.lbthomas.healthcoach.core.di.previewAppModule
 import com.lbthomas.healthcoach.core.enums.SelectedPage
+import com.lbthomas.healthcoach.core.enums.ThemeMode
 import com.lbthomas.healthcoach.core.ui.Tooltip
 import com.lbthomas.healthcoach.features.bloodpressure.BloodPressureView
 import com.lbthomas.healthcoach.features.graphs.GraphsView
@@ -67,7 +69,15 @@ fun App() {
         focusRequester.requestFocus()
     }
 
-    MaterialTheme {
+    val isDark = when (settings.themeMode) {
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+    }
+
+    val colorScheme = if (isDark) darkColorScheme() else lightColorScheme()
+
+    MaterialTheme(colorScheme = colorScheme) {
         Scaffold(
             modifier = Modifier
                 .focusRequester(focusRequester)
@@ -162,8 +172,11 @@ fun AppBar(
                 tint = Color.Unspecified
             )
         },
-        colors = TopAppBarDefaults.topAppBarColors()
-            .copy(MaterialTheme.colorScheme.primaryFixedDim),
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.primaryFixedDim,
+            titleContentColor = MaterialTheme.colorScheme.onPrimaryFixed,
+            actionIconContentColor = MaterialTheme.colorScheme.onPrimaryFixed
+        ),
         actions = {
             AppActionButtons(onSelection, selectedPage, onShowSettings)
         }
@@ -212,7 +225,13 @@ private fun AppFeatureButton(
     Tooltip("$tabTitle (Ctrl + ${tabTitle.first()})") {
         IconToggleButton(
             onCheckedChange = { checked -> if (checked) onSelection() },
-            checked = isSelected
+            checked = isSelected,
+            colors = IconButtonDefaults.iconToggleButtonColors(
+                containerColor = Color.Transparent,
+                contentColor = MaterialTheme.colorScheme.onPrimaryFixed,
+                checkedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                checkedContentColor = MaterialTheme.colorScheme.onSecondaryContainer
+            )
         ) {
             Icon(
                 imageVector = tabIcon,
