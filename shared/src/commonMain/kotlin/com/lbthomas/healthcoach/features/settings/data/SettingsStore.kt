@@ -59,6 +59,14 @@ open class SettingsStore(private val settingsFile: File) {
         }
     }
 
+    fun setAdaptiveDisplay(adaptiveDisplay: Boolean) {
+        updateSettings { it.copy(adaptiveDisplay = adaptiveDisplay) }
+    }
+
+    fun setSplitterPosition(position: Float) {
+        updateSettings { it.copy(splitterPosition = position) }
+    }
+
     fun setBloodPressureDisplaySettings(
         showDailyAverages: Boolean,
         showMonthlyAverages: Boolean,

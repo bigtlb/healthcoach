@@ -3,6 +3,7 @@ package com.lbthomas.healthcoach
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -26,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.lbthomas.healthcoach.core.di.previewAppModule
 import com.lbthomas.healthcoach.core.enums.SelectedPage
 import com.lbthomas.healthcoach.core.enums.ThemeMode
+import com.lbthomas.healthcoach.core.ui.HorizontalSplitPane
 import com.lbthomas.healthcoach.core.ui.Tooltip
 import com.lbthomas.healthcoach.features.bloodpressure.BloodPressureView
 import com.lbthomas.healthcoach.features.graphs.GraphsView
@@ -78,54 +80,75 @@ fun App() {
     val colorScheme = if (isDark) darkColorScheme() else lightColorScheme()
 
     MaterialTheme(colorScheme = colorScheme) {
-        Scaffold(
-            modifier = Modifier
-                .focusRequester(focusRequester)
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            val isWideLayout = settings.adaptiveDisplay && maxWidth >= 600.dp
 
-                .focusable()
-                .onPreviewKeyEvent { keyEvent ->
-                    if (keyEvent.type == KeyEventType.KeyDown &&
-                        (keyEvent.isCtrlPressed || keyEvent.isMetaPressed)
-                    ) {
-                        when (keyEvent.key) {
-                            Key.W -> settingsViewModel.setSelectedPage(SelectedPage.WeightView)
-                            Key.B -> settingsViewModel.setSelectedPage(SelectedPage.BloodPressureView)
-                            Key.G -> settingsViewModel.setSelectedPage(SelectedPage.GraphsView)
-                            Key.S, Key.Comma -> showSettings = true
-                            Key.N, Key.Plus, Key.NumPadAdd, Key.Equals -> {
-                                if (selectedPage == SelectedPage.WeightView) {
-                                    showAddWeightEntry = true
+            LaunchedEffect(isWideLayout, selectedPage) {
+                if (isWideLayout && selectedPage == SelectedPage.GraphsView) {
+                    settingsViewModel.setSelectedPage(SelectedPage.WeightView)
+                }
+            }
+
+            Scaffold(
+                modifier = Modifier
+                    .focusRequester(focusRequester)
+
+                    .focusable()
+                    .onPreviewKeyEvent { keyEvent ->
+                        if (keyEvent.type == KeyEventType.KeyDown &&
+                            (keyEvent.isCtrlPressed || keyEvent.isMetaPressed)
+                        ) {
+                            when (keyEvent.key) {
+                                Key.W -> settingsViewModel.setSelectedPage(SelectedPage.WeightView)
+                                Key.B -> settingsViewModel.setSelectedPage(SelectedPage.BloodPressureView)
+                                Key.G -> {
+                                    if (isWideLayout) {
+                                        settingsViewModel.setSelectedPage(SelectedPage.WeightView)
+                                    } else {
+                                        settingsViewModel.setSelectedPage(SelectedPage.GraphsView)
+                                    }
+                                }
+                                Key.S, Key.Comma -> showSettings = true
+                                Key.N, Key.Plus, Key.NumPadAdd, Key.Equals -> {
+                                    if (selectedPage == SelectedPage.WeightView) {
+                                        showAddWeightEntry = true
+                                    }
+                                }
+                                else -> {
+                                    return@onPreviewKeyEvent false
                                 }
                             }
-                            else -> {
-                                return@onPreviewKeyEvent false
-                            }
+                            true
+                        } else {
+                            false
                         }
-                        true
-                    } else {
-                        false
-                    }
-                },
-            topBar = {
-                AppBar(
+                    },
+                topBar = {
+                    AppBar(
+                        selectedPage = selectedPage,
+                        isWideLayout = isWideLayout,
+                        onSelection = { settingsViewModel.setSelectedPage(it) },
+                        onShowSettings = { showSettings = true }
+                    )
+                }
+            ) { innerPadding ->
+                AppContent(
+                    modifier = Modifier.padding(innerPadding),
                     selectedPage = selectedPage,
-                    onSelection = { settingsViewModel.setSelectedPage(it) },
-                    onShowSettings = { showSettings = true })
+                    isWideLayout = isWideLayout,
+                    splitterPosition = settings.splitterPosition,
+                    onSplitterPositionChange = { settingsViewModel.setSplitterPosition(it) },
+                    showAddWeightEntry = showAddWeightEntry,
+                    onAddDismiss = { showAddWeightEntry = false }
+                )
             }
-        ) { innerPadding ->
-            AppContent(
-                modifier = Modifier.padding(innerPadding),
-                selectedPage = selectedPage,
-                showAddWeightEntry = showAddWeightEntry,
-                onAddDismiss = { showAddWeightEntry = false }
-            )
-        }
 
-        if (showSettings) {
-            SettingsDialog(
-                settingsViewModel = settingsViewModel,
-                onDismiss = { showSettings = false }
-            )
+            if (showSettings) {
+                SettingsDialog(
+                    settingsViewModel = settingsViewModel,
+                    onDismiss = { showSettings = false }
+                )
+            }
         }
     }
 }
@@ -133,6 +156,9 @@ fun App() {
 @Composable
 private fun AppContent(
     selectedPage: SelectedPage,
+    isWideLayout: Boolean,
+    splitterPosition: Float = 0.5f,
+    onSplitterPositionChange: (Float) -> Unit = {},
     showAddWeightEntry: Boolean,
     modifier: Modifier = Modifier,
     onAddDismiss: () -> Unit = {}
@@ -144,13 +170,30 @@ private fun AppContent(
             .padding(top = 5.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        when (selectedPage) {
-            SelectedPage.WeightView -> WeightView(
-                showAddWeightEntry = showAddWeightEntry,
-                onAddDismiss = onAddDismiss
+        if (isWideLayout && selectedPage == SelectedPage.WeightView) {
+            HorizontalSplitPane(
+                modifier = Modifier.fillMaxSize(),
+                initialFraction = splitterPosition,
+                onFractionChange = onSplitterPositionChange,
+                first = {
+                    WeightView(
+                        showAddWeightEntry = showAddWeightEntry,
+                        onAddDismiss = onAddDismiss
+                    )
+                },
+                second = {
+                    GraphsView()
+                }
             )
-            SelectedPage.BloodPressureView -> BloodPressureView()
-            SelectedPage.GraphsView -> GraphsView()
+        } else {
+            when (selectedPage) {
+                SelectedPage.WeightView -> WeightView(
+                    showAddWeightEntry = showAddWeightEntry,
+                    onAddDismiss = onAddDismiss
+                )
+                SelectedPage.BloodPressureView -> BloodPressureView()
+                SelectedPage.GraphsView -> GraphsView()
+            }
         }
     }
 }
@@ -159,6 +202,7 @@ private fun AppContent(
 @Composable
 fun AppBar(
     selectedPage: SelectedPage,
+    isWideLayout: Boolean = false,
     onSelection: (SelectedPage) -> Unit,
     onShowSettings: () -> Unit
 ) {
@@ -178,7 +222,7 @@ fun AppBar(
             actionIconContentColor = MaterialTheme.colorScheme.onPrimaryFixed
         ),
         actions = {
-            AppActionButtons(onSelection, selectedPage, onShowSettings)
+            AppActionButtons(onSelection, selectedPage, isWideLayout, onShowSettings)
         }
     )
 
@@ -189,9 +233,16 @@ fun AppBar(
 private fun AppActionButtons(
     onSelection: (SelectedPage) -> Unit,
     selectedPage: SelectedPage,
+    isWideLayout: Boolean = false,
     onShowSettings: () -> Unit
 ) {
-    AppDefaults.Tabs.forEach { tab ->
+    val tabs = if (isWideLayout) {
+        AppDefaults.Tabs.filter { it.page != SelectedPage.GraphsView }
+    } else {
+        AppDefaults.Tabs
+    }
+
+    tabs.forEach { tab ->
         AppFeatureButton(
             tabTitle = tab.title,
             onSelection = { onSelection(tab.page) },

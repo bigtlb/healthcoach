@@ -21,6 +21,8 @@ class SettingsDataTest {
         assertEquals(GraphTimeFrame.ALL, settings.graphTimeFrame)
         assertEquals(WeightUnit.US, settings.weightUnit)
         assertEquals(ThemeMode.SYSTEM, settings.themeMode)
+        assertEquals(true, settings.adaptiveDisplay)
+        assertEquals(0.5f, settings.splitterPosition)
     }
 
     @Test
@@ -34,7 +36,9 @@ class SettingsDataTest {
         val original = SettingsData(
             selectedPage = SelectedPage.GraphsView,
             selectedGraphTimeFrame = GraphTimeFrame.ONE_MONTH,
-            themeMode = ThemeMode.DARK
+            themeMode = ThemeMode.DARK,
+            adaptiveDisplay = false,
+            splitterPosition = 0.42f
         )
 
         val serialized = json.encodeToString(SettingsData.serializer(), original)
@@ -43,6 +47,8 @@ class SettingsDataTest {
         assertEquals(SelectedPage.GraphsView, deserialized.selectedPage)
         assertEquals(GraphTimeFrame.ONE_MONTH, deserialized.selectedGraphTimeFrame)
         assertEquals(ThemeMode.DARK, deserialized.themeMode)
+        assertEquals(false, deserialized.adaptiveDisplay)
+        assertEquals(0.42f, deserialized.splitterPosition)
     }
 
     @Test
@@ -58,5 +64,11 @@ class SettingsDataTest {
 
         viewModel.setThemeMode(ThemeMode.LIGHT)
         assertEquals(ThemeMode.LIGHT, viewModel.settings.value.themeMode)
+
+        viewModel.setAdaptiveDisplay(false)
+        assertEquals(false, viewModel.settings.value.adaptiveDisplay)
+
+        viewModel.setSplitterPosition(0.65f)
+        assertEquals(0.65f, viewModel.settings.value.splitterPosition)
     }
 }

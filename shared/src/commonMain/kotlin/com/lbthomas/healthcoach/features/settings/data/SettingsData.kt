@@ -20,7 +20,9 @@ data class SettingsData(
     val showDailyAverages: Boolean = true,
     val showMonthlyAverages: Boolean = true,
     val showDailyChanges: Boolean = true,
-    val showMonthlyChanges: Boolean = true
+    val showMonthlyChanges: Boolean = true,
+    val adaptiveDisplay: Boolean = true,
+    val splitterPosition: Float = 0.5f
 ) {
     val graphTimeFrame: GraphTimeFrame get() = selectedGraphTimeFrame
 }

@@ -73,6 +73,9 @@ fun SettingsDialog(
 
                 // Blood Pressure Display Settings Section
                 BloodPressureOptions(settings, settingsViewModel)
+
+                // Adaptive Display Section
+                AdaptiveDisplayOptions(settings, settingsViewModel)
             }
         },
         confirmButton = {
@@ -81,6 +84,22 @@ fun SettingsDialog(
             }
         }
     )
+}
+
+@Composable
+private fun AdaptiveDisplayOptions(
+    settings: SettingsData,
+    settingsViewModel: SettingsViewModel
+) {
+    SettingsSection(title = "Display Options") {
+        SettingCheckboxRow(
+            text = "Adaptive Display",
+            checked = settings.adaptiveDisplay,
+            onCheckedChange = { checked ->
+                settingsViewModel.setAdaptiveDisplay(checked)
+            }
+        )
+    }
 }
 
 @Composable
