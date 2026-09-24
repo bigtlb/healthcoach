@@ -6,6 +6,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,17 +18,14 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.lbthomas.healthcoach.core.di.previewAppModule
 import com.lbthomas.healthcoach.core.enums.BloodPressureCategory
 import com.lbthomas.healthcoach.core.ui.Tooltip
 import com.lbthomas.healthcoach.core.ui.onDialogKeyEvents
-import com.lbthomas.healthcoach.core.utils.displayDate
-import com.lbthomas.healthcoach.core.utils.formatBpStorageString
-import com.lbthomas.healthcoach.core.utils.nowLocal
-import com.lbthomas.healthcoach.core.utils.today
+import com.lbthomas.healthcoach.core.utils.*
 import com.lbthomas.healthcoach.features.bloodpressure.data.BloodPressureEntryData
 import kotlinx.coroutines.yield
 import kotlinx.datetime.*
@@ -44,28 +42,11 @@ fun BloodPressureEntryEditDialog(
     modifier: Modifier = Modifier
 ) {
     val isNew = entry.id == 0L
-    val title = if (isNew) "Add Blood Pressure Entry" else "Edit Blood Pressure Entry"
+    val title = if (isNew) "New Blood Pressure" else "Edit Blood Pressure"
 
     var selectedDate by remember { mutableStateOf(if (isNew) today else entry.date) }
     var includeTime by remember { mutableStateOf(if (isNew) false else entry.hasTime) }
-
-    val initialTime = entry.time ?: nowLocal.time
-    var hourText by remember {
-        mutableStateOf(
-            TextFieldValue(
-                text = initialTime.hour.toString().padStart(2, '0'),
-                selection = TextRange(2)
-            )
-        )
-    }
-    var minuteText by remember {
-        mutableStateOf(
-            TextFieldValue(
-                text = initialTime.minute.toString().padStart(2, '0'),
-                selection = TextRange(2)
-            )
-        )
-    }
+    var selectedTime by remember { mutableStateOf(entry.time ?: nowLocal.time) }
 
     val initialSystolic = if (entry.systolic > 0) entry.systolic.toString() else ""
     var systolicFieldValue by remember {
@@ -98,30 +79,22 @@ fun BloodPressureEntryEditDialog(
     }
 
     var showDatePicker by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
 
     val digitsPattern = remember { Regex("""^\d{0,3}$""") }
-    val timeDigitsPattern = remember { Regex("""^\d{0,2}$""") }
 
     val parsedSystolic = systolicFieldValue.text.toIntOrNull()
     val parsedDiastolic = diastolicFieldValue.text.toIntOrNull()
     val parsedPulse = pulseFieldValue.text.toIntOrNull()
 
-    val parsedHour = hourText.text.toIntOrNull()
-    val parsedMinute = minuteText.text.toIntOrNull()
-
-    val isTimeValid = !includeTime || (parsedHour != null && parsedHour in 0..23 && parsedMinute != null && parsedMinute in 0..59)
     val isSystolicValid = parsedSystolic != null && parsedSystolic in 30..350
     val isDiastolicValid = parsedDiastolic != null && parsedDiastolic in 20..250
     val isPulseValid = pulseFieldValue.text.isEmpty() || (parsedPulse != null && parsedPulse in 20..300)
-    val isValid = isSystolicValid && isDiastolicValid && isTimeValid && isPulseValid
+    val isValid = isSystolicValid && isDiastolicValid && isPulseValid
 
     fun confirmIfValid() {
         if (isValid) {
-            val finalTime = if (includeTime && parsedHour != null && parsedMinute != null) {
-                LocalTime(parsedHour, parsedMinute, 0)
-            } else {
-                null
-            }
+            val finalTime = if (includeTime) selectedTime else null
             val storageDateTime = formatBpStorageString(selectedDate, finalTime)
             onConfirm(
                 entry.copy(
@@ -150,7 +123,7 @@ fun BloodPressureEntryEditDialog(
                 onConfirm = { confirmIfValid() },
                 onDismiss = onDismiss
             ),
-        title = { Text(title) },
+        title = { Text(text = title, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
         text = {
             Column(
                 modifier = Modifier
@@ -159,34 +132,10 @@ fun BloodPressureEntryEditDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 // Date Selection
-                if (isNew) {
-                    EnterDateValue(
-                        selectedDate = selectedDate,
-                        onShowDatePicker = { showDatePicker = true }
-                    )
-                } else {
-                    OutlinedCard(
-                        onClick = { showDatePicker = true },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = selectedDate.displayDate(),
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                            Icon(
-                                imageVector = Icons.Default.CalendarMonth,
-                                contentDescription = "Select date"
-                            )
-                        }
-                    }
-                }
+                EnterDateValue(
+                    selectedDate = selectedDate,
+                    onShowDatePicker = { showDatePicker = true }
+                )
 
                 // Optional Time Component
                 Row(
@@ -205,37 +154,10 @@ fun BloodPressureEntryEditDialog(
                 }
 
                 if (includeTime) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        OutlinedTextField(
-                            value = hourText,
-                            onValueChange = { input ->
-                                if (input.text.isEmpty() || timeDigitsPattern.matches(input.text)) {
-                                    hourText = input
-                                }
-                            },
-                            label = { Text("Hour (00-23)") },
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.weight(1f)
-                        )
-                        Text(":", fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                        OutlinedTextField(
-                            value = minuteText,
-                            onValueChange = { input ->
-                                if (input.text.isEmpty() || timeDigitsPattern.matches(input.text)) {
-                                    minuteText = input
-                                }
-                            },
-                            label = { Text("Min (00-59)") },
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
+                    EnterTimeValue(
+                        selectedTime = selectedTime,
+                        onShowTimePicker = { showTimePicker = true }
+                    )
                 }
 
                 // Systolic Input Field
@@ -344,6 +266,19 @@ fun BloodPressureEntryEditDialog(
             }
         )
     }
+
+    if (showTimePicker) {
+        BpTimePickerDialog(
+            selectedTime = selectedTime,
+            onTimeSelected = { newTime ->
+                selectedTime = newTime
+                showTimePicker = false
+            },
+            onDismiss = {
+                showTimePicker = false
+            }
+        )
+    }
 }
 
 @Composable
@@ -370,6 +305,35 @@ private fun EnterDateValue(
             Icon(
                 imageVector = Icons.Default.CalendarMonth,
                 contentDescription = "Select date"
+            )
+        }
+    }
+}
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun EnterTimeValue(
+    selectedTime: LocalTime,
+    onShowTimePicker: () -> Unit
+) {
+    OutlinedCard(
+        onClick = onShowTimePicker,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = selectedTime.displayTime(),
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Icon(
+                imageVector = Icons.Default.Schedule,
+                contentDescription = "Select time"
             )
         }
     }
@@ -415,7 +379,47 @@ private fun BpDatePickerDialog(
     }
 }
 
-@Preview
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun BpTimePickerDialog(
+    selectedTime: LocalTime,
+    onTimeSelected: (LocalTime) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val timePickerState = rememberTimePickerState(
+        initialHour = selectedTime.hour,
+        initialMinute = selectedTime.minute,
+        is24Hour = false
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onTimeSelected(LocalTime(timePickerState.hour, timePickerState.minute, 0))
+                }
+            ) {
+                Text("OK")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+        text = {
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                TimePicker(state = timePickerState)
+            }
+        }
+    )
+}
+
+@Preview(name = "Blood Pressure Entry Dialog")
 @Composable
 fun BloodPressureEntryEditDialogPreview() {
     KoinApplication(
@@ -424,6 +428,37 @@ fun BloodPressureEntryEditDialogPreview() {
             BloodPressureEntryEditDialog(
                 entry = BloodPressureEntryData(id = 0, dateTime = "2026-09-23T15:00:00Z", systolic = 120, diastolic = 80, pulse = 70),
                 onConfirm = {},
+                onDismiss = {}
+            )
+        }
+    )
+}
+
+
+@Preview(name = "Blood Pressure Entry With Time")
+@Composable
+fun BloodPressureEntryWTimeEditDialogPreview() {
+    KoinApplication(
+        configuration = koinConfiguration(declaration = { modules(previewAppModule) }),
+        content = {
+            BloodPressureEntryEditDialog(
+                entry = BloodPressureEntryData(id = 1, dateTime = "2026-09-23T15:00:00Z", systolic = 120, diastolic = 80, pulse = 70),
+                onConfirm = {},
+                onDismiss = {}
+            )
+        }
+    )
+}
+
+@Preview(name = "Blood Pressure Time Picker Dialog")
+@Composable
+fun BloodPressureTimePickerDialogPreview() {
+    KoinApplication(
+        configuration = koinConfiguration(declaration = { modules(previewAppModule) }),
+        content = {
+            BpTimePickerDialog(
+                selectedTime = LocalTime(11, 0, 0),
+                onTimeSelected = {},
                 onDismiss = {}
             )
         }

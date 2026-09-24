@@ -6,6 +6,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ShowChart
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -253,7 +254,7 @@ fun GraphsView(modifier: Modifier = Modifier) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
+                .padding(horizontal = 4.dp, vertical = 4.dp)
         ) {
             GraphHeader(
                 selectedTimeFrame = selectedTimeFrame,
@@ -268,12 +269,12 @@ fun GraphsView(modifier: Modifier = Modifier) {
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(16.dp)
+                        .padding(horizontal = 2.dp, vertical = 4.dp)
                 ) {
                     if (!hasAnyData) {
                         EmptyGraphState(
@@ -310,47 +311,45 @@ private fun GraphHeader(
     settings: SettingsData,
     settingsViewModel: SettingsViewModel
 ) {
+    val extColors = MaterialTheme.extendedColors
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 16.dp),
+            .padding(bottom = 6.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Series Selection Checkboxes
+        // Series Selection FilterChips
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Checkbox(
-                    checked = settings.showWeightInGraph,
-                    onCheckedChange = { settingsViewModel.setShowWeightInGraph(it) }
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = "Weight",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium
-                )
-            }
+            FilterChip(
+                selected = settings.showWeightInGraph,
+                onClick = { settingsViewModel.setShowWeightInGraph(!settings.showWeightInGraph) },
+                label = { Text("Weight", style = MaterialTheme.typography.labelMedium) },
+                leadingIcon = {
+                    Box(
+                        Modifier
+                            .size(8.dp)
+                            .background(extColors.graphWeight.color, CircleShape)
+                    )
+                }
+            )
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Checkbox(
-                    checked = settings.showBloodPressureInGraph,
-                    onCheckedChange = { settingsViewModel.setShowBloodPressureInGraph(it) }
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = "Blood Pressure",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium
-                )
-            }
+            FilterChip(
+                selected = settings.showBloodPressureInGraph,
+                onClick = { settingsViewModel.setShowBloodPressureInGraph(!settings.showBloodPressureInGraph) },
+                label = { Text("Blood Pressure", style = MaterialTheme.typography.labelMedium) },
+                leadingIcon = {
+                    Box(
+                        Modifier
+                            .size(8.dp)
+                            .background(extColors.graphSystolic.color, CircleShape)
+                    )
+                }
+            )
         }
 
         // Time Frame Dropdown
@@ -361,7 +360,6 @@ private fun GraphHeader(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GraphTimeFrameDropdown(
     selectedTimeFrame: GraphTimeFrame,
@@ -370,32 +368,37 @@ private fun GraphTimeFrameDropdown(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = !expanded },
-        modifier = modifier.width(160.dp)
-    ) {
-        OutlinedTextField(
-            value = selectedTimeFrame.label,
-            onValueChange = {},
-            readOnly = true,
-            singleLine = true,
-            label = { Text("Time frame") },
-            trailingIcon = {
-                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+    Box(modifier = modifier) {
+        AssistChip(
+            onClick = { expanded = true },
+            label = {
+                Text(
+                    text = selectedTimeFrame.shortLabel,
+                    style = MaterialTheme.typography.labelMedium,
+                    maxLines = 1,
+                    softWrap = false
+                )
             },
-            modifier = Modifier
-                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable, enabled = true)
-                .fillMaxWidth()
+            trailingIcon = {
+                Icon(
+                    imageVector = Icons.Default.ArrowDropDown,
+                    contentDescription = "Select time frame",
+                    modifier = Modifier.size(18.dp)
+                )
+            }
         )
 
-        ExposedDropdownMenu(
+        DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
             GraphTimeFrame.entries.forEach { timeFrame ->
                 DropdownMenuItem(
-                    text = { Text(timeFrame.label) },
+                    text = {
+                        Text(
+                            text = timeFrame.label
+                        )
+                    },
                     onClick = {
                         onTimeFrameSelected(timeFrame)
                         expanded = false
@@ -759,6 +762,7 @@ private fun CompoundHealthChart(
     }
 
     val startAxis = VerticalAxis.rememberStart(
+        horizontalLabelPosition = VerticalAxis.HorizontalLabelPosition.Inside,
         valueFormatter = startAxisValueFormatter,
         label = rememberAxisLabelComponent(
             style = TextStyle(
@@ -779,6 +783,7 @@ private fun CompoundHealthChart(
 
     val endAxis = if (hasWeight && hasBp) {
         VerticalAxis.rememberEnd(
+            horizontalLabelPosition = VerticalAxis.HorizontalLabelPosition.Inside,
             valueFormatter = endAxisValueFormatter,
             label = rememberAxisLabelComponent(
                 style = TextStyle(
@@ -816,27 +821,23 @@ private fun CompoundHealthChart(
     )
 
     Column(modifier = modifier) {
-        // Legend
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 8.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (hasWeight) {
-                LegendItem(color = weightLineColor, label = "Weight ($unitLabel)")
-            }
-            if (hasWeight && hasBp) {
-                Spacer(modifier = Modifier.width(16.dp))
-            }
-            if (hasBp) {
-                LegendItem(color = bpSystolicColor, label = "Systolic (mmHg)")
-                Spacer(modifier = Modifier.width(12.dp))
-                LegendItem(color = bpDiastolicColor, label = "Diastolic (mmHg)")
+        // Legend: only shown when Blood Pressure is active to distinguish Systolic, Diastolic, and Pulse lines
+        if (hasBp) {
+            FlowRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 2.dp, bottom = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+                itemVerticalAlignment = Alignment.CenterVertically
+            ) {
+                if (hasWeight) {
+                    LegendItem(color = weightLineColor, label = "Weight ($unitLabel)")
+                }
+                LegendItem(color = bpSystolicColor, label = "Systolic")
+                LegendItem(color = bpDiastolicColor, label = "Diastolic")
                 if (showPulse) {
-                    Spacer(modifier = Modifier.width(12.dp))
-                    LegendItem(color = bpPulseColor, label = "Pulse (bpm)")
+                    LegendItem(color = bpPulseColor, label = "Pulse")
                 }
             }
         }
@@ -856,14 +857,16 @@ private fun LegendItem(color: Color, label: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
             modifier = Modifier
-                .size(10.dp)
+                .size(8.dp)
                 .background(color, CircleShape)
         )
         Spacer(modifier = Modifier.width(4.dp))
         Text(
             text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            softWrap = false
         )
     }
 }

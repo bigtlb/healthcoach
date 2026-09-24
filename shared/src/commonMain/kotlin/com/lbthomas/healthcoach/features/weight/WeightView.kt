@@ -49,6 +49,7 @@ private object WeightViewDefaults {
 fun WeightView(
     showAddWeightEntry: Boolean,
     modifier: Modifier = Modifier,
+    isWideLayout: Boolean = false,
     onAddDismiss: () -> Unit = {},
     onRequestFocus: () -> Unit = {}
 ) {
@@ -105,29 +106,32 @@ fun WeightView(
         modifier = modifier
             .fillMaxSize()
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Weight",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            AddWeightEntryButton(
-                onClick = {
-                    entryToEdit = WeightEntryData(id = 0, date = today, weight = 0.0)
-                }
-            )
+        if (isWideLayout) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Weight",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                AddWeightEntryButton(
+                    onClick = {
+                        entryToEdit = WeightEntryData(id = 0, date = today, weight = 0.0)
+                    }
+                )
+            }
         }
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             WeightEntryList(
                 entries = entries,
                 settings = settings,
+                isWideLayout = isWideLayout,
                 onClickEntry = { entry ->
                     entryToEdit = entry
                 },
@@ -166,6 +170,7 @@ private fun AddWeightEntryButton(
 fun WeightEntryList(
     entries: List<WeightEntryData>,
     settings: SettingsData,
+    isWideLayout: Boolean = false,
     onClickEntry: (WeightEntryData) -> Unit = {},
     onDeleteEntry: (WeightEntryData) -> Unit = {}
 ) {
@@ -176,6 +181,10 @@ fun WeightEntryList(
     ) {
         LazyColumn(
             state = listState,
+            contentPadding = PaddingValues(
+                top = 4.dp,
+                bottom = if (isWideLayout) 8.dp else 80.dp
+            ),
             modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {

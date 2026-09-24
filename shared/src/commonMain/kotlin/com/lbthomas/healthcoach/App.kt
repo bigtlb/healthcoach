@@ -5,6 +5,7 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ShowChart
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Scale
 import androidx.compose.material.icons.filled.Settings
@@ -126,6 +127,57 @@ fun App() {
                         onSelection = { settingsViewModel.setSelectedPage(it) },
                         onShowSettings = { showSettings = true }
                     )
+                },
+                bottomBar = {
+                    if (!isWideLayout) {
+                        NavigationBar(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer
+                        ) {
+                            AppDefaults.Tabs.forEach { tab ->
+                                NavigationBarItem(
+                                    selected = selectedPage == tab.page,
+                                    onClick = { settingsViewModel.setSelectedPage(tab.page) },
+                                    icon = {
+                                        Icon(
+                                            imageVector = tab.icon,
+                                            contentDescription = tab.title
+                                        )
+                                    },
+                                    label = {
+                                        Text(
+                                            text = tab.title,
+                                            maxLines = 1,
+                                            softWrap = false
+                                        )
+                                    }
+                                )
+                            }
+                        }
+                    }
+                },
+                floatingActionButton = {
+                    if (!isWideLayout && (selectedPage == SelectedPage.WeightView || selectedPage == SelectedPage.BloodPressureView)) {
+                        FloatingActionButton(
+                            onClick = {
+                                if (selectedPage == SelectedPage.WeightView) {
+                                    showAddWeightEntry = true
+                                } else {
+                                    showAddBloodPressureEntry = true
+                                }
+                            },
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = if (selectedPage == SelectedPage.WeightView) {
+                                    "Add new weight"
+                                } else {
+                                    "Add new blood pressure"
+                                }
+                            )
+                        }
+                    }
                 }
             ) { innerPadding ->
                 AppContent(
@@ -178,9 +230,9 @@ private fun AppContent(
 ) {
     Column(
         modifier = modifier
-            .background(MaterialTheme.colorScheme.primaryContainer)
+            .background(if (isWideLayout) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.background)
             .fillMaxSize()
-            .padding(top = 5.dp),
+            .then(if (isWideLayout) Modifier.padding(top = 5.dp) else Modifier),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         if (isWideLayout && (selectedPage == SelectedPage.WeightView || selectedPage == SelectedPage.BloodPressureView)) {
@@ -192,12 +244,14 @@ private fun AppContent(
                     if (selectedPage == SelectedPage.WeightView) {
                         WeightView(
                             showAddWeightEntry = showAddWeightEntry,
+                            isWideLayout = true,
                             onAddDismiss = onAddWeightDismiss,
                             onRequestFocus = onRequestFocus
                         )
                     } else {
                         BloodPressureView(
                             showAddBloodPressureEntry = showAddBloodPressureEntry,
+                            isWideLayout = true,
                             onAddDismiss = onAddBloodPressureDismiss,
                             onRequestFocus = onRequestFocus
                         )
@@ -211,11 +265,13 @@ private fun AppContent(
             when (selectedPage) {
                 SelectedPage.WeightView -> WeightView(
                     showAddWeightEntry = showAddWeightEntry,
+                    isWideLayout = false,
                     onAddDismiss = onAddWeightDismiss,
                     onRequestFocus = onRequestFocus
                 )
                 SelectedPage.BloodPressureView -> BloodPressureView(
                     showAddBloodPressureEntry = showAddBloodPressureEntry,
+                    isWideLayout = false,
                     onAddDismiss = onAddBloodPressureDismiss,
                     onRequestFocus = onRequestFocus
                 )
@@ -226,6 +282,7 @@ private fun AppContent(
 }
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppBar(
     selectedPage: SelectedPage,
@@ -233,15 +290,30 @@ fun AppBar(
     onSelection: (SelectedPage) -> Unit,
     onShowSettings: () -> Unit
 ) {
-
     TopAppBar(
         title = {
-            Icon(
-                painter = painterResource(Res.drawable.scales),
-                contentDescription = "HealthCoach",
-                modifier = Modifier.size(AppDefaults.TitleIconSize),
-                tint = Color.Unspecified
-            )
+            if (isWideLayout) {
+                Icon(
+                    painter = painterResource(Res.drawable.scales),
+                    contentDescription = "HealthCoach",
+                    modifier = Modifier.size(AppDefaults.TitleIconSize),
+                    tint = Color.Unspecified
+                )
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        painter = painterResource(Res.drawable.scales),
+                        contentDescription = "HealthCoach",
+                        modifier = Modifier.size(24.dp),
+                        tint = Color.Unspecified
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = AppDefaults.Tabs.firstOrNull { it.page == selectedPage }?.title ?: "Health Coach",
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                }
+            }
         },
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -249,11 +321,13 @@ fun AppBar(
             actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
         ),
         actions = {
-            AppActionButtons(onSelection, selectedPage, isWideLayout, onShowSettings)
+            if (isWideLayout) {
+                AppActionButtons(onSelection, selectedPage, isWideLayout = true, onShowSettings)
+            } else {
+                SettingsButton(onShowSettings)
+            }
         }
     )
-
-
 }
 
 @Composable

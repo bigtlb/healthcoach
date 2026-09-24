@@ -53,6 +53,7 @@ import org.koin.compose.koinInject
 import org.koin.dsl.koinConfiguration
 import kotlin.time.Instant
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.text.style.TextAlign
 import kotlinx.datetime.LocalDate
 
 @Suppress("DefaultLocale")
@@ -65,7 +66,7 @@ fun WeightEntryEditDialog(
     settings: SettingsData,
     modifier: Modifier = Modifier
 ) {
-    val title = if (entry.id == 0L) "Add Weight Entry" else "Edit Weight Entry"
+    val title = if (entry.id == 0L) "New Weight" else "Edit Weight"
     val units = if (settings.weightUnit == WeightUnit.METRIC) "kgs" else "lbs"
 
     var selectedDate by remember { mutableStateOf(entry.date) }
@@ -107,7 +108,7 @@ fun WeightEntryEditDialog(
                 onConfirm = { confirmIfValid() },
                 onDismiss = onDismiss
             ),
-        title = { Text(title) },
+        title = { Text(text = title, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
         text = {
             Column(
                 modifier = Modifier

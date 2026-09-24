@@ -90,6 +90,17 @@ fun LocalTime.formatTime(): String {
     return "$h:$m"
 }
 
+fun LocalTime.displayTime(): String {
+    val h = when {
+        hour == 0 -> 12
+        hour > 12 -> hour - 12
+        else -> hour
+    }
+    val amPm = if (hour >= 12) "PM" else "AM"
+    val m = minute.toString().padStart(2, '0')
+    return "$h:$m $amPm"
+}
+
 fun LocalDateTime.formatDateTime(): String {
     return "${date.displayDate()} ${time.formatTime()}"
 }

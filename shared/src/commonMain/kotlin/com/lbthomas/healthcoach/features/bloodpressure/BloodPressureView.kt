@@ -47,13 +47,15 @@ private object BloodPressureViewDefaults {
     val RowDateWidth = 68.dp
     val ButtonSize = 36.dp
     val ButtonPadding = 8.dp
-    const val AHA_GUIDE_URL = "https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings"
+    const val AHA_GUIDE_URL =
+        "https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings"
 }
 
 @Composable
 fun BloodPressureView(
     showAddBloodPressureEntry: Boolean,
     modifier: Modifier = Modifier,
+    isWideLayout: Boolean = false,
     onAddDismiss: () -> Unit = {},
     onRequestFocus: () -> Unit = {}
 ) {
@@ -120,35 +122,38 @@ fun BloodPressureView(
         modifier = modifier
             .fillMaxSize()
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Blood Pressure",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            AddBloodPressureEntryButton(
-                onClick = {
-                    entryToEdit = BloodPressureEntryData(
-                        id = 0,
-                        dateTime = today.toString(),
-                        systolic = 0,
-                        diastolic = 0,
-                        pulse = null
-                    )
-                }
-            )
+        if (isWideLayout) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Blood Pressure",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                AddBloodPressureEntryButton(
+                    onClick = {
+                        entryToEdit = BloodPressureEntryData(
+                            id = 0,
+                            dateTime = today.toString(),
+                            systolic = 0,
+                            diastolic = 0,
+                            pulse = null
+                        )
+                    }
+                )
+            }
         }
 
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             BloodPressureEntryList(
                 entries = entries,
+                isWideLayout = isWideLayout,
                 onClickEntry = { entry ->
                     entryToEdit = entry
                 },
@@ -161,7 +166,7 @@ fun BloodPressureView(
         AhaGuideLinkFooter(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 12.dp, horizontal = 16.dp)
+                .padding(vertical = 8.dp, horizontal = 16.dp)
         )
     }
 }
@@ -192,6 +197,7 @@ private fun AddBloodPressureEntryButton(
 @Composable
 fun BloodPressureEntryList(
     entries: List<BloodPressureEntryData>,
+    isWideLayout: Boolean = false,
     onClickEntry: (BloodPressureEntryData) -> Unit = {},
     onDeleteEntry: (BloodPressureEntryData) -> Unit = {}
 ) {
@@ -202,6 +208,10 @@ fun BloodPressureEntryList(
     ) {
         LazyColumn(
             state = listState,
+            contentPadding = PaddingValues(
+                top = 4.dp,
+                bottom = if (isWideLayout) 8.dp else 80.dp
+            ),
             modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -315,8 +325,10 @@ private fun RowBpData(
     val (changeIcon, iconColor, changeDescription) = when {
         systolicDiff < 0 && diastolicDiff <= 0 || systolicDiff <= 0 && diastolicDiff < 0 ->
             Triple(Icons.Outlined.KeyboardDoubleArrowDown, extColors.weightDecrease.color, "Decreased BP")
+
         systolicDiff > 0 || diastolicDiff > 0 ->
             Triple(Icons.Outlined.KeyboardDoubleArrowUp, extColors.weightIncrease.color, "Increased BP")
+
         else ->
             Triple(Icons.Outlined.Stop, extColors.weightNoChange.color, "No change")
     }
@@ -469,7 +481,8 @@ private fun AhaGuideLinkFooter(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "American Heart Association Blood Pressure Guide",
+                text = "Blood Pressure Guide",
+                textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.bodyMedium.copy(
                     color = MaterialTheme.colorScheme.primary,
                     textDecoration = TextDecoration.Underline,
