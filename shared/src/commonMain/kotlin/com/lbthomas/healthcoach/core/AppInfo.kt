@@ -210,7 +210,11 @@ object AppInfo {
       and charge a fee for, acceptance of support, warranty, indemnity,
       or other liability obligations and/or rights consistent with this License.
 
-   Copyright 2026 Thomas Baker
+    Health Coach
+    Copyright 2026 Thomas Baker
+
+    This product includes software developed at
+    https://github.com/bigtlb/healthcoach
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.

@@ -22,12 +22,26 @@ compose.desktop {
     application {
         mainClass = "com.lbthomas.healthcoach.MainKt"
 
+        buildTypes.release.proguard {
+            configurationFiles.from(project.file("proguard-rules.pro"))
+        }
+
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "com.lbthomas.healthcoach"
+            packageName = "HealthCoach"
             packageVersion = libs.versions.app.version.get()
+            description = "Health and wellness tracking application"
+            vendor = "LBThomas"
 
-            modules("java.sql")
+            modules("java.sql", "jdk.unsupported", "java.naming", "java.management")
+
+            linux {
+                // Debian package names must be lowercase, numbers, plus, minus, and dots
+                packageName = "healthcoach"
+                iconFile.set(project.file("src/main/resources/scales.png"))
+                appCategory = "Utility;MedicalSoftware;"
+                menuGroup = "Utility"
+            }
         }
     }
 }

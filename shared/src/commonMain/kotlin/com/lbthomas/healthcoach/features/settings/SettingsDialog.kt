@@ -54,6 +54,7 @@ private enum class SettingsTab(val title: String) {
     ABOUT("About")
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsDialog(
     settingsViewModel: SettingsViewModel,
@@ -68,10 +69,11 @@ fun SettingsDialog(
         focusRequester.requestFocus()
     }
 
-    AlertDialog(
+    BasicAlertDialog(
         onDismissRequest = onDismiss,
         modifier = Modifier
             .widthIn(min = 380.dp, max = 520.dp)
+            .fillMaxWidth()
             .focusRequester(focusRequester)
             .focusable()
             .testTag("settings_dialog")
@@ -79,23 +81,37 @@ fun SettingsDialog(
                 onConfirm = onDismiss,
                 onDismiss = onDismiss
             ),
-        title = { Text("Settings") },
-        text = {
+    ) {
+        Surface(
+            shape = AlertDialogDefaults.shape,
+            color = AlertDialogDefaults.containerColor,
+            tonalElevation = AlertDialogDefaults.TonalElevation
+        ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(SettingsDialogDefaults.DialogPadding),
-                verticalArrangement = Arrangement.spacedBy(SettingsDialogDefaults.SectionSpacing)
+                modifier = Modifier.fillMaxWidth()
             ) {
-                PrimaryTabRow(
+                Text(
+                    text = "Settings",
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.padding(start = 24.dp, top = 24.dp, end = 24.dp, bottom = 16.dp)
+                )
+
+                PrimaryScrollableTabRow(
                     selectedTabIndex = selectedTab.ordinal,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    edgePadding = 0.dp
                 ) {
                     SettingsTab.entries.forEach { tab ->
                         Tab(
                             selected = selectedTab == tab,
                             onClick = { selectedTab = tab },
-                            text = { Text(tab.title) }
+                            text = {
+                                Text(
+                                    text = tab.title,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            }
                         )
                     }
                 }
@@ -103,7 +119,7 @@ fun SettingsDialog(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 8.dp)
+                        .padding(horizontal = 24.dp, vertical = 16.dp)
                 ) {
                     when (selectedTab) {
                         SettingsTab.APPEARANCE -> AppearanceTabContent(settings, settingsViewModel)
@@ -112,14 +128,20 @@ fun SettingsDialog(
                         SettingsTab.ABOUT -> AboutTabContent()
                     }
                 }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Close")
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 24.dp, end = 24.dp, bottom = 16.dp),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Close")
+                    }
+                }
             }
         }
-    )
+    }
 }
 
 @Composable
