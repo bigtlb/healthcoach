@@ -103,6 +103,7 @@ fun App() {
                                         settingsViewModel.setSelectedPage(SelectedPage.GraphsView)
                                     }
                                 }
+
                                 Key.S, Key.Comma -> showSettings = true
                                 Key.N, Key.Plus, Key.NumPadAdd, Key.Equals -> {
                                     if (selectedPage == SelectedPage.WeightView) {
@@ -111,6 +112,7 @@ fun App() {
                                         showAddBloodPressureEntry = true
                                     }
                                 }
+
                                 else -> {
                                     return@onPreviewKeyEvent false
                                 }
@@ -138,10 +140,12 @@ fun App() {
                                     selected = selectedPage == tab.page,
                                     onClick = { settingsViewModel.setSelectedPage(tab.page) },
                                     icon = {
-                                        Icon(
-                                            imageVector = tab.icon,
-                                            contentDescription = tab.title
-                                        )
+                                        Tooltip("${tab.title} (Ctrl + ${tab.title.first()})") {
+                                            Icon(
+                                                imageVector = tab.icon,
+                                                contentDescription = tab.title
+                                            )
+                                        }
                                     },
                                     label = {
                                         Text(
@@ -168,14 +172,16 @@ fun App() {
                             containerColor = MaterialTheme.colorScheme.primary,
                             contentColor = MaterialTheme.colorScheme.onPrimary
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = if (selectedPage == SelectedPage.WeightView) {
-                                    "Add new weight"
-                                } else {
-                                    "Add new blood pressure"
-                                }
-                            )
+                            Tooltip("Add new entry\n(Ctrl + N or '+')") {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = if (selectedPage == SelectedPage.WeightView) {
+                                        "Add new weight"
+                                    } else {
+                                        "Add new blood pressure"
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -269,12 +275,14 @@ private fun AppContent(
                     onAddDismiss = onAddWeightDismiss,
                     onRequestFocus = onRequestFocus
                 )
+
                 SelectedPage.BloodPressureView -> BloodPressureView(
                     showAddBloodPressureEntry = showAddBloodPressureEntry,
                     isWideLayout = false,
                     onAddDismiss = onAddBloodPressureDismiss,
                     onRequestFocus = onRequestFocus
                 )
+
                 SelectedPage.GraphsView -> GraphsView()
             }
         }
