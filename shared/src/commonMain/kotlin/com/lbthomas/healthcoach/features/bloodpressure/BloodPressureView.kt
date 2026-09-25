@@ -68,7 +68,7 @@ fun BloodPressureView(
     LaunchedEffect(showAddBloodPressureEntry) {
         if (showAddBloodPressureEntry) {
             entryToEdit = BloodPressureEntryData(
-                id = 0,
+                id = "",
                 dateTime = today.toString(),
                 systolic = 0,
                 diastolic = 0,
@@ -96,7 +96,7 @@ fun BloodPressureView(
         BloodPressureEntryEditDialog(
             entry = entry,
             onConfirm = { updatedEntry ->
-                if (updatedEntry.id == 0L) {
+                if (updatedEntry.id.isEmpty() || updatedEntry.id == "0") {
                     viewModel.addEntry(
                         dateTime = updatedEntry.dateTime,
                         systolic = updatedEntry.systolic,
@@ -139,7 +139,7 @@ fun BloodPressureView(
                 AddBloodPressureEntryButton(
                     onClick = {
                         entryToEdit = BloodPressureEntryData(
-                            id = 0,
+                            id = "",
                             dateTime = today.toString(),
                             systolic = 0,
                             diastolic = 0,

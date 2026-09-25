@@ -1,18 +1,17 @@
 CREATE TABLE bloodPressureEntry (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id TEXT PRIMARY KEY NOT NULL,
     dateTime TEXT NOT NULL,
     systolic INTEGER NOT NULL,
     diastolic INTEGER NOT NULL,
-    pulse INTEGER
+    pulse INTEGER,
+    updated_at INTEGER NOT NULL
 );
 
-insert {
-INSERT INTO bloodPressureEntry (dateTime, systolic, diastolic, pulse) VALUES (?, ?, ?, ?);
-SELECT last_insert_rowid();
-}
+insert:
+INSERT INTO bloodPressureEntry (id, dateTime, systolic, diastolic, pulse, updated_at) VALUES (?, ?, ?, ?, ?, ?);
 
 update:
-UPDATE bloodPressureEntry SET dateTime = ?, systolic = ?, diastolic = ?, pulse = ? WHERE id = ?;
+UPDATE bloodPressureEntry SET dateTime = ?, systolic = ?, diastolic = ?, pulse = ?, updated_at = ? WHERE id = ?;
 
 delete:
 DELETE FROM bloodPressureEntry WHERE id = ?;

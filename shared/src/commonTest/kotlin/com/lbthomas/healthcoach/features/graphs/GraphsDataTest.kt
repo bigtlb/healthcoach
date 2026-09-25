@@ -16,9 +16,9 @@ class GraphsDataTest {
     @Test
     fun testChronologicalSorting() {
         val entries = listOf(
-            WeightEntryData(id = 1, date = LocalDate(2026, 3, 15), weight = 75.0),
-            WeightEntryData(id = 2, date = LocalDate(2026, 1, 10), weight = 77.5),
-            WeightEntryData(id = 3, date = LocalDate(2026, 2, 20), weight = 76.0),
+            WeightEntryData(id = "1", date = LocalDate(2026, 3, 15), weight = 75.0),
+            WeightEntryData(id = "2", date = LocalDate(2026, 1, 10), weight = 77.5),
+            WeightEntryData(id = "3", date = LocalDate(2026, 2, 20), weight = 76.0),
         )
 
         val sorted = entries.sortedBy { it.date }
@@ -30,7 +30,7 @@ class GraphsDataTest {
 
     @Test
     fun testUnitConversion() {
-        val entry = WeightEntryData(id = 1, date = LocalDate(2026, 1, 10), weight = 80.0)
+        val entry = WeightEntryData(id = "1", date = LocalDate(2026, 1, 10), weight = 80.0)
 
         val metricWeight = entry.getWeightInCurrentUnits(WeightUnit.METRIC)
         assertEquals(80.0, metricWeight, 0.001)
@@ -42,9 +42,9 @@ class GraphsDataTest {
     @Test
     fun testBuildWeightGraphEntriesYearToDateWithInterpolation() {
         val entries = listOf(
-            WeightEntryData(id = 1, date = LocalDate(2025, 12, 1), weight = 80.0),
-            WeightEntryData(id = 2, date = LocalDate(2026, 1, 31), weight = 70.0),
-            WeightEntryData(id = 3, date = LocalDate(2026, 3, 1), weight = 68.0)
+            WeightEntryData(id = "1", date = LocalDate(2025, 12, 1), weight = 80.0),
+            WeightEntryData(id = "2", date = LocalDate(2026, 1, 31), weight = 70.0),
+            WeightEntryData(id = "3", date = LocalDate(2026, 3, 1), weight = 68.0)
         )
 
         val result = buildWeightGraphEntries(entries, GraphTimeFrame.YEAR_TO_DATE)
@@ -64,9 +64,9 @@ class GraphsDataTest {
     @Test
     fun testBuildBpGraphEntries() {
         val entries = listOf(
-            BloodPressureEntryData(id = 1, dateTime = "2026-01-15T08:00:00Z", systolic = 120, diastolic = 80, pulse = 70),
-            BloodPressureEntryData(id = 2, dateTime = "2026-01-15T20:00:00Z", systolic = 125, diastolic = 82, pulse = 72),
-            BloodPressureEntryData(id = 3, dateTime = "2026-02-10", systolic = 130, diastolic = 85, pulse = null)
+            BloodPressureEntryData(id = "1", dateTime = "2026-01-15T08:00:00Z", systolic = 120, diastolic = 80, pulse = 70),
+            BloodPressureEntryData(id = "2", dateTime = "2026-01-15T20:00:00Z", systolic = 125, diastolic = 82, pulse = 72),
+            BloodPressureEntryData(id = "3", dateTime = "2026-02-10", systolic = 130, diastolic = 85, pulse = null)
         )
 
         val result = buildBpGraphEntries(entries, GraphTimeFrame.ALL)

@@ -41,7 +41,7 @@ fun BloodPressureEntryEditDialog(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val isNew = entry.id == 0L
+    val isNew = entry.id.isEmpty() || entry.id == "0"
     val title = if (isNew) "New Blood Pressure" else "Edit Blood Pressure"
 
     var selectedDate by remember { mutableStateOf(if (isNew) today else entry.date) }
@@ -426,7 +426,7 @@ fun BloodPressureEntryEditDialogPreview() {
         configuration = koinConfiguration(declaration = { modules(previewAppModule) }),
         content = {
             BloodPressureEntryEditDialog(
-                entry = BloodPressureEntryData(id = 0, dateTime = "2026-09-23T15:00:00Z", systolic = 120, diastolic = 80, pulse = 70),
+                entry = BloodPressureEntryData(id = "0", dateTime = "2026-09-23T15:00:00Z", systolic = 120, diastolic = 80, pulse = 70),
                 onConfirm = {},
                 onDismiss = {}
             )
@@ -442,7 +442,7 @@ fun BloodPressureEntryWTimeEditDialogPreview() {
         configuration = koinConfiguration(declaration = { modules(previewAppModule) }),
         content = {
             BloodPressureEntryEditDialog(
-                entry = BloodPressureEntryData(id = 1, dateTime = "2026-09-23T15:00:00Z", systolic = 120, diastolic = 80, pulse = 70),
+                entry = BloodPressureEntryData(id = "1", dateTime = "2026-09-23T15:00:00Z", systolic = 120, diastolic = 80, pulse = 70),
                 onConfirm = {},
                 onDismiss = {}
             )

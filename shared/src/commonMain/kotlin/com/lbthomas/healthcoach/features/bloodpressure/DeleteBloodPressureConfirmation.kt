@@ -69,7 +69,7 @@ fun DeleteBloodPressureConfirmationPreview() {
         configuration = koinConfiguration(declaration = { modules(previewAppModule) }),
         content = {
             DeleteBloodPressureConfirmation(
-                entry = BloodPressureEntryData(id = 1, dateTime = "2026-09-23T15:00:00Z", systolic = 120, diastolic = 80, pulse = 70),
+                entry = BloodPressureEntryData(id = "1", dateTime = "2026-09-23T15:00:00Z", systolic = 120, diastolic = 80, pulse = 70),
                 onConfirm = {},
                 onDismiss = {}
             )

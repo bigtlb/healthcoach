@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lbthomas.healthcoach.features.weight.data.WeightEntryData
 import com.lbthomas.healthcoach.features.weight.data.WeightRepository
-import com.lbthomas.healthcoach.weight.data.WeightEntry
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -28,15 +27,15 @@ open class WeightViewModel : ViewModel {
         this.repository = null
     }
 
-    fun addEntry(date: LocalDate, weight: Double) {
-        repository?.addEntry(date, weight)
+    fun addEntry(date: LocalDate, weight: Double): String? {
+        return repository?.addEntry(date, weight)
     }
 
     fun updateEntry(entry: WeightEntryData) {
         repository?.updateEntry(entry)
     }
 
-    fun deleteEntry(id: Long) {
+    fun deleteEntry(id: String) {
         repository?.deleteEntry(id)
     }
 }

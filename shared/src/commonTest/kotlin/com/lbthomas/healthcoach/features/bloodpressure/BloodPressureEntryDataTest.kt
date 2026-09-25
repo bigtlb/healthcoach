@@ -17,7 +17,7 @@ class BloodPressureEntryDataTest {
     @Test
     fun testDateOnlyParsing() {
         val entry = BloodPressureEntryData(
-            id = 1,
+            id = "1",
             dateTime = "2026-09-23",
             systolic = 118,
             diastolic = 76,
@@ -33,7 +33,7 @@ class BloodPressureEntryDataTest {
     @Test
     fun testRfc3339DateTimeParsing() {
         val entry = BloodPressureEntryData(
-            id = 2,
+            id = "2",
             dateTime = "2026-09-23T15:30:00Z",
             systolic = 145,
             diastolic = 95,

@@ -66,7 +66,7 @@ fun DeleteConfirmationPreview() {
         configuration = koinConfiguration(declaration = { modules(previewAppModule) }),
         content = {
             DeleteConfirmation(
-                entry = WeightEntryData(id = 1, date = today, weight = 70.0),
+                entry = WeightEntryData(id = "1", date = today, weight = 70.0),
                 onConfirm = {},
                 onDismiss = {}
             )

@@ -6,11 +6,12 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 
 data class BloodPressureEntryData(
-    val id: Long,
+    val id: String,
     val dateTime: String,
     val systolic: Int,
     val diastolic: Int,
-    val pulse: Int? = null
+    val pulse: Int? = null,
+    val updatedAt: Long = 0L,
 ) {
     val date: LocalDate
         get() = parsedDateTime.first

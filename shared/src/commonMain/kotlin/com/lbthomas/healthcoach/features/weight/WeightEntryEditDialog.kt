@@ -66,7 +66,7 @@ fun WeightEntryEditDialog(
     settings: SettingsData,
     modifier: Modifier = Modifier
 ) {
-    val title = if (entry.id == 0L) "New Weight" else "Edit Weight"
+    val title = if (entry.id.isEmpty() || entry.id == "0") "New Weight" else "Edit Weight"
     val units = if (settings.weightUnit == WeightUnit.METRIC) "kgs" else "lbs"
 
     var selectedDate by remember { mutableStateOf(entry.date) }
@@ -116,7 +116,7 @@ fun WeightEntryEditDialog(
                     .padding(8.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                if (entry.id == 0L) {
+                if (entry.id.isEmpty() || entry.id == "0") {
                     // Date Selection
                     EnterDateValue(
                         selectedDate = selectedDate,
@@ -279,7 +279,7 @@ fun WeightEntryEditDialogPreview() {
         configuration = koinConfiguration(declaration = { modules(previewAppModule) }),
         content = {
             WeightEntryEditDialog(
-                entry = WeightEntryData(id = 1, date = today, weight = 75.0),
+                entry = WeightEntryData(id = "1", date = today, weight = 75.0),
                 onConfirm = {},
                 onDismiss = {},
                 koinInject<SettingsViewModel>().settings.collectAsState().value
@@ -295,7 +295,7 @@ fun WeightEntryAddDialogPreview() {
         configuration = koinConfiguration(declaration = { modules(previewAppModule) }),
         content = {
             WeightEntryEditDialog(
-                entry = WeightEntryData(id = 0, date = today, weight = 75.0),
+                entry = WeightEntryData(id = "0", date = today, weight = 75.0),
                 onConfirm = {},
                 onDismiss = {},
                 koinInject<SettingsViewModel>().settings.collectAsState().value

@@ -16,8 +16,8 @@ fun createDatabase(driverFactory: DriverFactory): Database {
         val schemaVersion = Schema.version
         if (dbVersion == 0L) {
             Schema.create(driver)
-            setDbVersion(driver, Schema.version)
-            Logger.i("dbinit: created tables, setVersion to 1")
+            setDbVersion(driver, schemaVersion)
+            Logger.i("dbinit: created tables, setVersion to $schemaVersion")
         } else {
             Logger.i("dbinit: existing tables, version $dbVersion")
             if (schemaVersion > dbVersion) {

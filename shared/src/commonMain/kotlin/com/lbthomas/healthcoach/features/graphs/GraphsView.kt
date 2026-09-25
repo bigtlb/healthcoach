@@ -65,7 +65,7 @@ internal data class WeightGraphEntries(
 )
 
 internal data class BpGraphPoint(
-    val id: Long,
+    val id: String,
     val x: Double,
     val date: LocalDate,
     val systolic: Double,
@@ -132,7 +132,7 @@ internal fun buildWeightGraphEntries(
                 previousEntry.weight + ((firstEntryInRange.weight - previousEntry.weight) * progress)
 
             WeightEntryData(
-                id = Long.MIN_VALUE,
+                id = "",
                 date = LocalDate.fromEpochDays(minEpochDay),
                 weight = interpolatedWeight
             )

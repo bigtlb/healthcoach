@@ -1,0 +1,49 @@
+CREATE TABLE weightEntry_v3 (
+    id TEXT PRIMARY KEY NOT NULL,
+    date TEXT NOT NULL,
+    weight REAL NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+INSERT INTO weightEntry_v3 (id, date, weight, updated_at)
+SELECT
+    substr(printf('%012x', COALESCE(CAST(strftime('%s', date) AS INTEGER) * 1000, CAST(strftime('%s', 'now') AS INTEGER) * 1000)), 1, 8) || '-' ||
+    substr(printf('%012x', COALESCE(CAST(strftime('%s', date) AS INTEGER) * 1000, CAST(strftime('%s', 'now') AS INTEGER) * 1000)), 9, 4) || '-7' ||
+    substr(lower(hex(randomblob(2))), 2, 3) || '-' ||
+    substr('89ab', 1 + (abs(random()) % 4), 1) || substr(lower(hex(randomblob(2))), 2, 3) || '-' ||
+    lower(hex(randomblob(6))),
+    date,
+    weight,
+    COALESCE(CAST(strftime('%s', date) AS INTEGER) * 1000, CAST(strftime('%s', 'now') AS INTEGER) * 1000)
+FROM weightEntry;
+
+DROP TABLE weightEntry;
+
+ALTER TABLE weightEntry_v3 RENAME TO weightEntry;
+
+CREATE TABLE bloodPressureEntry_v3 (
+    id TEXT PRIMARY KEY NOT NULL,
+    dateTime TEXT NOT NULL,
+    systolic INTEGER NOT NULL,
+    diastolic INTEGER NOT NULL,
+    pulse INTEGER,
+    updated_at INTEGER NOT NULL
+);
+
+INSERT INTO bloodPressureEntry_v3 (id, dateTime, systolic, diastolic, pulse, updated_at)
+SELECT
+    substr(printf('%012x', COALESCE(CAST(strftime('%s', dateTime) AS INTEGER) * 1000, CAST(strftime('%s', 'now') AS INTEGER) * 1000)), 1, 8) || '-' ||
+    substr(printf('%012x', COALESCE(CAST(strftime('%s', dateTime) AS INTEGER) * 1000, CAST(strftime('%s', 'now') AS INTEGER) * 1000)), 9, 4) || '-7' ||
+    substr(lower(hex(randomblob(2))), 2, 3) || '-' ||
+    substr('89ab', 1 + (abs(random()) % 4), 1) || substr(lower(hex(randomblob(2))), 2, 3) || '-' ||
+    lower(hex(randomblob(6))),
+    dateTime,
+    systolic,
+    diastolic,
+    pulse,
+    COALESCE(CAST(strftime('%s', dateTime) AS INTEGER) * 1000, CAST(strftime('%s', 'now') AS INTEGER) * 1000)
+FROM bloodPressureEntry;
+
+DROP TABLE bloodPressureEntry;
+
+ALTER TABLE bloodPressureEntry_v3 RENAME TO bloodPressureEntry;

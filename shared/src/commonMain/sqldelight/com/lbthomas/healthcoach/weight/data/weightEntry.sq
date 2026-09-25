@@ -1,18 +1,17 @@
 CREATE TABLE weightEntry (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id TEXT PRIMARY KEY NOT NULL,
     -- Date format is ISO-8601 YYYY-MM-DD
     date TEXT NOT NULL,
     -- weight is always stored in Kg
-    weight REAL NOT NULL
+    weight REAL NOT NULL,
+    updated_at INTEGER NOT NULL
 );
 
-insert {
-INSERT INTO weightEntry (date, weight) VALUES (?, ?);
-SELECT last_insert_rowid();
-}
+insert:
+INSERT INTO weightEntry (id, date, weight, updated_at) VALUES (?, ?, ?, ?);
 
 update:
-UPDATE weightEntry SET date = ?, weight = ? WHERE id = ?;
+UPDATE weightEntry SET date = ?, weight = ?, updated_at = ? WHERE id = ?;
 
 delete:
 DELETE FROM weightEntry WHERE id = ?;

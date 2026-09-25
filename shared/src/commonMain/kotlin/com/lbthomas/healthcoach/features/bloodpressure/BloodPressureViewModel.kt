@@ -26,15 +26,15 @@ open class BloodPressureViewModel : ViewModel {
         this.repository = null
     }
 
-    fun addEntry(dateTime: String, systolic: Int, diastolic: Int, pulse: Int?) {
-        repository?.addEntry(dateTime, systolic, diastolic, pulse)
+    fun addEntry(dateTime: String, systolic: Int, diastolic: Int, pulse: Int?): String? {
+        return repository?.addEntry(dateTime, systolic, diastolic, pulse)
     }
 
     fun updateEntry(entry: BloodPressureEntryData) {
         repository?.updateEntry(entry)
     }
 
-    fun deleteEntry(id: Long) {
+    fun deleteEntry(id: String) {
         repository?.deleteEntry(id)
     }
 }

@@ -62,7 +62,7 @@ fun WeightView(
 
     LaunchedEffect(showAddWeightEntry) {
         if (showAddWeightEntry) {
-            entryToEdit = WeightEntryData(id = 0, date = today, weight = 0.0)
+            entryToEdit = WeightEntryData(id = "", date = today, weight = 0.0)
         }
     }
 
@@ -85,7 +85,7 @@ fun WeightView(
         WeightEntryEditDialog(
             entry = entry,
             onConfirm = { updatedEntry ->
-                if (updatedEntry.id == 0L)
+                if (updatedEntry.id.isEmpty() || updatedEntry.id == "0")
                     viewModel.addEntry(updatedEntry.date, updatedEntry.weight)
                 else
                     viewModel.updateEntry(updatedEntry)
@@ -122,7 +122,7 @@ fun WeightView(
                 )
                 AddWeightEntryButton(
                     onClick = {
-                        entryToEdit = WeightEntryData(id = 0, date = today, weight = 0.0)
+                        entryToEdit = WeightEntryData(id = "", date = today, weight = 0.0)
                     }
                 )
             }
@@ -382,7 +382,7 @@ fun MonthHeader(
         val formattedWeight =
             String.format(
                 "%+.1f",
-                WeightEntryData(0, today, weightChange)
+                WeightEntryData("", today, weightChange)
                     .getWeightInCurrentUnits(settings.weightUnit)
             )
 
