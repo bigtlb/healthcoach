@@ -13,6 +13,7 @@ import healthcoach.shared.generated.resources.scales
 import org.jetbrains.compose.resources.painterResource
 import org.koin.core.context.GlobalContext
 import org.koin.core.context.startKoin
+import kotlin.time.Duration.Companion.milliseconds
 
 
 fun main() = application {
@@ -24,9 +25,6 @@ fun main() = application {
     }
 
     val settingsViewModel = GlobalContext.get().get<SettingsViewModel>()
-
-    // this is overkill for making the window reflect state changes
-    // val settings by settingsViewModel.settings.collectAsState()
 
     val settings = settingsViewModel.settings.value
 
@@ -43,7 +41,17 @@ fun main() = application {
     Window(
         onCloseRequest = {
             saveWindowState(windowState, settingsViewModel)
-
+            val currentSettings = settingsViewModel.settings.value
+            if (currentSettings.syncEnabled && currentSettings.autoSyncOnClose) {
+                runCatching {
+                    val syncEngine = GlobalContext.get().get<com.lbthomas.healthcoach.core.sync.SyncEngine>()
+                    kotlinx.coroutines.runBlocking {
+                        kotlinx.coroutines.withTimeoutOrNull(5000L.milliseconds) {
+                            syncEngine.sync(currentSettings.toSyncConfig())
+                        }
+                    }
+                }
+            }
             exitApplication()
         },
         title = "HealthCoach",

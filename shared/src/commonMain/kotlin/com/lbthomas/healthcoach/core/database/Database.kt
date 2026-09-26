@@ -9,6 +9,15 @@ import com.lbthomas.healthcoach.Database.Companion.Schema
 
 fun createDatabase(driverFactory: DriverFactory): Database {
     val driver = driverFactory.createDriver()
+    return createDatabaseForDriver(driver)
+}
+
+fun createDatabaseForPath(driverFactory: DriverFactory, dbFilePath: String): Database {
+    val driver = driverFactory.createDriverForPath(dbFilePath)
+    return createDatabaseForDriver(driver)
+}
+
+fun createDatabaseForDriver(driver: SqlDriver): Database {
     val database = Database(driver)
 
     database.transaction {

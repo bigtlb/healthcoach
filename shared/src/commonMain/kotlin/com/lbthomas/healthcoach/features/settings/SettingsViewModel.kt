@@ -99,4 +99,81 @@ class SettingsViewModel  {
             )
         }
     }
+
+    fun setSyncEnabled(enabled: Boolean) {
+        updateSettings { it.copy(syncEnabled = enabled) }
+    }
+
+    fun setSyncProvider(provider: com.lbthomas.healthcoach.core.sync.SyncProviderType) {
+        updateSettings { it.copy(syncProvider = provider) }
+    }
+
+    fun setLocalSyncPath(path: String) {
+        updateSettings { it.copy(localSyncPath = path) }
+    }
+
+    fun setGoogleSession(
+        email: String,
+        accessToken: String = "",
+        refreshToken: String = "",
+        tokenStatus: String = "Active",
+        expiresAt: Long? = null,
+        refreshTokenExpiresAt: Long? = null
+    ) {
+        updateSettings {
+            it.copy(
+                googleAccountEmail = email,
+                googleAccessToken = accessToken,
+                googleRefreshToken = if (refreshToken.isNotBlank()) refreshToken else it.googleRefreshToken,
+                googleTokenStatus = tokenStatus,
+                googleTokenExpiresAt = expiresAt,
+                googleRefreshTokenExpiresAt = if (refreshToken.isNotBlank()) refreshTokenExpiresAt else it.googleRefreshTokenExpiresAt
+            )
+        }
+    }
+
+    fun clearGoogleSession() {
+        updateSettings {
+            it.copy(
+                googleAccessToken = "",
+                googleRefreshToken = "",
+                googleAccountEmail = "",
+                googleTokenStatus = "Revoked",
+                googleTokenExpiresAt = null,
+                googleRefreshTokenExpiresAt = null
+            )
+        }
+    }
+
+    fun setGoogleTokenExpiresAt(expiresAt: Long?) {
+        updateSettings { it.copy(googleTokenExpiresAt = expiresAt) }
+    }
+
+    fun setGoogleRefreshTokenExpiresAt(expiresAt: Long?) {
+        updateSettings { it.copy(googleRefreshTokenExpiresAt = expiresAt) }
+    }
+
+    fun setGoogleTokenStatus(status: String) {
+        updateSettings { it.copy(googleTokenStatus = status) }
+    }
+
+    fun setGoogleAccessToken(token: String) {
+        updateSettings { it.copy(googleAccessToken = token) }
+    }
+
+    fun setGoogleAccountEmail(email: String) {
+        updateSettings { it.copy(googleAccountEmail = email) }
+    }
+
+    fun setRemoteFileName(name: String) {
+        updateSettings { it.copy(remoteFileName = name) }
+    }
+
+    fun setAutoSyncOnClose(enabled: Boolean) {
+        updateSettings { it.copy(autoSyncOnClose = enabled) }
+    }
+
+    fun setAutoSyncIntervalMinutes(minutes: Int) {
+        updateSettings { it.copy(autoSyncIntervalMinutes = minutes) }
+    }
 }

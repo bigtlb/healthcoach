@@ -94,5 +94,31 @@ class SettingsDataTest {
 
         viewModel.setShowPulseInGraph(true)
         assertEquals(true, viewModel.settings.value.showPulseInGraph)
+
+        viewModel.setLocalSyncPath("/path/to/sync")
+        assertEquals("/path/to/sync", viewModel.settings.value.localSyncPath)
+
+        viewModel.setGoogleSession(
+            email = "user@gmail.com",
+            accessToken = "access123",
+            refreshToken = "refresh456",
+            tokenStatus = "Active (expires in 60m)",
+            expiresAt = 1700000000000L,
+            refreshTokenExpiresAt = 1700604800000L
+        )
+        assertEquals("user@gmail.com", viewModel.settings.value.googleAccountEmail)
+        assertEquals("access123", viewModel.settings.value.googleAccessToken)
+        assertEquals("refresh456", viewModel.settings.value.googleRefreshToken)
+        assertEquals("Active (expires in 60m)", viewModel.settings.value.googleTokenStatus)
+        assertEquals(1700000000000L, viewModel.settings.value.googleTokenExpiresAt)
+        assertEquals(1700604800000L, viewModel.settings.value.googleRefreshTokenExpiresAt)
+
+        viewModel.clearGoogleSession()
+        assertEquals("", viewModel.settings.value.googleAccessToken)
+        assertEquals("", viewModel.settings.value.googleRefreshToken)
+        assertEquals("", viewModel.settings.value.googleAccountEmail)
+        assertEquals("Revoked", viewModel.settings.value.googleTokenStatus)
+        assertEquals(null, viewModel.settings.value.googleTokenExpiresAt)
+        assertEquals(null, viewModel.settings.value.googleRefreshTokenExpiresAt)
     }
 }

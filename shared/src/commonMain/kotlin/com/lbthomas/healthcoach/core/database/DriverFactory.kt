@@ -1,11 +1,12 @@
-@file:Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
-
 package com.lbthomas.healthcoach.core.database
 
 import app.cash.sqldelight.db.SqlDriver
 
-expect class DriverFactory {
-    fun createDriver(): SqlDriver
+expect open class DriverFactory {
+    open fun createDriver(): SqlDriver
+    open fun createDriverForPath(dbFilePath: String): SqlDriver
+    open fun getDatabaseDirectory(): String
+    open fun getDatabaseFilePath(): String
 }
 
 expect fun createDbFolder(): String

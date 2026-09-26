@@ -29,6 +29,9 @@ import com.lbthomas.healthcoach.features.bloodpressure.BloodPressureView
 import com.lbthomas.healthcoach.features.graphs.GraphsView
 import com.lbthomas.healthcoach.features.settings.SettingsDialog
 import com.lbthomas.healthcoach.features.settings.SettingsViewModel
+import com.lbthomas.healthcoach.features.sync.SyncActionButton
+import com.lbthomas.healthcoach.features.sync.SyncNotificationManager
+import com.lbthomas.healthcoach.features.sync.SyncViewModel
 import com.lbthomas.healthcoach.features.weight.WeightView
 import healthcoach.shared.generated.resources.Res
 import healthcoach.shared.generated.resources.scales
@@ -57,12 +60,22 @@ private object AppDefaults {
 @Composable
 fun App() {
     val settingsViewModel = koinInject<SettingsViewModel>()
+    val syncViewModel = koinInject<SyncViewModel>()
     val settings by settingsViewModel.settings.collectAsState()
     val selectedPage = settings.selectedPage
     var showSettings by remember { mutableStateOf(false) }
     var showAddWeightEntry by remember { mutableStateOf(false) }
     var showAddBloodPressureEntry by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
+    LaunchedEffect(Unit) {
+        SyncNotificationManager.notifications.collect { notification ->
+            snackbarHostState.showSnackbar(
+                message = notification.message,
+                duration = if (notification.isError) SnackbarDuration.Long else SnackbarDuration.Short
+            )
+        }
+    }
 
     HealthCoachTheme(
         theme = settings.appTheme,
@@ -86,6 +99,7 @@ fun App() {
             }
 
             Scaffold(
+                snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
                 modifier = Modifier
                     .focusRequester(focusRequester)
                     .focusable()
@@ -105,6 +119,7 @@ fun App() {
                                 }
 
                                 Key.S, Key.Comma -> showSettings = true
+                                Key.R -> syncViewModel.syncNow()
                                 Key.N, Key.Plus, Key.NumPadAdd, Key.Equals -> {
                                     if (selectedPage == SelectedPage.WeightView) {
                                         showAddWeightEntry = true
@@ -126,6 +141,7 @@ fun App() {
                     AppBar(
                         selectedPage = selectedPage,
                         isWideLayout = isWideLayout,
+                        syncViewModel = syncViewModel,
                         onSelection = { settingsViewModel.setSelectedPage(it) },
                         onShowSettings = { showSettings = true }
                     )
@@ -295,6 +311,7 @@ private fun AppContent(
 fun AppBar(
     selectedPage: SelectedPage,
     isWideLayout: Boolean = false,
+    syncViewModel: SyncViewModel? = null,
     onSelection: (SelectedPage) -> Unit,
     onShowSettings: () -> Unit
 ) {
@@ -330,8 +347,11 @@ fun AppBar(
         ),
         actions = {
             if (isWideLayout) {
-                AppActionButtons(onSelection, selectedPage, isWideLayout = true, onShowSettings)
+                AppActionButtons(onSelection, selectedPage, isWideLayout = true, syncViewModel, onShowSettings)
             } else {
+                if (syncViewModel != null) {
+                    SyncActionButton(syncViewModel = syncViewModel)
+                }
                 SettingsButton(onShowSettings)
             }
         }
@@ -343,6 +363,7 @@ private fun AppActionButtons(
     onSelection: (SelectedPage) -> Unit,
     selectedPage: SelectedPage,
     isWideLayout: Boolean = false,
+    syncViewModel: SyncViewModel? = null,
     onShowSettings: () -> Unit
 ) {
     val tabs = if (isWideLayout) {
@@ -360,6 +381,9 @@ private fun AppActionButtons(
         )
     }
 
+    if (syncViewModel != null) {
+        SyncActionButton(syncViewModel = syncViewModel)
+    }
     SettingsButton(onShowSettings)
 }
 

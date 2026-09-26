@@ -104,3 +104,9 @@ fun LocalTime.displayTime(): String {
 fun LocalDateTime.formatDateTime(): String {
     return "${date.displayDate()} ${time.formatTime()}"
 }
+
+fun formatEpochMillis(epochMillis: Long): String {
+    val instant = Instant.fromEpochMilliseconds(epochMillis)
+    val ldt = instant.toLocalDateTime(TimeZone.currentSystemDefault())
+    return ldt.formatDateTime()
+}

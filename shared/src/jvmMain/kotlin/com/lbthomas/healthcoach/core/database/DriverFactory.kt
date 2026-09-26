@@ -6,10 +6,22 @@ import com.lbthomas.healthcoach.core.database.createDbFolder
 import kotlin.io.path.Path
 import kotlin.io.path.createDirectories
 
-actual class DriverFactory {
-    actual fun createDriver(): SqlDriver {
-        val dbFolder = createDbFolder()
+actual open class DriverFactory(private val customDbFolder: String? = null) {
+    actual open fun createDriver(): SqlDriver {
+        val dbFolder = customDbFolder ?: createDbFolder()
         return JdbcSqliteDriver("jdbc:sqlite:${dbFolder}/healthcoach.db")
+    }
+
+    actual open fun createDriverForPath(dbFilePath: String): SqlDriver {
+        return JdbcSqliteDriver("jdbc:sqlite:${dbFilePath}")
+    }
+
+    actual open fun getDatabaseDirectory(): String {
+        return customDbFolder ?: createDbFolder()
+    }
+
+    actual open fun getDatabaseFilePath(): String {
+        return "${getDatabaseDirectory()}/healthcoach.db"
     }
 }
 

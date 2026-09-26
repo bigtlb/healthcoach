@@ -19,6 +19,8 @@ val previewAppModule = module {
         SettingsData()
     )) }
 
+    factory { com.lbthomas.healthcoach.features.sync.SyncViewModel() }
+
     factory {
         WeightViewModel(
             previewEntries = MutableStateFlow(

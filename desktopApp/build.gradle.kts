@@ -16,6 +16,7 @@ dependencies {
     implementation(libs.compose.components.resources)
     implementation(libs.slf4j)
     implementation(libs.koin.core)
+    implementation(libs.kotlinx.coroutines.core)
 }
 
 compose.desktop {
