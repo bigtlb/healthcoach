@@ -83,6 +83,22 @@ object AppInfo {
             projectUrl = "https://www.slf4j.org/"
         ),
         OpenSourceAttribution(
+            name = "Ktor Framework",
+            version = "3.1.1",
+            copyright = "Copyright © 2018-2025 JetBrains s.r.o. and Ktor project contributors",
+            licenseName = "Apache-2.0",
+            licenseUrl = "https://www.apache.org/licenses/LICENSE-2.0",
+            projectUrl = "https://ktor.io/"
+        ),
+        OpenSourceAttribution(
+            name = "JmDNS",
+            version = "3.5.9",
+            copyright = "Copyright © 2002-2023 JmDNS Project and contributors",
+            licenseName = "Apache-2.0",
+            licenseUrl = "https://www.apache.org/licenses/LICENSE-2.0",
+            projectUrl = "https://github.com/jmdns/jmdns"
+        ),
+        OpenSourceAttribution(
             name = "Outfit Font Family",
             version = null,
             copyright = "Copyright © 2021 The Outfit Project Authors (Rodrigo Fuenzalida / Omnibus-Type)",

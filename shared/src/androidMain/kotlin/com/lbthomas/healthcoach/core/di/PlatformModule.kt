@@ -4,6 +4,7 @@ import android.content.Context
 import co.touchlab.kermit.LogcatWriter
 import co.touchlab.kermit.Logger
 import com.lbthomas.healthcoach.core.database.DriverFactory
+import com.lbthomas.healthcoach.core.logging.LoggingConfig
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.KoinApplication
 import org.koin.core.module.Module
@@ -21,4 +22,5 @@ actual fun KoinApplication.configurePlatformContext(context: Any?) {
         androidContext(context)
     }
     Logger.setLogWriters(LogcatWriter())
+    Logger.setMinSeverity(LoggingConfig.minSeverity)
 }

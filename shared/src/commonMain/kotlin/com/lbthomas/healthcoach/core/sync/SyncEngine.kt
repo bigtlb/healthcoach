@@ -4,7 +4,6 @@ import app.cash.sqldelight.db.SqlDriver
 import co.touchlab.kermit.Logger
 import com.lbthomas.healthcoach.Database
 import com.lbthomas.healthcoach.core.database.DriverFactory
-import com.lbthomas.healthcoach.core.database.createDatabaseForDriver
 import com.lbthomas.healthcoach.core.database.createDatabaseForPath
 import com.lbthomas.healthcoach.core.database.getDbVersion
 import com.lbthomas.healthcoach.core.database.setDbVersion
@@ -80,11 +79,13 @@ class SyncEngine(
             // We can write via temporary staging or update settings store
             settingsStore?.updateSettings {
                 it.copy(
-                    lastSyncStatus = metadata.lastSyncStatus,
-                    lastSyncTime = metadata.lastSyncedTimestamp,
-                    lastSyncHash = metadata.lastSyncedHash,
-                    lastSyncError = metadata.lastSyncError,
-                    lastSyncFailed = metadata.lastSyncStatus.startsWith("Error")
+                    sync = it.sync.copy(
+                        lastSyncStatus = metadata.lastSyncStatus,
+                        lastSyncTime = metadata.lastSyncedTimestamp,
+                        lastSyncHash = metadata.lastSyncedHash,
+                        lastSyncError = metadata.lastSyncError,
+                        lastSyncFailed = metadata.lastSyncStatus.startsWith("Error")
+                    )
                 )
             }
         } catch (e: Exception) {

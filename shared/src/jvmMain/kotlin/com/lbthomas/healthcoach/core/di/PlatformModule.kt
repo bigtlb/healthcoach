@@ -6,6 +6,7 @@ import co.touchlab.kermit.Logger
 import co.touchlab.kermit.Severity
 import com.lbthomas.healthcoach.core.database.DriverFactory
 import com.lbthomas.healthcoach.core.database.createDbFolder
+import com.lbthomas.healthcoach.core.logging.LoggingConfig
 import org.koin.core.KoinApplication
 import org.koin.core.module.Module
 import org.koin.core.qualifier.named
@@ -49,4 +50,5 @@ actual val platformModule: Module = module {
 actual fun KoinApplication.configurePlatformContext(context: Any?) {
     val logFile = File(createDbFolder(), "healthcoach.log")
     Logger.setLogWriters(CommonWriter(), FileLogWriter(logFile))
+    Logger.setMinSeverity(LoggingConfig.minSeverity)
 }

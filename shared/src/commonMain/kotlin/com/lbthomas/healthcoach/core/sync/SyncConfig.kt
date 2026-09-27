@@ -9,7 +9,7 @@ import kotlinx.serialization.Serializable
 enum class SyncProviderType {
     LOCAL_FOLDER,
     GOOGLE_DRIVE,
-    SMB
+    PEER_TO_PEER
 }
 
 /**
@@ -22,10 +22,15 @@ data class SyncConfig(
     val localFolderPath: String = "",
     val googleAccountEmail: String = "",
     val googleAccessToken: String = "",
-    val googleRefreshToken: String = ""
+    val googleRefreshToken: String = "",
+    val peerServerHost: String = "",
+    val peerServerPort: Int = DEFAULT_P2P_PORT,
+    val peerServerToken: String = "",
+    val peerServerName: String = ""
 ) {
     companion object {
         const val DEFAULT_REMOTE_DB_NAME = "healthcoach.db"
+        const val DEFAULT_P2P_PORT = 8765
         const val LOCAL_APP_SUBFOLDER = "com.lbthomas.healthcoach"
         const val GOOGLE_APP_SUBFOLDER = "appDataFolder"
     }

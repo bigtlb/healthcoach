@@ -34,7 +34,7 @@ class MainActivity : ComponentActivity() {
         val settingsViewModel = runCatching { GlobalContext.get().get<com.lbthomas.healthcoach.features.settings.SettingsViewModel>() }.getOrNull()
         val syncEngine = runCatching { GlobalContext.get().get<com.lbthomas.healthcoach.core.sync.SyncEngine>() }.getOrNull()
         val currentSettings = settingsViewModel?.settings?.value
-        if (currentSettings?.syncEnabled == true && currentSettings.autoSyncOnClose && syncEngine != null) {
+        if (currentSettings?.sync?.syncEnabled == true && currentSettings.sync.autoSyncOnClose && syncEngine != null) {
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
                 syncEngine.sync(currentSettings.toSyncConfig())
             }

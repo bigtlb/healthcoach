@@ -42,7 +42,7 @@ fun main() = application {
         onCloseRequest = {
             saveWindowState(windowState, settingsViewModel)
             val currentSettings = settingsViewModel.settings.value
-            if (currentSettings.syncEnabled && currentSettings.autoSyncOnClose) {
+            if (currentSettings.sync.syncEnabled && currentSettings.sync.autoSyncOnClose) {
                 runCatching {
                     val syncEngine = GlobalContext.get().get<com.lbthomas.healthcoach.core.sync.SyncEngine>()
                     kotlinx.coroutines.runBlocking {
@@ -82,14 +82,14 @@ private fun saveWindowState(
 @Composable
 private fun GetWindowState(settings: SettingsData): WindowState = rememberWindowState(
     position = WindowPosition(
-        x = settings.windowX.dp,
-        y = settings.windowY.dp
+        x = settings.ui.windowX.dp,
+        y = settings.ui.windowY.dp
     ),
     size = DpSize(
-        width = settings.windowWidth.dp,
-        height = settings.windowHeight.dp
+        width = settings.ui.windowWidth.dp,
+        height = settings.ui.windowHeight.dp
     ),
-    placement = if (settings.windowMaximized) {
+    placement = if (settings.ui.windowMaximized) {
         WindowPlacement.Maximized
     } else {
         WindowPlacement.Floating

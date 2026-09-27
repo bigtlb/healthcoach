@@ -11,10 +11,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.lbthomas.healthcoach.core.ui.Tooltip
-import com.lbthomas.healthcoach.features.settings.data.SettingsData
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,12 +24,12 @@ fun SyncActionButton(
     val settings by syncViewModel.settings.collectAsState()
     var showCancelDialog by remember { mutableStateOf(false) }
 
-    if (!settings.syncEnabled) {
+    if (!settings.sync.syncEnabled) {
         return
     }
 
     val isSyncing = syncState is SyncState.Syncing
-    val hasError = syncState is SyncState.Error || settings.lastSyncFailed
+    val hasError = syncState is SyncState.Error || settings.sync.lastSyncFailed
 
     val infiniteTransition = rememberInfiniteTransition()
     val rotation by infiniteTransition.animateFloat(

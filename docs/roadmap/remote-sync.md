@@ -12,7 +12,7 @@ Users can synchronize their health records using their preferred storage targets
 * **Local Folders & Mounted Drives** (*Implemented*): Directories synchronized by Proton Drive Desktop, Microsoft OneDrive, Dropbox, or local network mounts.
 * **Google Drive (`appDataFolder`)** (*Desktop Implemented, Android In Progress*): Scoped hidden sandbox partition in personal Google Drive via PKCE OAuth 2.0.
 * **Peer-to-Peer (LAN Client-Server)** (*Active Plan / In Progress*): Direct Wi-Fi synchronization between running HealthCoach instances with zero-configuration mDNS discovery, binary database streaming, and PIN pairing.
-* **Future Storage Adapters**: Direct SMB2/SMB3 network shares via `smbj`, Microsoft OneDrive integration.
+* **Future Storage Adapters**: Microsoft OneDrive integration.
 
 ---
 
@@ -170,4 +170,4 @@ graph TD
 | **Phase 3: 3-Way Snapshot Merge Engine** | Differential delta extraction, `updated_at` LWW conflict resolution, schema gating, concurrency retries. | **Completed** |
 | **Phase 4: Sync UI, Action Button & Feedback** | Modernized Settings Sync tab, animated `SyncActionButton`, failure overlays, cancel modals, toast dispatch. | **Completed** |
 | **Phase 5: Peer-to-Peer LAN Synchronization** | Embedded Ktor server, binary DB streaming, mDNS discovery, PIN pairing, live DB reset, `PeerToPeerStorageAdapter`. | **Active / In Progress** |
-| **Phase 6: Android Google Drive & Future Cloud** | Android native Google Play Services Drive integration, Microsoft OneDrive, and SMB network shares. | **Upcoming** |
+| **Phase 6: Android Google Drive & Future Cloud** | Android native Google Play Services Drive integration, Microsoft OneDrive. | **Upcoming** |

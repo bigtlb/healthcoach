@@ -3,6 +3,8 @@ package com.lbthomas.healthcoach.features.graphs
 import com.lbthomas.healthcoach.core.enums.GraphTimeFrame
 import com.lbthomas.healthcoach.core.enums.WeightUnit
 import com.lbthomas.healthcoach.features.bloodpressure.data.BloodPressureEntryData
+import com.lbthomas.healthcoach.features.graphs.data.buildBpGraphEntries
+import com.lbthomas.healthcoach.features.graphs.data.buildWeightGraphEntries
 import com.lbthomas.healthcoach.features.weight.data.WeightEntryData
 import kotlinx.datetime.LocalDate
 import kotlin.math.max

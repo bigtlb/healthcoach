@@ -1,5 +1,5 @@
 [versions]
-app-version = "0.9.0"
+app-version = "0.9.1"
 app-versionCode = "1"
 agp = "9.1.1"
 android-compileSdk = "37"
@@ -18,6 +18,8 @@ kotlinx-coroutines = "1.11.0"
 material3 = "1.12.0-alpha03"
 
 composeMaterialIconsVersion = "1.7.3"
+ktorVersion = "3.1.1"
+jmdnsVersion = "3.5.9"
 kermitVersion = "2.1.0"
 koinAnnotationsVersion = "4.2.2"
 koinVersion = "4.2.2"
@@ -59,6 +61,16 @@ koin-test-junit5 = { group = "io.insert-koin", name = "koin-test-junit5", versio
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetimeVersion" }
 kotlinx-serialization = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerializationVersion" }
 slf4j = { group = "org.slf4j", name = "slf4j-simple", version.ref = "slf4jVersion" }
+jmdns = { group = "org.jmdns", name = "jmdns", version.ref = "jmdnsVersion" }
+ktor-server-core = { group = "io.ktor", name = "ktor-server-core", version.ref = "ktorVersion" }
+ktor-server-cio = { group = "io.ktor", name = "ktor-server-cio", version.ref = "ktorVersion" }
+ktor-server-content-negotiation = { group = "io.ktor", name = "ktor-server-content-negotiation", version.ref = "ktorVersion" }
+ktor-server-status-pages = { group = "io.ktor", name = "ktor-server-status-pages", version.ref = "ktorVersion" }
+ktor-server-cors = { group = "io.ktor", name = "ktor-server-cors", version.ref = "ktorVersion" }
+ktor-client-core = { group = "io.ktor", name = "ktor-client-core", version.ref = "ktorVersion" }
+ktor-client-cio = { group = "io.ktor", name = "ktor-client-cio", version.ref = "ktorVersion" }
+ktor-client-content-negotiation = { group = "io.ktor", name = "ktor-client-content-negotiation", version.ref = "ktorVersion" }
+ktor-serialization-kotlinx-json = { group = "io.ktor", name = "ktor-serialization-kotlinx-json", version.ref = "ktorVersion" }
 sqldelight-coroutines-extensions = { group = "app.cash.sqldelight", name = "coroutines-extensions", version.ref = "sqlDelightVersion" }
 sqldelight-android-driver = { group = "app.cash.sqldelight", name = "android-driver", version.ref = "sqlDelightVersion" }
 sqldelight-sqlite-dialect = { group = "app.cash.sqldelight", name = "sqlite-3-38-dialect", version.ref = "sqlDelightVersion" }

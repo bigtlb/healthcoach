@@ -67,10 +67,10 @@ fun WeightEntryEditDialog(
     modifier: Modifier = Modifier
 ) {
     val title = if (entry.id.isEmpty() || entry.id == "0") "New Weight" else "Edit Weight"
-    val units = if (settings.weightUnit == WeightUnit.METRIC) "kgs" else "lbs"
+    val units = if (settings.weight.unit == WeightUnit.METRIC) "kgs" else "lbs"
 
     var selectedDate by remember { mutableStateOf(entry.date) }
-    val initialText = if (entry.weight > 0.0) String.format("%.1f",entry.getWeightInCurrentUnits(settings.weightUnit)) else ""
+    val initialText = if (entry.weight > 0.0) String.format("%.1f",entry.getWeightInCurrentUnits(settings.weight.unit)) else ""
     var weightFieldValue by remember {
         mutableStateOf(
             TextFieldValue(
@@ -89,7 +89,7 @@ fun WeightEntryEditDialog(
 
     fun confirmIfValid() {
         if (isWeightValid) {
-            onConfirm(entry.copy(id = entry.id, date = selectedDate, weight = entry.convertToKilograms(parsedWeight, settings.weightUnit)))
+            onConfirm(entry.copy(id = entry.id, date = selectedDate, weight = entry.convertToKilograms(parsedWeight, settings.weight.unit)))
         }
     }
 

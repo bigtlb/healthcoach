@@ -25,8 +25,8 @@ object StorageAdapterFactory {
                     refreshToken = config.googleRefreshToken
                 )
             }
-            SyncProviderType.SMB -> {
-                throw UnsupportedOperationException("SMB storage adapter is deferred to FR-11")
+            SyncProviderType.PEER_TO_PEER -> {
+                throw UnsupportedOperationException("PeerToPeerStorageAdapter will be fully wired in Phase 3")
             }
         }
     }

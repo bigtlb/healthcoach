@@ -45,13 +45,13 @@ class SyncViewModel {
         scope.launch {
             settings.collectLatest { s ->
                 periodicJob?.cancel()
-                if (s.syncEnabled && s.autoSyncIntervalMinutes > 0) {
-                    val delayMillis = s.autoSyncIntervalMinutes * 60 * 1000L
+                if (s.sync.syncEnabled && s.sync.autoSyncIntervalMinutes > 0) {
+                    val delayMillis = s.sync.autoSyncIntervalMinutes * 60 * 1000L
                     periodicJob = this@launch.launch {
                         while (isActive) {
                             delay(delayMillis.milliseconds)
                             if (_syncState.value !is SyncState.Syncing) {
-                                Logger.i("Triggering periodic background sync (${s.autoSyncIntervalMinutes}m interval)")
+                                Logger.i("Triggering periodic background sync (${s.sync.autoSyncIntervalMinutes}m interval)")
                                 performSync(showNotifications = false)
                             }
                         }
@@ -92,7 +92,7 @@ class SyncViewModel {
         if (_syncState.value is SyncState.Syncing) return
 
         val config = settings.value.toSyncConfig()
-        if (!settings.value.syncEnabled) return
+        if (!settings.value.sync.syncEnabled) return
 
         syncJob = scope.launch {
             _syncState.value = SyncState.Syncing

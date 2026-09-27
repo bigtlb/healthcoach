@@ -4,6 +4,7 @@ import com.lbthomas.healthcoach.core.enums.GraphTimeFrame
 import com.lbthomas.healthcoach.core.enums.SelectedPage
 import com.lbthomas.healthcoach.core.enums.ThemeMode
 import com.lbthomas.healthcoach.core.enums.WeightUnit
+import com.lbthomas.healthcoach.core.sync.SyncProviderType
 import com.lbthomas.healthcoach.core.theme.AppTheme
 import com.lbthomas.healthcoach.features.settings.data.SettingsData
 import com.lbthomas.healthcoach.features.settings.data.SettingsStore
@@ -33,55 +34,57 @@ class SettingsViewModel  {
     }
 
     fun setSelectedPage(page: SelectedPage) {
-        updateSettings { it.copy(selectedPage = page) }
+        updateSettings { it.copy(ui = it.ui.copy(selectedPage = page)) }
     }
 
     fun setSelectedGraphTimeFrame(timeFrame: GraphTimeFrame) {
-        updateSettings { it.copy(selectedGraphTimeFrame = timeFrame) }
+        updateSettings { it.copy(ui = it.ui.copy(selectedGraphTimeFrame = timeFrame)) }
     }
 
     fun setThemeMode(themeMode: ThemeMode) {
-        updateSettings { it.copy(themeMode = themeMode) }
+        updateSettings { it.copy(appearance = it.appearance.copy(themeMode = themeMode)) }
     }
 
     fun setAppTheme(theme: AppTheme) {
-        updateSettings { it.copy(appTheme = theme) }
+        updateSettings { it.copy(appearance = it.appearance.copy(appTheme = theme)) }
     }
 
     fun setWeightUnit(unit: WeightUnit) {
-        updateSettings { it.copy(weightUnit = unit) }
+        updateSettings { it.copy(weight = it.weight.copy(unit = unit)) }
     }
 
     fun setWindowState(x: Int, y: Int, width: Int, height: Int, maximized: Boolean) {
         updateSettings {
             it.copy(
-                windowX = x,
-                windowY = y,
-                windowWidth = width,
-                windowHeight = height,
-                windowMaximized = maximized
+                ui = it.ui.copy(
+                    windowX = x,
+                    windowY = y,
+                    windowWidth = width,
+                    windowHeight = height,
+                    windowMaximized = maximized
+                )
             )
         }
     }
 
     fun setAdaptiveDisplay(adaptiveDisplay: Boolean) {
-        updateSettings { it.copy(adaptiveDisplay = adaptiveDisplay) }
+        updateSettings { it.copy(appearance = it.appearance.copy(adaptiveDisplay = adaptiveDisplay)) }
     }
 
     fun setSplitterPosition(position: Float) {
-        updateSettings { it.copy(splitterPosition = position) }
+        updateSettings { it.copy(ui = it.ui.copy(splitterPosition = position)) }
     }
 
     fun setShowWeightInGraph(show: Boolean) {
-        updateSettings { it.copy(showWeightInGraph = show) }
+        updateSettings { it.copy(weight = it.weight.copy(showInGraph = show)) }
     }
 
     fun setShowBloodPressureInGraph(show: Boolean) {
-        updateSettings { it.copy(showBloodPressureInGraph = show) }
+        updateSettings { it.copy(bloodPressure = it.bloodPressure.copy(showInGraph = show)) }
     }
 
     fun setShowPulseInGraph(show: Boolean) {
-        updateSettings { it.copy(showPulseInGraph = show) }
+        updateSettings { it.copy(bloodPressure = it.bloodPressure.copy(showPulseInGraph = show)) }
     }
 
     fun setBloodPressureDisplaySettings(
@@ -92,24 +95,26 @@ class SettingsViewModel  {
     ) {
         updateSettings {
             it.copy(
-                showDailyAverages = showDailyAverages,
-                showMonthlyAverages = showMonthlyAverages,
-                showDailyChanges = showDailyChanges,
-                showMonthlyChanges = showMonthlyChanges
+                bloodPressure = it.bloodPressure.copy(
+                    showDailyAverages = showDailyAverages,
+                    showMonthlyAverages = showMonthlyAverages,
+                    showDailyChanges = showDailyChanges,
+                    showMonthlyChanges = showMonthlyChanges
+                )
             )
         }
     }
 
     fun setSyncEnabled(enabled: Boolean) {
-        updateSettings { it.copy(syncEnabled = enabled) }
+        updateSettings { it.copy(sync = it.sync.copy(syncEnabled = enabled)) }
     }
 
-    fun setSyncProvider(provider: com.lbthomas.healthcoach.core.sync.SyncProviderType) {
-        updateSettings { it.copy(syncProvider = provider) }
+    fun setSyncProvider(provider: SyncProviderType) {
+        updateSettings { it.copy(sync = it.sync.copy(syncProvider = provider)) }
     }
 
     fun setLocalSyncPath(path: String) {
-        updateSettings { it.copy(localSyncPath = path) }
+        updateSettings { it.copy(sync = it.sync.copy(localSyncPath = path)) }
     }
 
     fun setGoogleSession(
@@ -122,12 +127,14 @@ class SettingsViewModel  {
     ) {
         updateSettings {
             it.copy(
-                googleAccountEmail = email,
-                googleAccessToken = accessToken,
-                googleRefreshToken = if (refreshToken.isNotBlank()) refreshToken else it.googleRefreshToken,
-                googleTokenStatus = tokenStatus,
-                googleTokenExpiresAt = expiresAt,
-                googleRefreshTokenExpiresAt = if (refreshToken.isNotBlank()) refreshTokenExpiresAt else it.googleRefreshTokenExpiresAt
+                sync = it.sync.copy(
+                    googleAccountEmail = email,
+                    googleAccessToken = accessToken,
+                    googleRefreshToken = if (refreshToken.isNotBlank()) refreshToken else it.sync.googleRefreshToken,
+                    googleTokenStatus = tokenStatus,
+                    googleTokenExpiresAt = expiresAt,
+                    googleRefreshTokenExpiresAt = if (refreshToken.isNotBlank()) refreshTokenExpiresAt else it.sync.googleRefreshTokenExpiresAt
+                )
             )
         }
     }
@@ -135,45 +142,47 @@ class SettingsViewModel  {
     fun clearGoogleSession() {
         updateSettings {
             it.copy(
-                googleAccessToken = "",
-                googleRefreshToken = "",
-                googleAccountEmail = "",
-                googleTokenStatus = "Revoked",
-                googleTokenExpiresAt = null,
-                googleRefreshTokenExpiresAt = null
+                sync = it.sync.copy(
+                    googleAccessToken = "",
+                    googleRefreshToken = "",
+                    googleAccountEmail = "",
+                    googleTokenStatus = "Revoked",
+                    googleTokenExpiresAt = null,
+                    googleRefreshTokenExpiresAt = null
+                )
             )
         }
     }
 
     fun setGoogleTokenExpiresAt(expiresAt: Long?) {
-        updateSettings { it.copy(googleTokenExpiresAt = expiresAt) }
+        updateSettings { it.copy(sync = it.sync.copy(googleTokenExpiresAt = expiresAt)) }
     }
 
     fun setGoogleRefreshTokenExpiresAt(expiresAt: Long?) {
-        updateSettings { it.copy(googleRefreshTokenExpiresAt = expiresAt) }
+        updateSettings { it.copy(sync = it.sync.copy(googleRefreshTokenExpiresAt = expiresAt)) }
     }
 
     fun setGoogleTokenStatus(status: String) {
-        updateSettings { it.copy(googleTokenStatus = status) }
+        updateSettings { it.copy(sync = it.sync.copy(googleTokenStatus = status)) }
     }
 
     fun setGoogleAccessToken(token: String) {
-        updateSettings { it.copy(googleAccessToken = token) }
+        updateSettings { it.copy(sync = it.sync.copy(googleAccessToken = token)) }
     }
 
     fun setGoogleAccountEmail(email: String) {
-        updateSettings { it.copy(googleAccountEmail = email) }
+        updateSettings { it.copy(sync = it.sync.copy(googleAccountEmail = email)) }
     }
 
     fun setRemoteFileName(name: String) {
-        updateSettings { it.copy(remoteFileName = name) }
+        updateSettings { it.copy(sync = it.sync.copy(remoteFileName = name)) }
     }
 
     fun setAutoSyncOnClose(enabled: Boolean) {
-        updateSettings { it.copy(autoSyncOnClose = enabled) }
+        updateSettings { it.copy(sync = it.sync.copy(autoSyncOnClose = enabled)) }
     }
 
     fun setAutoSyncIntervalMinutes(minutes: Int) {
-        updateSettings { it.copy(autoSyncIntervalMinutes = minutes) }
+        updateSettings { it.copy(sync = it.sync.copy(autoSyncIntervalMinutes = minutes)) }
     }
 }

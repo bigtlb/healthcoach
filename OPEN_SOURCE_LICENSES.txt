@@ -25,6 +25,8 @@ Koin Dependency Injection                   Apache-2.0     https://insert-koin.i
 Vico Charting Library                       Apache-2.0     https://github.com/patrykandpatrick/vico
 Kermit Logging Library                      Apache-2.0     https://github.com/touchlab/Kermit
 SLF4J Simple                                MIT            https://www.slf4j.org/
+Ktor Framework                              Apache-2.0     https://ktor.io/
+JmDNS                                       Apache-2.0     https://github.com/jmdns/jmdns
 Outfit Font Family                          SIL OFL 1.1    https://github.com/Omnibus-Type/Outfit
 Inter Font Family                           SIL OFL 1.1    https://rsms.me/inter/
 
@@ -64,12 +66,20 @@ THIRD-PARTY NOTICES & COPYRIGHT STATEMENTS
    Copyright © 2004-2025 QOS.ch / Ceki Gülcü
    Licensed under the MIT License.
 
-9. Outfit Font Family
+9. Ktor Framework (Server CIO, Client CIO, Content Negotiation, Status Pages, CORS)
+   Copyright © 2018-2025 JetBrains s.r.o. and Ktor project contributors
+   Licensed under the Apache License, Version 2.0.
+
+10. JmDNS (mDNS / DNS-SD library for Java)
+    Copyright © 2002-2023 JmDNS Project and contributors
+    Licensed under the Apache License, Version 2.0.
+
+11. Outfit Font Family
    Copyright © 2021 The Outfit Project Authors (https://github.com/Omnibus-Type/Outfit)
    Designed by Rodrigo Fuenzalida (Omnibus-Type)
    Licensed under the SIL Open Font License, Version 1.1.
 
-10. Inter Font Family
+12. Inter Font Family
     Copyright © 2016-2024 The Inter Project Authors (Rasmus Andersson)
     Licensed under the SIL Open Font License, Version 1.1.
 
