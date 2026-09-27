@@ -4,25 +4,73 @@ import com.lbthomas.healthcoach.core.enums.GraphTimeFrame
 import com.lbthomas.healthcoach.core.enums.SelectedPage
 import com.lbthomas.healthcoach.core.enums.ThemeMode
 import com.lbthomas.healthcoach.core.enums.WeightUnit
+import com.lbthomas.healthcoach.core.logging.LoggingConfig
+import com.lbthomas.healthcoach.core.sync.SyncConfig
 import com.lbthomas.healthcoach.core.sync.SyncProviderType
+import com.lbthomas.healthcoach.core.sync.p2p.DiscoveredPeer
+import com.lbthomas.healthcoach.core.sync.p2p.PairInitRequest
+import com.lbthomas.healthcoach.core.sync.p2p.PairRequest
+import com.lbthomas.healthcoach.core.sync.p2p.PairResponse
+import com.lbthomas.healthcoach.core.sync.p2p.PeerDiscoveryAdvertiser
+import com.lbthomas.healthcoach.core.sync.p2p.PeerDiscoveryBrowser
+import com.lbthomas.healthcoach.core.sync.p2p.PeerServerManager
+import com.lbthomas.healthcoach.core.sync.p2p.PeerServerStatus
 import com.lbthomas.healthcoach.core.theme.AppTheme
 import com.lbthomas.healthcoach.features.settings.data.SettingsData
 import com.lbthomas.healthcoach.features.settings.data.SettingsStore
+import io.ktor.client.HttpClient
+import io.ktor.client.call.body
+import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.get
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.contentType
+import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 
-class SettingsViewModel  {
+class SettingsViewModel {
     val settings: StateFlow<SettingsData>
     val persistence: SettingsStore?
+    val peerServerManager: PeerServerManager?
+    val discoveryAdvertiser: PeerDiscoveryAdvertiser?
+    val discoveryBrowser: PeerDiscoveryBrowser?
 
-    constructor(persistence: SettingsStore): super(){
+    private val viewModelScope = CoroutineScope(Dispatchers.Default)
+
+    val serverStatus: StateFlow<PeerServerStatus>
+        get() = peerServerManager?.serverStatus ?: MutableStateFlow(PeerServerStatus()).asStateFlow()
+
+    val discoveredPeers: StateFlow<List<DiscoveredPeer>>
+        get() = discoveryBrowser?.discoveredPeers ?: MutableStateFlow(emptyList<DiscoveredPeer>()).asStateFlow()
+
+    constructor(
+        persistence: SettingsStore,
+        peerServerManager: PeerServerManager? = null,
+        discoveryAdvertiser: PeerDiscoveryAdvertiser? = null,
+        discoveryBrowser: PeerDiscoveryBrowser? = null
+    ) {
         this.persistence = persistence
         this.settings = persistence.settings
+        this.peerServerManager = peerServerManager
+        this.discoveryAdvertiser = discoveryAdvertiser
+        this.discoveryBrowser = discoveryBrowser
     }
 
-    constructor(settings: StateFlow<SettingsData>):super() {
+    constructor(settings: StateFlow<SettingsData>) {
         this.persistence = null
         this.settings = settings
+        this.peerServerManager = null
+        this.discoveryAdvertiser = null
+        this.discoveryBrowser = null
     }
 
     fun updateSettings(transform: (SettingsData) -> SettingsData) {
@@ -184,5 +232,242 @@ class SettingsViewModel  {
 
     fun setAutoSyncIntervalMinutes(minutes: Int) {
         updateSettings { it.copy(sync = it.sync.copy(autoSyncIntervalMinutes = minutes)) }
+    }
+
+    fun setPeerServerEnabled(enabled: Boolean) {
+        persistence?.setPeerServerEnabled(enabled) ?: updateSettings {
+            it.copy(
+                peerSync = it.peerSync.copy(
+                    localServerEnabled = enabled,
+                    isServerMode = if (enabled) true else it.peerSync.isServerMode
+                )
+            )
+        }
+        val current = settings.value
+        if (enabled) {
+            viewModelScope.launch {
+                val res = peerServerManager?.start(current.peerSync.localServerPort)
+                val boundPort = res?.getOrNull() ?: current.peerSync.localServerPort
+                discoveryAdvertiser?.startAdvertising(
+                    instanceId = current.peerSync.instanceId,
+                    deviceName = current.peerSync.deviceName,
+                    port = boundPort
+                )
+            }
+        } else {
+            discoveryAdvertiser?.stopAdvertising()
+            viewModelScope.launch {
+                peerServerManager?.stop()
+            }
+        }
+    }
+
+    fun setPeerIsServerMode(isServer: Boolean) {
+        persistence?.setPeerIsServerMode(isServer) ?: updateSettings {
+            it.copy(peerSync = it.peerSync.copy(isServerMode = isServer))
+        }
+    }
+
+    fun setPeerServerPort(port: Int) {
+        updateSettings { it.copy(peerSync = it.peerSync.copy(localServerPort = port)) }
+        val current = settings.value
+        if (current.peerSync.localServerEnabled) {
+            viewModelScope.launch {
+                val res = peerServerManager?.restart(port)
+                val boundPort = res?.getOrNull() ?: port
+                discoveryAdvertiser?.startAdvertising(
+                    instanceId = current.peerSync.instanceId,
+                    deviceName = current.peerSync.deviceName,
+                    port = boundPort
+                )
+            }
+        }
+    }
+
+    fun setPeerServerPin(pin: String) {
+        updateSettings { it.copy(peerSync = it.peerSync.copy(localServerPin = pin)) }
+    }
+
+    fun setDeviceName(deviceName: String) {
+        updateSettings { it.copy(peerSync = it.peerSync.copy(deviceName = deviceName)) }
+        val current = settings.value
+        if (current.peerSync.localServerEnabled) {
+            val port = peerServerManager?.serverStatus?.value?.port ?: current.peerSync.localServerPort
+            discoveryAdvertiser?.startAdvertising(
+                instanceId = current.peerSync.instanceId,
+                deviceName = deviceName,
+                port = port
+            )
+        }
+    }
+
+    fun startDiscovery() {
+        discoveryBrowser?.startBrowsing(settings.value.peerSync.instanceId)
+    }
+
+    fun stopDiscovery() {
+        discoveryBrowser?.stopBrowsing()
+    }
+
+    fun clearDiscoveredPeers() {
+        discoveryBrowser?.clearPeers()
+    }
+
+    fun setPeerClientTarget(
+        instanceId: String?,
+        host: String,
+        port: Int,
+        token: String,
+        name: String
+    ) {
+        updateSettings {
+            it.copy(
+                peerSync = it.peerSync.copy(
+                    serverInstanceId = instanceId,
+                    serverHost = host,
+                    serverPort = port,
+                    serverToken = token,
+                    serverName = name
+                )
+            )
+        }
+    }
+
+    fun disconnectPeerClient() {
+        setPeerClientTarget(null, "", SyncConfig.DEFAULT_P2P_PORT, "", "")
+    }
+
+    fun clearServerHistory() {
+        persistence?.clearServerHistory() ?: updateSettings {
+            it.copy(peerSync = it.peerSync.copy(localServerHistory = emptyList()))
+        }
+    }
+
+    suspend fun requestPairingPin(
+        host: String,
+        port: Int
+    ): Result<Unit> {
+        val current = settings.value
+        val client = HttpClient(CIO) {
+            install(ContentNegotiation) {
+                json(Json {
+                    ignoreUnknownKeys = true
+                    encodeDefaults = true
+                    prettyPrint = false
+                })
+            }
+        }
+
+        return try {
+            val response = client.post("http://${host.trim()}:$port/api/v1/auth/request-pin") {
+                contentType(ContentType.Application.Json)
+                setBody(
+                    PairInitRequest(
+                        clientInstanceId = current.peerSync.instanceId,
+                        clientName = current.peerSync.deviceName.ifBlank { "HealthCoach Client" }
+                    )
+                )
+            }
+            if (response.status == HttpStatusCode.OK) {
+                Result.success(Unit)
+            } else {
+                Result.failure(IllegalStateException("Server returned HTTP ${response.status} when requesting PIN"))
+            }
+        } catch (e: Exception) {
+            LoggingConfig.clientLogger.e("Request pairing PIN failed: ${e.message}", e)
+            Result.failure(e)
+        } finally {
+            client.close()
+        }
+    }
+
+    suspend fun pairWithPeer(
+        host: String,
+        port: Int,
+        pin: String
+    ): Result<PairResponse> {
+        val current = settings.value
+        val client = HttpClient(CIO) {
+            install(ContentNegotiation) {
+                json(Json {
+                    ignoreUnknownKeys = true
+                    encodeDefaults = true
+                    prettyPrint = false
+                })
+            }
+        }
+
+        return try {
+            val response = client.post("http://${host.trim()}:$port/api/v1/auth/pair") {
+                contentType(ContentType.Application.Json)
+                setBody(
+                    PairRequest(
+                        clientInstanceId = current.peerSync.instanceId,
+                        clientName = current.peerSync.deviceName.ifBlank { "HealthCoach Client" },
+                        pin = pin
+                    )
+                )
+            }
+
+            if (response.status == HttpStatusCode.OK) {
+                val pairResp = response.body<PairResponse>()
+                setPeerClientTarget(
+                    instanceId = pairResp.serverInstanceId,
+                    host = host.trim(),
+                    port = port,
+                    token = pairResp.token,
+                    name = pairResp.serverName
+                )
+                Result.success(pairResp)
+            } else if (response.status == HttpStatusCode.Unauthorized) {
+                Result.failure(IllegalStateException("Invalid PIN entered for server"))
+            } else {
+                Result.failure(IllegalStateException("Pairing failed (HTTP ${response.status})"))
+            }
+        } catch (e: Exception) {
+            LoggingConfig.clientLogger.e("Pairing request failed: ${e.message}", e)
+            Result.failure(e)
+        } finally {
+            client.close()
+        }
+    }
+
+    suspend fun testPeerConnection(host: String, port: Int): Result<Unit> {
+        val client = HttpClient(CIO)
+        return try {
+            val response = client.get("http://${host.trim()}:$port/api/v1/status")
+            if (response.status == HttpStatusCode.OK) {
+                Result.success(Unit)
+            } else {
+                Result.failure(IllegalStateException("Server returned HTTP ${response.status}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        } finally {
+            client.close()
+        }
+    }
+
+    fun initializeServerIfEnabled() {
+        val current = settings.value
+        if (current.peerSync.localServerEnabled) {
+            viewModelScope.launch {
+                val res = peerServerManager?.start(current.peerSync.localServerPort)
+                val boundPort = res?.getOrNull() ?: current.peerSync.localServerPort
+                discoveryAdvertiser?.startAdvertising(
+                    instanceId = current.peerSync.instanceId,
+                    deviceName = current.peerSync.deviceName,
+                    port = boundPort
+                )
+            }
+        }
+    }
+
+    fun shutdownServerAndDiscovery() {
+        discoveryAdvertiser?.stopAdvertising()
+        discoveryBrowser?.stopBrowsing()
+        viewModelScope.launch {
+            peerServerManager?.stop()
+        }
     }
 }

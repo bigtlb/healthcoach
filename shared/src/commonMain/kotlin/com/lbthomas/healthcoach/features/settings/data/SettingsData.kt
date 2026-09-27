@@ -32,6 +32,7 @@ data class BloodPressureSettings(
 data class PeerSyncSettings(
     val deviceName: String = "",
     val instanceId: String = "",
+    val isServerMode: Boolean = false,
     val lastConnectedTimestamp: Long? = null,
     val localServerEnabled: Boolean = false,
     val localServerHistory: List<PeerClientRecord> = emptyList(),
@@ -106,7 +107,9 @@ data class SettingsData(
             peerServerHost = peerSync.serverHost,
             peerServerPort = peerSync.serverPort,
             peerServerToken = peerSync.serverToken,
-            peerServerName = peerSync.serverName
+            peerServerName = peerSync.serverName,
+            clientInstanceId = peerSync.instanceId,
+            clientDeviceName = peerSync.deviceName
         )
     }
 }

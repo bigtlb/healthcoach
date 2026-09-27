@@ -5,6 +5,8 @@ import co.touchlab.kermit.LogcatWriter
 import co.touchlab.kermit.Logger
 import com.lbthomas.healthcoach.core.database.DriverFactory
 import com.lbthomas.healthcoach.core.logging.LoggingConfig
+import com.lbthomas.healthcoach.core.sync.p2p.PeerDiscoveryAdvertiser
+import com.lbthomas.healthcoach.core.sync.p2p.PeerDiscoveryBrowser
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.KoinApplication
 import org.koin.core.module.Module
@@ -15,6 +17,8 @@ import java.io.File
 actual val platformModule: Module = module {
     single { DriverFactory(get()) }
     single(named("settingsFile")) { File(get<Context>().filesDir, "settings.json") }
+    single { PeerDiscoveryAdvertiser(get()) }
+    single { PeerDiscoveryBrowser(get()) }
 }
 
 actual fun KoinApplication.configurePlatformContext(context: Any?) {

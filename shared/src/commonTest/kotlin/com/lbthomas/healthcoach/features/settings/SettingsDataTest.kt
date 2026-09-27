@@ -45,6 +45,7 @@ class SettingsDataTest {
         // Peer Sync
         assertEquals("", settings.peerSync.deviceName)
         assertEquals("", settings.peerSync.instanceId)
+        assertEquals(false, settings.peerSync.isServerMode)
         assertEquals(null, settings.peerSync.lastConnectedTimestamp)
         assertEquals(false, settings.peerSync.localServerEnabled)
         assertEquals(emptyList(), settings.peerSync.localServerHistory)
@@ -118,6 +119,7 @@ class SettingsDataTest {
             peerSync = PeerSyncSettings(
                 deviceName = "My Desktop Node",
                 instanceId = "test-uuid-1234",
+                isServerMode = true,
                 lastConnectedTimestamp = 1710000000000L,
                 localServerEnabled = true,
                 localServerHistory = listOf(
@@ -182,6 +184,7 @@ class SettingsDataTest {
         // Peer Sync
         assertEquals("My Desktop Node", deserialized.peerSync.deviceName)
         assertEquals("test-uuid-1234", deserialized.peerSync.instanceId)
+        assertEquals(true, deserialized.peerSync.isServerMode)
         assertEquals(1710000000000L, deserialized.peerSync.lastConnectedTimestamp)
         assertEquals(true, deserialized.peerSync.localServerEnabled)
         assertEquals("123456", deserialized.peerSync.localServerPin)
@@ -342,5 +345,47 @@ class SettingsDataTest {
         assertEquals("Revoked", viewModel.settings.value.sync.googleTokenStatus)
         assertEquals(null, viewModel.settings.value.sync.googleTokenExpiresAt)
         assertEquals(null, viewModel.settings.value.sync.googleRefreshTokenExpiresAt)
+    }
+
+    @Test
+    fun testSettingsViewModel_PeerToPeerMutations() {
+        val flow = MutableStateFlow(SettingsData())
+        val viewModel = SettingsViewModel(flow)
+
+        viewModel.setPeerIsServerMode(true)
+        assertEquals(true, viewModel.settings.value.peerSync.isServerMode)
+
+        viewModel.setPeerServerEnabled(true)
+        assertEquals(true, viewModel.settings.value.peerSync.localServerEnabled)
+        assertEquals(true, viewModel.settings.value.peerSync.isServerMode)
+
+        viewModel.setPeerServerPort(9000)
+        assertEquals(9000, viewModel.settings.value.peerSync.localServerPort)
+
+        viewModel.setPeerServerPin("9876")
+        assertEquals("9876", viewModel.settings.value.peerSync.localServerPin)
+
+        viewModel.setDeviceName("Studio PC")
+        assertEquals("Studio PC", viewModel.settings.value.peerSync.deviceName)
+
+        viewModel.setPeerClientTarget(
+            instanceId = "remote-node-1",
+            host = "192.168.1.50",
+            port = 9000,
+            token = "session-token-xyz",
+            name = "Living Room Node"
+        )
+        assertEquals("remote-node-1", viewModel.settings.value.peerSync.serverInstanceId)
+        assertEquals("192.168.1.50", viewModel.settings.value.peerSync.serverHost)
+        assertEquals(9000, viewModel.settings.value.peerSync.serverPort)
+        assertEquals("session-token-xyz", viewModel.settings.value.peerSync.serverToken)
+        assertEquals("Living Room Node", viewModel.settings.value.peerSync.serverName)
+
+        viewModel.disconnectPeerClient()
+        assertEquals(null, viewModel.settings.value.peerSync.serverInstanceId)
+        assertEquals("", viewModel.settings.value.peerSync.serverHost)
+        assertEquals(SyncConfig.DEFAULT_P2P_PORT, viewModel.settings.value.peerSync.serverPort)
+        assertEquals("", viewModel.settings.value.peerSync.serverToken)
+        assertEquals("", viewModel.settings.value.peerSync.serverName)
     }
 }

@@ -51,8 +51,8 @@ fun SettingsDialog(
     BasicAlertDialog(
         onDismissRequest = onDismiss,
         modifier = Modifier
-            .widthIn(min = 600.dp, max = 760.dp)
-            .fillMaxWidth()
+            .widthIn(min = 600.dp, max = 860.dp)
+            .fillMaxWidth(0.96f)
             .focusRequester(focusRequester)
             .focusable()
             .testTag("settings_dialog")
@@ -66,106 +66,115 @@ fun SettingsDialog(
             color = AlertDialogDefaults.containerColor,
             tonalElevation = AlertDialogDefaults.TonalElevation
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 480.dp, max = 620.dp)
-            ) {
-                // Header
-                Row(
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val isCompact = maxWidth < 600.dp
+                val sidebarWidth = if (isCompact) 68.dp else 88.dp
+                val contentHorizontalPadding = if (isCompact) 12.dp else 24.dp
+                val contentVerticalPadding = if (isCompact) 12.dp else 16.dp
+                val dialogMinHeight = if (isCompact) 420.dp else 500.dp
+                val dialogMaxHeight = if (isCompact) 580.dp else 680.dp
+
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .heightIn(min = dialogMinHeight, max = dialogMaxHeight)
                 ) {
-                    Text(
-                        text = "Settings",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-                // Master-Detail Body
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                ) {
-                    // Compact Master Sidebar (navigation rail items with label)
-                    Surface(
+                    // Header
+                    Row(
                         modifier = Modifier
-                            .width(88.dp)
-                            .fillMaxHeight(),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                            .fillMaxWidth()
+                            .padding(horizontal = contentHorizontalPadding, vertical = 14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(
+                        Text(
+                            text = "Settings",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                    // Master-Detail Body
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                    ) {
+                        // Compact Master Sidebar (navigation rail items with label)
+                        Surface(
                             modifier = Modifier
-                                .fillMaxSize()
-                                .padding(vertical = 12.dp, horizontal = 4.dp)
-                                .verticalScroll(rememberScrollState()),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                                .width(sidebarWidth)
+                                .fillMaxHeight(),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
                         ) {
-                            SettingsTab.entries.forEach { tab ->
-                                val isSelected = selectedTab == tab
-                                NavigationRailItem(
-                                    selected = isSelected,
-                                    onClick = { selectedTab = tab },
-                                    icon = {
-                                        Icon(
-                                            imageVector = tab.icon,
-                                            contentDescription = tab.title,
-                                            modifier = Modifier.size(22.dp)
-                                        )
-                                    },
-                                    label = {
-                                        Text(
-                                            text = tab.title,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                            maxLines = 1
-                                        )
-                                    },
-                                    alwaysShowLabel = true
-                                )
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(vertical = 8.dp, horizontal = 2.dp)
+                                    .verticalScroll(rememberScrollState()),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                SettingsTab.entries.forEach { tab ->
+                                    val isSelected = selectedTab == tab
+                                    NavigationRailItem(
+                                        selected = isSelected,
+                                        onClick = { selectedTab = tab },
+                                        icon = {
+                                            Icon(
+                                                imageVector = tab.icon,
+                                                contentDescription = tab.title,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        },
+                                        label = {
+                                            Text(
+                                                text = tab.title,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                                maxLines = 1
+                                            )
+                                        },
+                                        alwaysShowLabel = true
+                                    )
+                                }
+                            }
+                        }
+
+                        VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                        // Detail Pane
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .padding(horizontal = contentHorizontalPadding, vertical = contentVerticalPadding)
+                        ) {
+                            when (selectedTab) {
+                                SettingsTab.APPEARANCE -> AppearanceTabContent(settings, settingsViewModel)
+                                SettingsTab.WEIGHT -> WeightTabContent(settings, settingsViewModel)
+                                SettingsTab.BLOOD_PRESSURE -> BloodPressureTabContent(settings, settingsViewModel)
+                                SettingsTab.SYNC -> SyncTabContent(settings, settingsViewModel)
+                                SettingsTab.ABOUT -> AboutTabContent()
                             }
                         }
                     }
 
-                    VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
-                    // Detail Pane
-                    Box(
+                    // Footer
+                    Row(
                         modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .padding(horizontal = 24.dp, vertical = 16.dp)
+                            .fillMaxWidth()
+                            .padding(horizontal = contentHorizontalPadding, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        when (selectedTab) {
-                            SettingsTab.APPEARANCE -> AppearanceTabContent(settings, settingsViewModel)
-                            SettingsTab.WEIGHT -> WeightTabContent(settings, settingsViewModel)
-                            SettingsTab.BLOOD_PRESSURE -> BloodPressureTabContent(settings, settingsViewModel)
-                            SettingsTab.SYNC -> SyncTabContent(settings, settingsViewModel)
-                            SettingsTab.ABOUT -> AboutTabContent()
+                        Button(onClick = onDismiss) {
+                            Text("Close")
                         }
-                    }
-                }
-
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-                // Footer
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Button(onClick = onDismiss) {
-                        Text("Close")
                     }
                 }
             }

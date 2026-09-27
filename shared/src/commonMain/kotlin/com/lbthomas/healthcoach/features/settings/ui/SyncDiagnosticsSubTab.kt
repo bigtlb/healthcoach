@@ -42,6 +42,24 @@ internal fun SyncDiagnosticsSubTab(
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Medium
                     )
+                    if (settings.sync.syncProvider == SyncProviderType.PEER_TO_PEER) {
+                        Text(
+                            text = "Local Node ID: ${settings.peerSync.instanceId}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Text(
+                            text = "Local Device Name: ${settings.peerSync.deviceName.ifBlank { "Unassigned" }}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Text(
+                            text = "Embedded Server: ${if (settings.peerSync.localServerEnabled) "Enabled (Port ${settings.peerSync.localServerPort})" else "Disabled"}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Text(
+                            text = "Target Peer Server: ${if (settings.peerSync.serverToken.isNotBlank()) "${settings.peerSync.serverName.ifBlank { "Peer Server" }} (${settings.peerSync.serverHost}:${settings.peerSync.serverPort}) - Authenticated" else if (settings.peerSync.serverHost.isNotBlank()) "${settings.peerSync.serverHost}:${settings.peerSync.serverPort} - Not Paired" else "None"}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                     Text(
                         text = "Remote File: ${settings.sync.remoteFileName}",
                         style = MaterialTheme.typography.bodySmall

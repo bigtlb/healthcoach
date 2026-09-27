@@ -11,3 +11,5 @@ expect fun getPlatform(): Platform
 
 @Composable
 expect fun getPlatformContext(): Any?
+
+expect fun getDefaultDeviceName(): String

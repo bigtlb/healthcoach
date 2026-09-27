@@ -1,8 +1,12 @@
 package com.lbthomas.healthcoach.core.di
 
 
-import com.lbthomas.healthcoach.core.database.createDatabase
+import app.cash.sqldelight.db.SqlDriver
+import com.lbthomas.healthcoach.Database
+import com.lbthomas.healthcoach.core.database.DriverFactory
+import com.lbthomas.healthcoach.core.database.createDatabaseForDriver
 import com.lbthomas.healthcoach.core.sync.SyncEngine
+import com.lbthomas.healthcoach.core.sync.p2p.PeerServerManager
 import com.lbthomas.healthcoach.features.bloodpressure.BloodPressureViewModel
 import com.lbthomas.healthcoach.features.bloodpressure.data.BloodPressureRepository
 import com.lbthomas.healthcoach.features.settings.SettingsViewModel
@@ -20,10 +24,18 @@ expect fun KoinApplication.configurePlatformContext(context: Any?)
 
 val appModule = module {
     includes(platformModule)
-    single { createDatabase(get()) }
+    single<SqlDriver> { get<DriverFactory>().createDriver() }
+    single<Database> { createDatabaseForDriver(get()) }
 
     single { SettingsStore(get(named("settingsFile"))) }
-    factory { SettingsViewModel(persistence = get()) }
+    factory {
+        SettingsViewModel(
+            persistence = get(),
+            peerServerManager = getOrNull(),
+            discoveryAdvertiser = getOrNull(),
+            discoveryBrowser = getOrNull()
+        )
+    }
 
     single { WeightRepository(get()) }
     factory { WeightViewModel(repository = get()) }
@@ -33,4 +45,12 @@ val appModule = module {
 
     single { SyncEngine(localDatabase = get(), driverFactory = get(), settingsStore = get()) }
     single { SyncViewModel(syncEngine = get(), settingsStore = get()) }
+    single {
+        val driver: SqlDriver = get()
+        PeerServerManager(driverFactory = get(), settingsStore = get()).apply {
+            onDatabaseReset = {
+                driver.notifyListeners("weightEntry", "bloodPressureEntry")
+            }
+        }
+    }
 }

@@ -105,11 +105,39 @@ internal fun SyncStorageAuthSubTab(
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
+
+            // Peer-to-Peer Option
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .selectable(
+                        selected = settings.sync.syncProvider == SyncProviderType.PEER_TO_PEER,
+                        onClick = {
+                            settingsViewModel.setSyncProvider(SyncProviderType.PEER_TO_PEER)
+                            folderValidationResult = null
+                            actionFeedback = null
+                        },
+                        role = Role.RadioButton
+                    )
+                    .padding(vertical = SettingsDialogDefaults.RowPadding),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RadioButton(
+                    selected = settings.sync.syncProvider == SyncProviderType.PEER_TO_PEER,
+                    onClick = null
+                )
+                Spacer(modifier = Modifier.width(SettingsDialogDefaults.LabelStartPadding))
+                Text(
+                    text = "Peer-to-Peer (Local Wi-Fi Network)",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
         }
 
-        SettingsSection(title = "Provider Configuration") {
-            when (settings.sync.syncProvider) {
-                SyncProviderType.LOCAL_FOLDER -> {
+        if (settings.sync.syncProvider != SyncProviderType.PEER_TO_PEER) {
+            SettingsSection(title = "Provider Configuration") {
+                when (settings.sync.syncProvider) {
+                    SyncProviderType.LOCAL_FOLDER -> {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -562,7 +590,7 @@ internal fun SyncStorageAuthSubTab(
                                     tint = if (success) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                                     modifier = Modifier.size(16.dp)
                                 )
-                                Spacer(modifier = Modifier.width(6.dp))
+                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     text = message,
                                     style = MaterialTheme.typography.bodySmall,
@@ -572,16 +600,44 @@ internal fun SyncStorageAuthSubTab(
                         }
                     }
                 }
-                SyncProviderType.PEER_TO_PEER -> {
-                    Text(
-                        text = "Peer-to-Peer LAN server and client settings will be fully integrated in Phase 4.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                SyncProviderType.PEER_TO_PEER -> {}
             }
         }
+    } else {
+        val isServerMode = settings.peerSync.isServerMode
+
+        SingleChoiceSegmentedButtonRow(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+        ) {
+            SegmentedButton(
+                selected = !isServerMode,
+                onClick = { settingsViewModel.setPeerIsServerMode(false) },
+                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+            ) {
+                Text("Connect as Client", maxLines = 1)
+            }
+            SegmentedButton(
+                selected = isServerMode,
+                onClick = { settingsViewModel.setPeerIsServerMode(true) },
+                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+            ) {
+                Text("Host as Server", maxLines = 1)
+            }
+        }
+
+        if (!isServerMode) {
+            PeerClientSettingsSection(
+                settings = settings,
+                settingsViewModel = settingsViewModel
+            )
+        } else {
+            PeerServerSettingsSection(
+                settings = settings,
+                settingsViewModel = settingsViewModel
+            )
+        }
     }
+}
 }
 
 @Preview

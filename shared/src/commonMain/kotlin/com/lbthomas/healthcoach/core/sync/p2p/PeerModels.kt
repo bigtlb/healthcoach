@@ -16,6 +16,15 @@ data class DiscoveredPeer(
 )
 
 /**
+ * Payload sent by client to request server to generate and display a one-time pairing PIN.
+ */
+@Serializable
+data class PairInitRequest(
+    val clientInstanceId: String,
+    val clientName: String
+)
+
+/**
  * Payload sent by client to initiate pairing with server.
  */
 @Serializable

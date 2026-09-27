@@ -6,10 +6,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.*
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.lbthomas.healthcoach.core.di.previewAppModule
@@ -180,6 +182,56 @@ fun App() {
                     onDismiss = {
                         showSettings = false
                         runCatching { focusRequester.requestFocus() }
+                    }
+                )
+            }
+
+            val pairingPrompt by SyncNotificationManager.pairingPinPrompt.collectAsState()
+
+            pairingPrompt?.let { prompt ->
+                AlertDialog(
+                    onDismissRequest = { SyncNotificationManager.dismissPairingPrompt() },
+                    title = {
+                        Text(
+                            text = "Peer Pairing Request",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                    },
+                    text = {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "Device '${prompt.clientName}' wants to pair with this device.",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Text(
+                                text = "Enter this One-Time PIN on the client device:",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Surface(
+                                shape = MaterialTheme.shapes.medium,
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                modifier = Modifier.padding(vertical = 12.dp)
+                            ) {
+                                Text(
+                                    text = prompt.pin,
+                                    style = MaterialTheme.typography.displayMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+                                )
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        Button(onClick = { SyncNotificationManager.dismissPairingPrompt() }) {
+                            Text("Dismiss")
+                        }
                     }
                 )
             }

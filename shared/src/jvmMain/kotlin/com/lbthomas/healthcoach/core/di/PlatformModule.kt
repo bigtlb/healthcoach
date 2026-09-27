@@ -7,6 +7,8 @@ import co.touchlab.kermit.Severity
 import com.lbthomas.healthcoach.core.database.DriverFactory
 import com.lbthomas.healthcoach.core.database.createDbFolder
 import com.lbthomas.healthcoach.core.logging.LoggingConfig
+import com.lbthomas.healthcoach.core.sync.p2p.PeerDiscoveryAdvertiser
+import com.lbthomas.healthcoach.core.sync.p2p.PeerDiscoveryBrowser
 import org.koin.core.KoinApplication
 import org.koin.core.module.Module
 import org.koin.core.qualifier.named
@@ -45,6 +47,8 @@ private class FileLogWriter(private val logFile: File) : LogWriter() {
 actual val platformModule: Module = module {
     single { DriverFactory() }
     single(named("settingsFile")) { File(createDbFolder(), "settings.json") }
+    single { PeerDiscoveryAdvertiser() }
+    single { PeerDiscoveryBrowser() }
 }
 
 actual fun KoinApplication.configurePlatformContext(context: Any?) {

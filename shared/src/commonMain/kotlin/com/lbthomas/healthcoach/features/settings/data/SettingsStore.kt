@@ -4,6 +4,7 @@ import com.lbthomas.healthcoach.core.enums.GraphTimeFrame
 import com.lbthomas.healthcoach.core.enums.SelectedPage
 import com.lbthomas.healthcoach.core.enums.ThemeMode
 import com.lbthomas.healthcoach.core.enums.WeightUnit
+import com.lbthomas.healthcoach.core.getDefaultDeviceName
 import com.lbthomas.healthcoach.core.sync.p2p.PeerClientRecord
 import com.lbthomas.healthcoach.core.theme.AppTheme
 import com.lbthomas.healthcoach.core.utils.generateUuid
@@ -47,8 +48,12 @@ open class SettingsStore(private val settingsFile: File) {
             peerSync = peerSync.copy(instanceId = generateUuid())
             updated = true
         }
-        if (peerSync.deviceName.isBlank()) {
-            peerSync = peerSync.copy(deviceName = "HealthCoach Device")
+        if (peerSync.deviceName.isBlank() || peerSync.deviceName == "HealthCoach Device") {
+            peerSync = peerSync.copy(deviceName = getDefaultDeviceName())
+            updated = true
+        }
+        if (peerSync.localServerEnabled && !peerSync.isServerMode) {
+            peerSync = peerSync.copy(isServerMode = true)
             updated = true
         }
         return if (updated) settings.copy(peerSync = peerSync) else settings
@@ -63,12 +68,23 @@ open class SettingsStore(private val settingsFile: File) {
         updateSettings { it.copy(peerSync = it.peerSync.copy(deviceName = name)) }
     }
 
-    fun setPeerServerEnabled(enabled: Boolean) {
-        updateSettings { it.copy(peerSync = it.peerSync.copy(localServerEnabled = enabled)) }
-    }
-
     fun setPeerServerPort(port: Int) {
         updateSettings { it.copy(peerSync = it.peerSync.copy(localServerPort = port)) }
+    }
+
+    fun setPeerServerEnabled(enabled: Boolean) {
+        updateSettings {
+            it.copy(
+                peerSync = it.peerSync.copy(
+                    localServerEnabled = enabled,
+                    isServerMode = if (enabled) true else it.peerSync.isServerMode
+                )
+            )
+        }
+    }
+
+    fun setPeerIsServerMode(isServer: Boolean) {
+        updateSettings { it.copy(peerSync = it.peerSync.copy(isServerMode = isServer)) }
     }
 
     fun setPeerServerPin(pin: String) {
@@ -100,6 +116,10 @@ open class SettingsStore(private val settingsFile: File) {
             val filtered = current.peerSync.localServerHistory.filter { it.clientInstanceId != record.clientInstanceId }
             current.copy(peerSync = current.peerSync.copy(localServerHistory = listOf(record) + filtered))
         }
+    }
+
+    fun clearServerHistory() {
+        updateSettings { it.copy(peerSync = it.peerSync.copy(localServerHistory = emptyList())) }
     }
 
     fun setSelectedPage(page: SelectedPage) {

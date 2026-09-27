@@ -24,6 +24,9 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        val settingsViewModel = runCatching { GlobalContext.get().get<com.lbthomas.healthcoach.features.settings.SettingsViewModel>() }.getOrNull()
+        settingsViewModel?.initializeServerIfEnabled()
+
         setContent {
             App()
         }
@@ -39,6 +42,12 @@ class MainActivity : ComponentActivity() {
                 syncEngine.sync(currentSettings.toSyncConfig())
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        val settingsViewModel = runCatching { GlobalContext.get().get<com.lbthomas.healthcoach.features.settings.SettingsViewModel>() }.getOrNull()
+        settingsViewModel?.shutdownServerAndDiscovery()
     }
 }
 

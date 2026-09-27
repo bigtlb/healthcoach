@@ -2,6 +2,7 @@ package com.lbthomas.healthcoach.core.sync
 
 import com.lbthomas.healthcoach.core.sync.adapters.GoogleDriveStorageAdapter
 import com.lbthomas.healthcoach.core.sync.adapters.LocalFolderAdapter
+import com.lbthomas.healthcoach.core.sync.adapters.PeerToPeerStorageAdapter
 import com.lbthomas.healthcoach.core.sync.auth.GoogleOAuthManager
 
 /**
@@ -26,7 +27,14 @@ object StorageAdapterFactory {
                 )
             }
             SyncProviderType.PEER_TO_PEER -> {
-                throw UnsupportedOperationException("PeerToPeerStorageAdapter will be fully wired in Phase 3")
+                PeerToPeerStorageAdapter(
+                    serverHost = config.peerServerHost,
+                    serverPort = config.peerServerPort,
+                    serverToken = config.peerServerToken,
+                    serverName = config.peerServerName,
+                    clientInstanceId = config.clientInstanceId,
+                    clientDeviceName = config.clientDeviceName
+                )
             }
         }
     }

@@ -26,7 +26,9 @@ data class SyncConfig(
     val peerServerHost: String = "",
     val peerServerPort: Int = DEFAULT_P2P_PORT,
     val peerServerToken: String = "",
-    val peerServerName: String = ""
+    val peerServerName: String = "",
+    val clientInstanceId: String = "",
+    val clientDeviceName: String = ""
 ) {
     companion object {
         const val DEFAULT_REMOTE_DB_NAME = "healthcoach.db"

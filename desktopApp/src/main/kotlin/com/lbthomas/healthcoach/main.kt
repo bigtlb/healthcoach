@@ -25,6 +25,7 @@ fun main() = application {
     }
 
     val settingsViewModel = GlobalContext.get().get<SettingsViewModel>()
+    settingsViewModel.initializeServerIfEnabled()
 
     val settings = settingsViewModel.settings.value
 
@@ -52,6 +53,17 @@ fun main() = application {
                     }
                 }
             }
+            if (currentSettings.peerSync.localServerEnabled) {
+                runCatching {
+                    val peerServerManager = GlobalContext.get().getOrNull<com.lbthomas.healthcoach.core.sync.p2p.PeerServerManager>()
+                    kotlinx.coroutines.runBlocking {
+                        kotlinx.coroutines.withTimeoutOrNull(1000L.milliseconds) {
+                            peerServerManager?.stop()
+                        }
+                    }
+                }
+            }
+            settingsViewModel.shutdownServerAndDiscovery()
             exitApplication()
         },
         title = "HealthCoach",
