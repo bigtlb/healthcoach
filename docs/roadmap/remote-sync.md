@@ -1,6 +1,6 @@
 # Remote Database Synchronization
 
-### Status: In Design & Planning
+### Status: Active Implementation & Evolution
 
 ---
 
@@ -8,10 +8,11 @@
 
 HealthCoach is a local-first application where health metrics (body weights, blood pressure readings, pulse) are stored in an embedded SQLite database. The goal of this initiative is to enable private, cross-device synchronization between Desktop (JVM) and Android devices without requiring a centralized, proprietary backend server.
 
-Users will be able to synchronize their health records using their own storage targets:
-* **Local Folders & Mounted Drives**: Directories synchronized by Proton Drive Desktop, Microsoft OneDrive, Dropbox, or local network mounts.
-* **SMB Network Shares**: Direct SMB2/SMB3 integration via `smbj` for private NAS / home servers.
-* **Proton Drive**: Proton Drive SDK integration and local desktop sync folder integration.
+Users can synchronize their health records using their preferred storage targets:
+* **Local Folders & Mounted Drives** (*Implemented*): Directories synchronized by Proton Drive Desktop, Microsoft OneDrive, Dropbox, or local network mounts.
+* **Google Drive (`appDataFolder`)** (*Desktop Implemented, Android In Progress*): Scoped hidden sandbox partition in personal Google Drive via PKCE OAuth 2.0.
+* **Peer-to-Peer (LAN Client-Server)** (*Active Plan / In Progress*): Direct Wi-Fi synchronization between running HealthCoach instances with zero-configuration mDNS discovery, binary database streaming, and PIN pairing.
+* **Future Storage Adapters**: Direct SMB2/SMB3 network shares via `smbj`, Microsoft OneDrive integration.
 
 ---
 
@@ -20,18 +21,18 @@ Users will be able to synchronize their health records using their own storage t
 Direct file copying over network shares risks corruption and completely overwrites concurrent modifications made on other devices. HealthCoach employs a cached 3-way snapshot merge reconciliation algorithm:
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    3-Way Merge Engine                   │
-├───────────────────┬─────────────────────────────────────┤
-│ BASE              │ Cached snapshot from last sync      │
-│ (synced_cache.db) │ (reference point for diffs)         │
-├───────────────────┼─────────────────────────────────────┤
-│ LOCAL             │ Live active user database           │
-│ (live.db)         │ (contains recent local edits)       │
-├───────────────────┼─────────────────────────────────────┤
-│ REMOTE            │ Snapshot downloaded from storage    │
-│ (remote.db)       │ (contains remote device edits)      │
-└───────────────────┴─────────────────────────────────────┘
++---------------------------------------------------------+
+|                    3-Way Merge Engine                   |
++-------------------+-------------------------------------+
+| BASE              | Cached snapshot from last sync      |
+| (synced_cache.db) | (reference point for diffs)         |
++-------------------+-------------------------------------+
+| LOCAL             | Live active user database           |
+| (live.db)         | (contains recent local edits)       |
++-------------------+-------------------------------------+
+| REMOTE            | Snapshot downloaded from storage    |
+| (remote.db)       | (contains remote device edits)      |
++-------------------+-------------------------------------+
 ```
 
 ### Reconciliation Workflow:
@@ -59,47 +60,114 @@ Direct file copying over network shares risks corruption and completely overwrit
 
 ---
 
-## 3. Storage Provider Abstraction (`RemoteStorageAdapter`)
+## 3. Implementation Status & Executed Components
 
-An extensible provider interface decouples transport protocols from merge logic:
+### 3.1 Implemented Storage Adapters (`RemoteStorageAdapter`)
+* **`LocalFolderAdapter` (Desktop & Android)**:
+  * Operates on local filesystem paths, external USB drives, and desktop-synchronized cloud folders.
+  * Ensures safe writes through atomic replacement via temporary files and SHA-256 integrity validation.
+* **`GoogleDriveStorageAdapter` (Desktop)**:
+  * Implements RFC 7636 PKCE (Proof Key for Code Exchange) OAuth 2.0 authorization flow using a local loopback server (`http://127.0.0.1:<port>/callback`).
+  * Stores database snapshots in Google Drive's hidden `appDataFolder` (`https://www.googleapis.com/auth/drive.appdata`), isolated from regular user drive files.
+  * Manages token lifecycle, automatic refresh, and streaming multipart uploads/downloads.
 
-* Parameterized `remoteDirectoryPath` and `remoteFileName` (defaulting to `healthcoach.db`) to support custom profiles and environments.
-* Methods: `getFileMetadata()`, `downloadFile()`, `uploadFile()`, and `testConnection()`.
-* **Phase 1 Providers**:
-  * `LocalFolderAdapter`: Local file paths, external drives, and desktop cloud client folders.
-  * `SmbStorageAdapter`: Windows / Samba network shares via `smbj`.
-  * `ProtonDriveStorageAdapter`: Proton Drive SDK and local sync client directory integration.
+### 3.2 Core Sync Engine (`SyncEngine`)
+* Executes 3-way differential merge across `WeightRecord` and `BloodPressureRecord` datasets.
+* Enforces schema compatibility via SQLite `PRAGMA user_version`.
+* Handles retry loops with exponential backoff on optimistic concurrency conflicts (`MAX_SYNC_RETRIES = 3`).
 
----
-
-## 4. UI & User Experience
-
+### 3.3 UI Diagnostics & Interaction
 * **Top Bar Sync Action Button**:
-  * Appears in `AppBar` next to Settings only when a sync provider is configured.
-  * Continuously animates with a rotating icon during active sync.
-  * Tapping while syncing displays a confirmation prompt to safely cancel the transfer.
-  * Overlays a persistent red exclamation badge if the previous sync failed.
-* **Toast & Snackbar Notifications**:
-  * Dispatches non-intrusive status updates for sync initiation, success, conflicts, and failures.
-* **Modernized Settings Pane**:
-  * Categorized Master-Detail sidebar navigation.
-  * Comprehensive Sync settings: Provider selection, credentials, storage path, custom DB filename, and connection test.
-  * **Sync Audit & Diagnostics**: Displays last synced timestamp, remote snapshot hash, sync status, and active SQLite schema version (`user_version`).
-  * **Background Sync Options**: Auto-sync on application close/exit and scheduled periodic intervals.
+  * Visible in `AppBar` whenever a sync provider is configured.
+  * Infinite rotation animation during active synchronization.
+  * Overlaid red exclamation badge if previous sync encountered errors.
+  * Tap during sync triggers cancellation confirmation dialog.
+* **Settings Dialog Sync Tab**:
+  * Categorized settings navigation with mutually exclusive provider selection.
+  * Real-time connection testing.
+  * Detailed sync audit metadata: Last synced time, remote snapshot SHA-256 hash, and local/remote schema versions.
+  * Global toast/snackbar notifications via `SyncNotificationManager`.
 
 ---
 
-## 5. Delivery Phases
+## 4. Peer-to-Peer (LAN) Synchronization Architecture
 
-1. **Phase 1: Schema & Data Model Evolution**:
-   * Migrate tables to UUID primary keys (`TEXT PRIMARY KEY`).
-   * Add `updated_at` epoch timestamps to all tables.
-   * Implement SQLite `PRAGMA user_version` helpers and SQLDelight migration scripts.
-2. **Phase 2: Remote Storage Adapters**:
-   * Implement `LocalFolderAdapter`, `SmbStorageAdapter`, and `ProtonDriveStorageAdapter`.
-3. **Phase 3: 3-Way Snapshot Merge Engine**:
-   * Implement snapshot cache management, schema gating, bootstrap union merge, and optimistic concurrency retry loops.
-4. **Phase 4: Settings UI & Sync Configuration**:
-   * Modernize Settings Dialog navigation, add Sync pane, diagnostics display, and auto-sync triggers.
-5. **Phase 5: Top Bar Sync Action & Toast Feedback**:
-   * Add animated `SyncActionButton`, failure overlays, cancel confirmation modals, and app exit lifecycle hooks.
+Peer-to-Peer synchronization allows HealthCoach instances to discover each other on a local Wi-Fi/LAN network and exchange database updates directly without third-party cloud infrastructure.
+
+```mermaid
+graph TD
+    subgraph ClientNode ["Client Node"]
+        UI["Settings UI & Sync Button"] --> SyncVM["SyncViewModel"]
+        SyncVM --> Engine["SyncEngine"]
+        Engine --> P2PAdapter["PeerToPeerStorageAdapter"]
+        P2PAdapter --> KtorClient["Ktor HTTP Client"]
+        Browser["PeerDiscoveryBrowser"] -.->|mDNS Scan| ServerList["Discovered Servers List"]
+    end
+
+    subgraph ServerNode ["Server Node"]
+        KtorServer["Embedded Ktor Server"] --> Auth["PIN Auth Handler"]
+        KtorServer --> SyncHandler["Streaming Storage Handler"]
+        SyncHandler --> Toast["SyncNotificationManager Toast"]
+        SyncHandler --> DBReloader["DB Reset & Cache Reload"]
+        DBReloader --> LiveDB[("Live SQLite DB")]
+        Advertiser["PeerDiscoveryAdvertiser"] -.->|mDNS Announce| Browser
+    end
+
+    KtorClient -->|1. POST /api/v1/auth/pair| Auth
+    KtorClient -->|2. GET /api/v1/sync/db/download| SyncHandler
+    KtorClient -->|3. POST /api/v1/sync/db/upload| SyncHandler
+```
+
+### 4.1 Key Architectural Decisions
+
+1. **Platform Symmetry (Desktop & Android)**:
+   * Any running instance—Desktop (JVM) or Android—can be configured as a **Server**, a **Client**, or both simultaneously.
+2. **Embedded Ktor HTTP Server & Binary Streaming**:
+   * Server runs an in-process Ktor HTTP Server with the `CIO` engine.
+   * Uses dynamic port allocation (default preferred port `8765` with automated fallback).
+   * Streams raw SQLite database files directly (`application/octet-stream`) via chunked transfer encoding (`ByteReadChannel`), preserving binary integrity and avoiding memory overhead.
+   * Enforces optimistic concurrency via `expectedHash` headers on upload (returns `409 Conflict` if modified).
+3. **Zero-Configuration Discovery (mDNS / DNS-SD)**:
+   * Advertises and browses using service type `_healthcoach-sync._tcp.` with service name `HealthCoach synch`.
+   * Advertises instance UUID (`instanceId`), device name (`deviceName`), interface version (`1.0`), and listening port.
+   * Multiplatform discovery: `JmDNS` on Desktop (JVM) and native `NsdManager` on Android.
+   * Maintains a dynamic list of discovered LAN servers, automatically filtering out the local node's own `instanceId`.
+4. **Security & PIN Handshake**:
+   * Server protects storage endpoints with a configurable or randomly generated 6-digit PIN.
+   * Client performs a pairing handshake (`POST /api/v1/auth/pair`) to validate the PIN and obtain a session bearer token.
+   * Token and server identity are saved in client settings for automatic subsequent syncs.
+5. **Server Toast Notifications & Live DB Reload**:
+   * Emits toast/snackbar notifications via `SyncNotificationManager` when clients connect, download, or upload records.
+   * Upon receiving an uploaded database snapshot, atomically swaps the database file and executes a database reload hook to refresh active SQLDelight queries and UI state.
+6. **RemoteStorageAdapter Integration**:
+   * `PeerToPeerStorageAdapter` implements `RemoteStorageAdapter` using Ktor Client, allowing `SyncEngine`'s 3-way differential merge algorithm to run unchanged.
+
+---
+
+## 5. UI & User Experience
+
+* **Provider Selection**:
+  * Mutually exclusive selection across **Local Folder**, **Google Drive (`appDataFolder`)**, and **Peer-to-Peer (LAN)**.
+* **Server Settings Section**:
+  * Server enable/disable toggle.
+  * Active listening status (bound IP address and port).
+  * Server identity configuration and PIN code display / regeneration.
+  * History log of recently serviced client devices.
+* **Client Settings Section**:
+  * Dynamic list of all discovered HealthCoach servers on the local network.
+  * Manual host/port entry fallback for complex subnets.
+  * PIN pairing modal dialog on initial connection.
+  * Connection diagnostics and paired server status indicator.
+
+---
+
+## 6. Delivery Phases
+
+| Phase | Description | Status |
+| :--- | :--- | :--- |
+| **Phase 1: Schema & Data Model Evolution** | UUID primary keys, `updated_at` timestamps, SQLite `PRAGMA user_version` migrations. | **Completed** |
+| **Phase 2: Local & Desktop Cloud Storage** | `LocalFolderAdapter`, `GoogleDriveStorageAdapter` (Desktop PKCE flow), atomic writes. | **Completed** |
+| **Phase 3: 3-Way Snapshot Merge Engine** | Differential delta extraction, `updated_at` LWW conflict resolution, schema gating, concurrency retries. | **Completed** |
+| **Phase 4: Sync UI, Action Button & Feedback** | Modernized Settings Sync tab, animated `SyncActionButton`, failure overlays, cancel modals, toast dispatch. | **Completed** |
+| **Phase 5: Peer-to-Peer LAN Synchronization** | Embedded Ktor server, binary DB streaming, mDNS discovery, PIN pairing, live DB reset, `PeerToPeerStorageAdapter`. | **Active / In Progress** |
+| **Phase 6: Android Google Drive & Future Cloud** | Android native Google Play Services Drive integration, Microsoft OneDrive, and SMB network shares. | **Upcoming** |
