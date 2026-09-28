@@ -2,6 +2,7 @@ package com.lbthomas.healthcoach.features.sync
 
 import co.touchlab.kermit.Logger
 import com.lbthomas.healthcoach.core.sync.SyncEngine
+import com.lbthomas.healthcoach.core.sync.SyncProviderType
 import com.lbthomas.healthcoach.core.sync.SyncResult
 import com.lbthomas.healthcoach.features.settings.data.SettingsData
 import com.lbthomas.healthcoach.features.settings.data.SettingsStore
@@ -93,6 +94,10 @@ class SyncViewModel {
 
         val config = settings.value.toSyncConfig()
         if (!settings.value.sync.syncEnabled) return
+
+        val isServerHost = settings.value.sync.syncProvider == SyncProviderType.PEER_TO_PEER &&
+            (settings.value.peerSync.isServerMode || settings.value.peerSync.localServerEnabled)
+        if (isServerHost) return
 
         syncJob = scope.launch {
             _syncState.value = SyncState.Syncing

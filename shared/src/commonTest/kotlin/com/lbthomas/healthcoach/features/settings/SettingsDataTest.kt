@@ -124,11 +124,12 @@ class SettingsDataTest {
                 localServerEnabled = true,
                 localServerHistory = listOf(
                     PeerClientRecord(
+                        authToken = "client_auth_token_123",
                         clientInstanceId = "client-uuid-5678",
                         clientName = "Pixel 8",
+                        ipAddress = "192.168.1.100",
                         lastAccessTimestamp = 1710000000000L,
-                        lastAction = "DOWNLOAD",
-                        ipAddress = "192.168.1.100"
+                        lastAction = "DOWNLOAD"
                     )
                 ),
                 localServerPin = "123456",
@@ -190,8 +191,10 @@ class SettingsDataTest {
         assertEquals("123456", deserialized.peerSync.localServerPin)
         assertEquals(9000, deserialized.peerSync.localServerPort)
         assertEquals(1, deserialized.peerSync.localServerHistory.size)
+        assertEquals("client_auth_token_123", deserialized.peerSync.localServerHistory[0].authToken)
         assertEquals("client-uuid-5678", deserialized.peerSync.localServerHistory[0].clientInstanceId)
         assertEquals("Pixel 8", deserialized.peerSync.localServerHistory[0].clientName)
+        assertEquals("192.168.1.100", deserialized.peerSync.localServerHistory[0].ipAddress)
         assertEquals("192.168.1.50", deserialized.peerSync.serverHost)
         assertEquals("server-uuid-9999", deserialized.peerSync.serverInstanceId)
         assertEquals("Home Server", deserialized.peerSync.serverName)

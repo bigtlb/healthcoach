@@ -10,7 +10,8 @@ class AppInfoTest {
     @Test
     fun testAppInfoMetadata() {
         assertEquals("Health Coach", AppInfo.APP_NAME)
-        assertEquals("0.9.0", AppInfo.APP_VERSION)
+        assertEquals(AppBuildConfig.APP_VERSION, AppInfo.APP_VERSION)
+        assertTrue(AppInfo.APP_VERSION.isNotBlank(), "App version must not be blank")
         assertEquals("Thomas Baker", AppInfo.AUTHOR)
         assertEquals("https://github.com/bigtlb/healthcoach", AppInfo.GITHUB_URL)
         assertEquals("Apache License 2.0", AppInfo.LICENSE_NAME)

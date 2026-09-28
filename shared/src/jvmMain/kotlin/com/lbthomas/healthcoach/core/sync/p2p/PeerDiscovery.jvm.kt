@@ -127,36 +127,7 @@ actual open class PeerDiscoveryBrowser {
 
                 override fun serviceResolved(event: ServiceEvent) {
                     val info = event.info ?: return
-                    val peerInstanceId = info.getPropertyString("instanceId") ?: ""
-
-                    // Filter out local instance
-                    if (peerInstanceId.isBlank() || peerInstanceId == this@PeerDiscoveryBrowser.localInstanceId) {
-                        return
-                    }
-
-                    val name = info.getPropertyString("deviceName")?.takeIf { it.isNotBlank() } ?: info.name
-                    val port = info.port
-                    val host = info.inet4Addresses.firstOrNull()?.hostAddress
-                        ?: info.hostAddresses.firstOrNull()
-                        ?: ""
-
-                    if (host.isNotBlank() && port > 0) {
-                        val peer = DiscoveredPeer(
-                            instanceId = peerInstanceId,
-                            name = name,
-                            host = host,
-                            port = port,
-                            interfaceVersion = info.getPropertyString("interfaceVersion") ?: PeerDiscoveryConstants.INTERFACE_VERSION,
-                            lastSeenTimestamp = currentEpochMillis()
-                        )
-
-                        _discoveredPeers.update { current ->
-                            val updated = current.filterNot { it.instanceId == peer.instanceId }.toMutableList()
-                            updated.add(peer)
-                            updated.sortedBy { it.name }
-                        }
-                        LoggingConfig.discoveryLogger.i("Discovered peer: '$name' ($host:$port, id: $peerInstanceId)")
-                    }
+                    handleResolvedService(info)
                 }
             }
 
@@ -164,9 +135,55 @@ actual open class PeerDiscoveryBrowser {
             dns.addServiceListener(PeerDiscoveryConstants.SERVICE_TYPE_JMDNS, listener)
             _isBrowsing = true
             LoggingConfig.discoveryLogger.i("mDNS service browsing started on $hostAddress")
+
+            Thread {
+                try {
+                    val existing = dns.list(PeerDiscoveryConstants.SERVICE_TYPE_JMDNS, 2000)
+                    for (info in existing) {
+                        handleResolvedService(info)
+                    }
+                } catch (_: Exception) {}
+            }.apply {
+                isDaemon = true
+                name = "HealthCoach-PeerDiscovery-Scanner"
+                start()
+            }
         } catch (e: Throwable) {
             LoggingConfig.discoveryLogger.e("Failed to start mDNS browsing: ${e.message}", e)
             _isBrowsing = false
+        }
+    }
+
+    private fun handleResolvedService(info: ServiceInfo) {
+        val peerInstanceId = info.getPropertyString("instanceId") ?: ""
+
+        // Filter out local instance
+        if (peerInstanceId.isBlank() || peerInstanceId == this@PeerDiscoveryBrowser.localInstanceId) {
+            return
+        }
+
+        val name = info.getPropertyString("deviceName")?.takeIf { it.isNotBlank() } ?: info.name
+        val port = info.port
+        val host = info.inet4Addresses.firstOrNull()?.hostAddress
+            ?: info.hostAddresses.firstOrNull()
+            ?: ""
+
+        if (host.isNotBlank() && port > 0) {
+            val peer = DiscoveredPeer(
+                instanceId = peerInstanceId,
+                name = name,
+                host = host,
+                port = port,
+                interfaceVersion = info.getPropertyString("interfaceVersion") ?: PeerDiscoveryConstants.INTERFACE_VERSION,
+                lastSeenTimestamp = currentEpochMillis()
+            )
+
+            _discoveredPeers.update { current ->
+                val updated = current.filterNot { it.instanceId == peer.instanceId }.toMutableList()
+                updated.add(peer)
+                updated.sortedBy { it.name }
+            }
+            LoggingConfig.discoveryLogger.i("Discovered peer: '$name' ($host:$port, id: $peerInstanceId)")
         }
     }
 

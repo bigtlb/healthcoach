@@ -30,3 +30,14 @@
 # Vico Charts
 -keep class com.patrykandpatrick.vico.** { *; }
 -dontwarn com.patrykandpatrick.vico.**
+
+# Ktor Network, Server & Client
+-keep class io.ktor.** { *; }
+-dontwarn io.ktor.**
+-dontwarn kotlinx.atomicfu.**
+-dontwarn com.typesafe.config.**
+-dontwarn org.fusesource.jansi.**
+
+# JmDNS / Zeroconf
+-keep class javax.jmdns.** { *; }
+-dontwarn javax.jmdns.**

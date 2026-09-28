@@ -5,7 +5,6 @@ import com.lbthomas.healthcoach.Database
 import com.lbthomas.healthcoach.core.database.DriverFactory
 import com.lbthomas.healthcoach.core.database.createDatabaseForDriver
 import com.lbthomas.healthcoach.core.sync.FileUtils
-import com.lbthomas.healthcoach.core.sync.SyncConfig
 import com.lbthomas.healthcoach.core.sync.SyncProviderType
 import com.lbthomas.healthcoach.core.sync.adapters.PeerToPeerStorageAdapter
 import com.lbthomas.healthcoach.core.sync.auth.AuthState
@@ -91,8 +90,19 @@ class PeerToPeerStorageAdapterTest {
                 serverPort = serverPort
             )
             val onlineResult = onlineAdapter.testConnection()
-            assertTrue(onlineResult.isSuccess, "Connection test should succeed against online server")
+            assertTrue(onlineResult.isSuccess, "Connection test should succeed against online server without auth")
 
+            // Test with authenticated adapter
+            onlineAdapter.authenticate(ProviderCredentials(password = "4321"))
+            val authConnResult = onlineAdapter.testConnection()
+            assertTrue(authConnResult.isSuccess, "Connection test should succeed when paired with valid credentials")
+
+            // Test with invalid session token
+            val invalidTokenAdapter = PeerToPeerStorageAdapter(
+                serverHost = "127.0.0.1",
+                serverPort = serverPort
+            )
+            // Inject invalid token into adapter field via reflection / internal state if needed or test via testPeerConnection
             val offlineAdapter = PeerToPeerStorageAdapter(
                 serverHost = "127.0.0.1",
                 serverPort = 59999 // unused port

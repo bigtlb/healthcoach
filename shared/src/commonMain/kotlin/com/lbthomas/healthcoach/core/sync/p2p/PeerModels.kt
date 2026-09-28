@@ -2,6 +2,33 @@ package com.lbthomas.healthcoach.core.sync.p2p
 
 import kotlinx.serialization.Serializable
 
+object PeerAuthStatus {
+    const val ACCESS_GRANTED = "ACCESS_GRANTED"
+    const val PAIRING_REQUIRED = "PAIRING_REQUIRED"
+}
+
+/**
+ * Health & status response returned by P2P sync server.
+ */
+@Serializable
+data class PeerStatusResponse(
+    val status: String = "OK",
+    val instanceId: String = "",
+    val deviceName: String = "",
+    val port: String = "",
+    val interfaceVersion: String = "1.0",
+    val isRunning: String = "true",
+    val authStatus: String = PeerAuthStatus.PAIRING_REQUIRED
+) {
+    val isAccessGranted: Boolean
+        get() = authStatus.equals(PeerAuthStatus.ACCESS_GRANTED, ignoreCase = true) ||
+            authStatus.equals("access granted", ignoreCase = true)
+
+    val isPairingRequired: Boolean
+        get() = authStatus.equals(PeerAuthStatus.PAIRING_REQUIRED, ignoreCase = true) ||
+            authStatus.equals("pairing required", ignoreCase = true)
+}
+
 /**
  * Information about a peer discovered on the local network via mDNS/NSD.
  */
@@ -60,11 +87,12 @@ data class ServerSyncMetadata(
  */
 @Serializable
 data class PeerClientRecord(
+    val authToken: String = "",
     val clientInstanceId: String,
     val clientName: String,
+    val ipAddress: String = "",
     val lastAccessTimestamp: Long,
-    val lastAction: String = "CONNECTED",
-    val ipAddress: String = ""
+    val lastAction: String = "CONNECTED"
 )
 
 /**

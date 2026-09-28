@@ -10,6 +10,8 @@ dependencies {
     implementation(project(":shared"))
 
     implementation(compose.desktop.currentOs)
+    implementation(libs.compose.material3)
+    implementation(libs.compose.foundation)
     implementation(libs.kotlinx.coroutinesSwing)
 
     implementation(libs.compose.uiToolingPreview)
@@ -22,6 +24,7 @@ dependencies {
 compose.desktop {
     application {
         mainClass = "com.lbthomas.healthcoach.MainKt"
+        jvmArgs += listOf("-Dskiko.vsync.enabled=false")
 
         buildTypes.release.proguard {
             configurationFiles.from(project.file("proguard-rules.pro"))

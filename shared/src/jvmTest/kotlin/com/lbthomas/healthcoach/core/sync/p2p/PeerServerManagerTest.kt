@@ -7,23 +7,14 @@ import com.lbthomas.healthcoach.core.database.createDatabaseForDriver
 import com.lbthomas.healthcoach.core.sync.FileUtils
 import com.lbthomas.healthcoach.features.settings.data.SettingsStore
 import com.lbthomas.healthcoach.features.sync.SyncNotificationManager
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.engine.cio.CIO
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.request.get
-import io.ktor.client.request.header
-import io.ktor.client.request.post
-import io.ktor.client.request.setBody
-import io.ktor.client.statement.bodyAsBytes
-import io.ktor.client.statement.bodyAsText
-import io.ktor.http.ContentType
-import io.ktor.http.HttpHeaders
-import io.ktor.http.HttpStatusCode
-import io.ktor.http.contentType
-import io.ktor.serialization.kotlinx.json.json
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.engine.cio.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
+import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -99,11 +90,37 @@ class PeerServerManagerTest {
             assertTrue(port > 0, "Bound port must be greater than 0")
             assertTrue(serverManager.serverStatus.value.isRunning, "Server status isRunning should be true")
 
-            // Health / Status Check
+            // Health / Status Check without token -> 200 OK with PAIRING_REQUIRED
             val response = httpClient.get("http://127.0.0.1:$port/api/v1/status")
             assertEquals(HttpStatusCode.OK, response.status)
-            val responseText = response.bodyAsText()
-            assertTrue(responseText.contains("\"status\":\"OK\""))
+            val unauthStatus = response.body<PeerStatusResponse>()
+            assertEquals("OK", unauthStatus.status)
+            assertEquals(PeerAuthStatus.PAIRING_REQUIRED, unauthStatus.authStatus)
+            assertTrue(unauthStatus.isPairingRequired)
+
+            // Health / Status Check with bad token -> 200 OK with PAIRING_REQUIRED
+            val badAuthResponse = httpClient.get("http://127.0.0.1:$port/api/v1/status") {
+                header(HttpHeaders.Authorization, "Bearer invalid-token-12345")
+            }
+            assertEquals(HttpStatusCode.OK, badAuthResponse.status)
+            val badAuthStatus = badAuthResponse.body<PeerStatusResponse>()
+            assertEquals(PeerAuthStatus.PAIRING_REQUIRED, badAuthStatus.authStatus)
+
+            // Register a session token
+            val validToken = "test-token-valid-abc"
+            serverManager.registerSessionToken(
+                validToken,
+                PeerClientSession("client-1", "Client One", "127.0.0.1", System.currentTimeMillis())
+            )
+
+            // Health / Status Check with valid token -> 200 OK with ACCESS_GRANTED
+            val validAuthResponse = httpClient.get("http://127.0.0.1:$port/api/v1/status") {
+                header(HttpHeaders.Authorization, "Bearer $validToken")
+            }
+            assertEquals(HttpStatusCode.OK, validAuthResponse.status)
+            val validAuthStatus = validAuthResponse.body<PeerStatusResponse>()
+            assertEquals(PeerAuthStatus.ACCESS_GRANTED, validAuthStatus.authStatus)
+            assertTrue(validAuthStatus.isAccessGranted)
 
             serverManager.stop()
             assertFalse(serverManager.serverStatus.value.isRunning, "Server status isRunning should be false after stop")
@@ -211,6 +228,16 @@ class PeerServerManagerTest {
             }.body<PairResponse>()
             val token = pairRes.token
 
+            // Seed prior sync error on server
+            settingsStore.updateSettings {
+                it.copy(
+                    sync = it.sync.copy(
+                        lastSyncFailed = true,
+                        lastSyncError = "Prior sync failure"
+                    )
+                )
+            }
+
             val currentServerHash = FileUtils.calculateFileSha256(testDriverFactory.getDatabaseFilePath())!!
 
             // Create an updated client database
@@ -263,6 +290,12 @@ class PeerServerManagerTest {
             // Verify history updated with UPLOAD
             val history = settingsStore.settings.value.peerSync.localServerHistory
             assertTrue(history.any { it.clientInstanceId == "client-3" && it.lastAction == "UPLOAD" })
+
+            // Verify prior sync error on server is cleared and success recorded
+            val syncSettings = settingsStore.settings.value.sync
+            assertFalse(syncSettings.lastSyncFailed, "lastSyncFailed must be cleared to false")
+            assertNull(syncSettings.lastSyncError, "lastSyncError must be cleared to null")
+            assertTrue(syncSettings.lastSyncStatus.contains("Success (Updated by Client C)"))
         }
     }
 
@@ -334,6 +367,66 @@ class PeerServerManagerTest {
             // Verify PIN and prompt cleared after successful pairing
             assertEquals("", serverManager.serverStatus.value.activePin)
             assertNull(SyncNotificationManager.pairingPinPrompt.value)
+        }
+    }
+
+    @Test
+    fun testClientTokenPersistenceAndReloadAcrossServerRestart() {
+        runBlocking {
+            settingsStore.setPeerServerPin("8888")
+            val port1 = serverManager.start(preferredPort = 0).getOrThrow()
+
+            // 1. Pair client and obtain token
+            val pairReq = PairRequest(
+                clientInstanceId = "client-persist-1",
+                clientName = "Client Persist Device",
+                pin = "8888"
+            )
+            val pairResponse = httpClient.post("http://127.0.0.1:$port1/api/v1/auth/pair") {
+                contentType(ContentType.Application.Json)
+                setBody(pairReq)
+            }
+            assertEquals(HttpStatusCode.OK, pairResponse.status)
+            val token = pairResponse.body<PairResponse>().token
+            assertTrue(token.isNotBlank())
+
+            // 2. Verify token is persisted in SettingsStore localServerHistory
+            val history = settingsStore.settings.value.peerSync.localServerHistory
+            val clientRecord = history.find { it.clientInstanceId == "client-persist-1" }
+            assertNotNull(clientRecord)
+            assertEquals(token, clientRecord.authToken)
+
+            // 3. Stop server completely
+            serverManager.stop()
+
+            // 4. Instantiate a new PeerServerManager instance with the same SettingsStore
+            val newServerManager = PeerServerManager(
+                driverFactory = testDriverFactory,
+                settingsStore = settingsStore
+            )
+
+            try {
+                val port2 = newServerManager.start(preferredPort = 0).getOrThrow()
+
+                // 5. Test status endpoint using the previously issued token without re-pairing
+                val statusResponse = httpClient.get("http://127.0.0.1:$port2/api/v1/status") {
+                    header(HttpHeaders.Authorization, "Bearer $token")
+                }
+                assertEquals(HttpStatusCode.OK, statusResponse.status)
+                val statusBody = statusResponse.body<PeerStatusResponse>()
+                assertEquals(PeerAuthStatus.ACCESS_GRANTED, statusBody.authStatus)
+                assertTrue(statusBody.isAccessGranted)
+
+                // 6. Test sync metadata endpoint using the persisted token
+                val metadataResponse = httpClient.get("http://127.0.0.1:$port2/api/v1/sync/metadata") {
+                    header(HttpHeaders.Authorization, "Bearer $token")
+                }
+                assertEquals(HttpStatusCode.OK, metadataResponse.status)
+                val meta = metadataResponse.body<ServerSyncMetadata>()
+                assertTrue(meta.exists)
+            } finally {
+                newServerManager.stop()
+            }
         }
     }
 }

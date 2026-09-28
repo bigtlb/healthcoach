@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.unit.dp
+import com.lbthomas.healthcoach.core.sync.SyncProviderType
 import com.lbthomas.healthcoach.core.ui.Tooltip
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -28,8 +29,11 @@ fun SyncActionButton(
         return
     }
 
+    val isServerHost = settings.sync.syncProvider == SyncProviderType.PEER_TO_PEER &&
+        (settings.peerSync.isServerMode || settings.peerSync.localServerEnabled)
     val isSyncing = syncState is SyncState.Syncing
-    val hasError = syncState is SyncState.Error || settings.sync.lastSyncFailed
+    val hasError = !isServerHost && (syncState is SyncState.Error || settings.sync.lastSyncFailed)
+    val hostDeviceName = settings.peerSync.deviceName.ifBlank { "HealthCoach Host" }
 
     val infiniteTransition = rememberInfiniteTransition()
     val rotation by infiniteTransition.animateFloat(
@@ -43,6 +47,7 @@ fun SyncActionButton(
 
     Tooltip(
         tooltip = when {
+            isServerHost -> "Currently hosting as Peer-to-Peer server ($hostDeviceName)\nClients synchronize directly with this device"
             isSyncing -> "Syncing in progress\nClick to cancel"
             hasError -> "Last sync failed\nClick to retry"
             else -> "Sync database"
@@ -53,6 +58,7 @@ fun SyncActionButton(
             contentAlignment = Alignment.Center
         ) {
             IconButton(
+                enabled = !isServerHost,
                 onClick = {
                     if (isSyncing) {
                         showCancelDialog = true
@@ -63,9 +69,13 @@ fun SyncActionButton(
             ) {
                 Icon(
                     imageVector = Icons.Default.Sync,
-                    contentDescription = "Sync",
+                    contentDescription = if (isServerHost) "P2P Host ($hostDeviceName)" else "Sync",
                     modifier = Modifier.rotate(if (isSyncing) rotation else 0f),
-                    tint = if (hasError && !isSyncing) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                    tint = when {
+                        isServerHost -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        hasError && !isSyncing -> MaterialTheme.colorScheme.error
+                        else -> MaterialTheme.colorScheme.onSurface
+                    }
                 )
             }
 

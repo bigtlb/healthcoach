@@ -3,6 +3,7 @@ package com.lbthomas.healthcoach.features.bloodpressure
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -16,6 +17,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
@@ -109,6 +111,8 @@ fun BloodPressureEntryEditDialog(
     }
 
     val systolicInputFocusRequester = remember { FocusRequester() }
+    val diastolicInputFocusRequester = remember { FocusRequester() }
+    val pulseInputFocusRequester = remember { FocusRequester() }
 
     LaunchedEffect(entry) {
         yield()
@@ -171,7 +175,13 @@ fun BloodPressureEntryEditDialog(
                     label = { Text("Systolic (mmHg)") },
                     singleLine = true,
                     isError = systolicFieldValue.text.isNotEmpty() && !isSystolicValid,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Next
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onNext = { diastolicInputFocusRequester.requestFocus() }
+                    ),
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(systolicInputFocusRequester)
@@ -188,8 +198,16 @@ fun BloodPressureEntryEditDialog(
                     label = { Text("Diastolic (mmHg)") },
                     singleLine = true,
                     isError = diastolicFieldValue.text.isNotEmpty() && !isDiastolicValid,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth()
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Next
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onNext = { pulseInputFocusRequester.requestFocus() }
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(diastolicInputFocusRequester)
                 )
 
                 // Pulse Input Field
@@ -203,8 +221,16 @@ fun BloodPressureEntryEditDialog(
                     label = { Text("Pulse bpm (optional)") },
                     singleLine = true,
                     isError = pulseFieldValue.text.isNotEmpty() && !isPulseValid,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth()
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = { confirmIfValid() }
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(pulseInputFocusRequester)
                 )
 
                 // AHA Category indicator preview

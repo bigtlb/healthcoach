@@ -7,28 +7,17 @@ import com.lbthomas.healthcoach.core.enums.WeightUnit
 import com.lbthomas.healthcoach.core.logging.LoggingConfig
 import com.lbthomas.healthcoach.core.sync.SyncConfig
 import com.lbthomas.healthcoach.core.sync.SyncProviderType
-import com.lbthomas.healthcoach.core.sync.p2p.DiscoveredPeer
-import com.lbthomas.healthcoach.core.sync.p2p.PairInitRequest
-import com.lbthomas.healthcoach.core.sync.p2p.PairRequest
-import com.lbthomas.healthcoach.core.sync.p2p.PairResponse
-import com.lbthomas.healthcoach.core.sync.p2p.PeerDiscoveryAdvertiser
-import com.lbthomas.healthcoach.core.sync.p2p.PeerDiscoveryBrowser
-import com.lbthomas.healthcoach.core.sync.p2p.PeerServerManager
-import com.lbthomas.healthcoach.core.sync.p2p.PeerServerStatus
+import com.lbthomas.healthcoach.core.sync.p2p.*
 import com.lbthomas.healthcoach.core.theme.AppTheme
 import com.lbthomas.healthcoach.features.settings.data.SettingsData
 import com.lbthomas.healthcoach.features.settings.data.SettingsStore
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.engine.cio.CIO
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.request.get
-import io.ktor.client.request.post
-import io.ktor.client.request.setBody
-import io.ktor.http.ContentType
-import io.ktor.http.HttpStatusCode
-import io.ktor.http.contentType
-import io.ktor.serialization.kotlinx.json.json
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.engine.cio.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.request.*
+import io.ktor.http.*
+import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -313,6 +302,12 @@ class SettingsViewModel {
         discoveryBrowser?.clearPeers()
     }
 
+    fun refreshDiscovery() {
+        discoveryBrowser?.stopBrowsing()
+        discoveryBrowser?.clearPeers()
+        discoveryBrowser?.startBrowsing(settings.value.peerSync.instanceId)
+    }
+
     fun setPeerClientTarget(
         instanceId: String?,
         host: String,
@@ -338,6 +333,7 @@ class SettingsViewModel {
     }
 
     fun clearServerHistory() {
+        peerServerManager?.clearAllSessions()
         persistence?.clearServerHistory() ?: updateSettings {
             it.copy(peerSync = it.peerSync.copy(localServerHistory = emptyList()))
         }
@@ -432,12 +428,29 @@ class SettingsViewModel {
         }
     }
 
-    suspend fun testPeerConnection(host: String, port: Int): Result<Unit> {
-        val client = HttpClient(CIO)
+    suspend fun testPeerConnection(
+        host: String = settings.value.peerSync.serverHost,
+        port: Int = settings.value.peerSync.serverPort,
+        token: String = settings.value.peerSync.serverToken
+    ): Result<PeerStatusResponse> {
+        val client = HttpClient(CIO) {
+            install(ContentNegotiation) {
+                json(Json {
+                    ignoreUnknownKeys = true
+                    encodeDefaults = true
+                    prettyPrint = false
+                })
+            }
+        }
         return try {
-            val response = client.get("http://${host.trim()}:$port/api/v1/status")
+            val response = client.get("http://${host.trim()}:$port/api/v1/status") {
+                if (token.isNotBlank()) {
+                    header(HttpHeaders.Authorization, "Bearer $token")
+                }
+            }
             if (response.status == HttpStatusCode.OK) {
-                Result.success(Unit)
+                val statusResponse = response.body<PeerStatusResponse>()
+                Result.success(statusResponse)
             } else {
                 Result.failure(IllegalStateException("Server returned HTTP ${response.status}"))
             }

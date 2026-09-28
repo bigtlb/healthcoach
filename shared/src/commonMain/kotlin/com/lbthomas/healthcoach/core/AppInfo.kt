@@ -11,7 +11,7 @@ data class OpenSourceAttribution(
 
 object AppInfo {
     const val APP_NAME = "Health Coach"
-    const val APP_VERSION = "0.9.0"
+    val APP_VERSION = AppBuildConfig.APP_VERSION
     const val GITHUB_URL = "https://github.com/bigtlb/healthcoach"
     const val AUTHOR = "Thomas Baker"
     const val LICENSE_NAME = "Apache License 2.0"

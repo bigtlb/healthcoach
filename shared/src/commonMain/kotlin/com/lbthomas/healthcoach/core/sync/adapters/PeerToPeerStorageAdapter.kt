@@ -1,35 +1,25 @@
 package com.lbthomas.healthcoach.core.sync.adapters
 
 import com.lbthomas.healthcoach.core.logging.LoggingConfig
-import com.lbthomas.healthcoach.core.sync.FileMetadata
-import com.lbthomas.healthcoach.core.sync.FileUtils
-import com.lbthomas.healthcoach.core.sync.RemoteStorageAdapter
-import com.lbthomas.healthcoach.core.sync.SyncConfig
-import com.lbthomas.healthcoach.core.sync.SyncProviderType
+import com.lbthomas.healthcoach.core.sync.*
 import com.lbthomas.healthcoach.core.sync.auth.AuthRequirement
 import com.lbthomas.healthcoach.core.sync.auth.AuthState
 import com.lbthomas.healthcoach.core.sync.auth.ProviderCredentials
 import com.lbthomas.healthcoach.core.sync.auth.RequiresAuth
 import com.lbthomas.healthcoach.core.sync.p2p.PairRequest
 import com.lbthomas.healthcoach.core.sync.p2p.PairResponse
+import com.lbthomas.healthcoach.core.sync.p2p.PeerStatusResponse
 import com.lbthomas.healthcoach.core.sync.p2p.ServerSyncMetadata
 import com.lbthomas.healthcoach.core.utils.generateUuid
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.engine.cio.CIO
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.request.get
-import io.ktor.client.request.header
-import io.ktor.client.request.post
-import io.ktor.client.request.setBody
-import io.ktor.client.statement.bodyAsChannel
-import io.ktor.http.ContentType
-import io.ktor.http.HttpHeaders
-import io.ktor.http.HttpStatusCode
-import io.ktor.http.contentType
-import io.ktor.serialization.kotlinx.json.json
-import io.ktor.utils.io.ByteReadChannel
-import io.ktor.utils.io.readAvailable
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.engine.cio.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
+import io.ktor.serialization.kotlinx.json.*
+import io.ktor.utils.io.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -151,9 +141,19 @@ class PeerToPeerStorageAdapter(
         }
 
         return try {
-            val response = client.get("$baseUrl/api/v1/status")
+            val token = activeToken
+            val response = client.get("$baseUrl/api/v1/status") {
+                if (token.isNotBlank()) {
+                    header(HttpHeaders.Authorization, "Bearer $token")
+                }
+            }
             if (response.status == HttpStatusCode.OK) {
-                Result.success(Unit)
+                val statusResponse = response.body<PeerStatusResponse>()
+                if (token.isNotBlank() && !statusResponse.isAccessGranted) {
+                    Result.failure(IllegalStateException("Pairing required: server authorization token is invalid or expired"))
+                } else {
+                    Result.success(Unit)
+                }
             } else {
                 Result.failure(IllegalStateException("Server responded with HTTP ${response.status}"))
             }

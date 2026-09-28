@@ -53,7 +53,8 @@ data class PeerClientSession(
     val clientInstanceId: String,
     val clientName: String,
     val ipAddress: String,
-    val pairedAtTimestamp: Long
+    val pairedAtTimestamp: Long,
+    val authToken: String = ""
 )
 
 /**
@@ -146,6 +147,19 @@ class PeerServerManager(
                 // Update transient runtime port in settings
                 settingsStore.updateSettings { current ->
                     current.copy(peerSync = current.peerSync.copy(serverPort = actualPort))
+                }
+
+                // Pre-populate active sessions from persisted history
+                settingsStore.settings.value.peerSync.localServerHistory.forEach { record ->
+                    if (record.authToken.isNotBlank()) {
+                        activeClientSessions[record.authToken] = PeerClientSession(
+                            clientInstanceId = record.clientInstanceId,
+                            clientName = record.clientName,
+                            ipAddress = record.ipAddress,
+                            pairedAtTimestamp = record.lastAccessTimestamp,
+                            authToken = record.authToken
+                        )
+                    }
                 }
 
                 LoggingConfig.serverLogger.i("P2P server successfully listening on port $actualPort (PIN: $activePin)")
@@ -243,15 +257,27 @@ class PeerServerManager(
             get("/api/v1/status") {
                 val settings = settingsStore.settings.value
                 val status = _serverStatus.value
+
+                val authHeader = call.request.headers[HttpHeaders.Authorization]
+                val isAuthorized = if (authHeader != null && authHeader.startsWith("Bearer ", ignoreCase = true)) {
+                    val token = authHeader.substring(7).trim()
+                    findSessionByToken(token) != null
+                } else {
+                    false
+                }
+
+                val authStatus = if (isAuthorized) PeerAuthStatus.ACCESS_GRANTED else PeerAuthStatus.PAIRING_REQUIRED
+
                 call.respond(
                     HttpStatusCode.OK,
-                    mapOf(
-                        "status" to "OK",
-                        "instanceId" to settings.peerSync.instanceId,
-                        "deviceName" to settings.peerSync.deviceName,
-                        "port" to status.port.toString(),
-                        "interfaceVersion" to "1.0",
-                        "isRunning" to status.isRunning.toString()
+                    PeerStatusResponse(
+                        status = "OK",
+                        instanceId = settings.peerSync.instanceId,
+                        deviceName = settings.peerSync.deviceName,
+                        port = status.port.toString(),
+                        interfaceVersion = "1.0",
+                        isRunning = status.isRunning.toString(),
+                        authStatus = authStatus
                     )
                 )
             }
@@ -315,18 +341,20 @@ class PeerServerManager(
                     clientInstanceId = pairRequest.clientInstanceId,
                     clientName = pairRequest.clientName,
                     ipAddress = clientIp,
-                    pairedAtTimestamp = currentEpochMillis()
+                    pairedAtTimestamp = currentEpochMillis(),
+                    authToken = token
                 )
                 activeClientSessions[token] = session
 
                 // Record in persistent history
                 settingsStore.addServerHistoryRecord(
                     PeerClientRecord(
+                        authToken = token,
                         clientInstanceId = pairRequest.clientInstanceId,
                         clientName = pairRequest.clientName,
+                        ipAddress = clientIp,
                         lastAccessTimestamp = currentEpochMillis(),
-                        lastAction = "PAIRED",
-                        ipAddress = clientIp
+                        lastAction = "PAIRED"
                     )
                 )
 
@@ -391,11 +419,12 @@ class PeerServerManager(
                 // Record client history and notification
                 settingsStore.addServerHistoryRecord(
                     PeerClientRecord(
+                        authToken = session.authToken,
                         clientInstanceId = session.clientInstanceId,
                         clientName = session.clientName,
+                        ipAddress = session.ipAddress,
                         lastAccessTimestamp = currentEpochMillis(),
-                        lastAction = "DOWNLOAD",
-                        ipAddress = session.ipAddress
+                        lastAction = "DOWNLOAD"
                     )
                 )
 
@@ -496,13 +525,27 @@ class PeerServerManager(
                     // Record client history and notification
                     settingsStore.addServerHistoryRecord(
                         PeerClientRecord(
+                            authToken = session.authToken,
                             clientInstanceId = session.clientInstanceId,
                             clientName = session.clientName,
+                            ipAddress = session.ipAddress,
                             lastAccessTimestamp = currentEpochMillis(),
-                            lastAction = "UPLOAD",
-                            ipAddress = session.ipAddress
+                            lastAction = "UPLOAD"
                         )
                     )
+
+                    // Clear any sync errors and record success from client update
+                    settingsStore.updateSettings {
+                        it.copy(
+                            sync = it.sync.copy(
+                                lastSyncStatus = "Success (Updated by ${session.clientName})",
+                                lastSyncTime = currentEpochMillis(),
+                                lastSyncHash = newHash,
+                                lastSyncError = null,
+                                lastSyncFailed = false
+                            )
+                        )
+                    }
 
                     serverScope.launch {
                         SyncNotificationManager.postNotification("Peer '${session.clientName}' uploaded new database snapshot")
@@ -544,6 +587,30 @@ class PeerServerManager(
     }
 
     /**
+     * Resolves an authenticated client session by token from active memory or persistent settings.
+     */
+    private fun findSessionByToken(token: String): PeerClientSession? {
+        if (token.isBlank()) return null
+        activeClientSessions[token]?.let { return it }
+
+        val persisted = settingsStore.settings.value.peerSync.localServerHistory.find {
+            it.authToken.isNotBlank() && it.authToken == token
+        }
+        if (persisted != null) {
+            val restored = PeerClientSession(
+                clientInstanceId = persisted.clientInstanceId,
+                clientName = persisted.clientName,
+                ipAddress = persisted.ipAddress,
+                pairedAtTimestamp = persisted.lastAccessTimestamp,
+                authToken = persisted.authToken
+            )
+            activeClientSessions[token] = restored
+            return restored
+        }
+        return null
+    }
+
+    /**
      * Authenticates an incoming call via Bearer token.
      */
     private suspend fun authenticate(call: ApplicationCall): PeerClientSession? {
@@ -554,7 +621,7 @@ class PeerServerManager(
         }
 
         val token = authHeader.substring(7).trim()
-        val session = activeClientSessions[token]
+        val session = findSessionByToken(token)
 
         if (session == null) {
             call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "Invalid or expired session token"))
@@ -568,7 +635,8 @@ class PeerServerManager(
      * Registers a pre-authenticated session token (useful for testing or cached credentials).
      */
     fun registerSessionToken(token: String, session: PeerClientSession) {
-        activeClientSessions[token] = session
+        val updatedSession = if (session.authToken.isBlank()) session.copy(authToken = token) else session
+        activeClientSessions[token] = updatedSession
     }
 
     /**

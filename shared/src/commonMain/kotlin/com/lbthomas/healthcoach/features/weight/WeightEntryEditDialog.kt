@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -32,6 +33,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
@@ -128,13 +130,14 @@ fun WeightEntryEditDialog(
 
                 // Weight Input Field (nnn.n)
                 EnterWeightValue(
-                        weightFieldValue = weightFieldValue,
-                        onValueChanged = { weightFieldValue = it },
-                        weightPattern = weightPattern,
-                        units = units,
-                        isWeightValid = isWeightValid,
-                        weightInputFocusRequester = weightInputFocusRequester
-                    )
+                    weightFieldValue = weightFieldValue,
+                    onValueChanged = { weightFieldValue = it },
+                    weightPattern = weightPattern,
+                    units = units,
+                    isWeightValid = isWeightValid,
+                    weightInputFocusRequester = weightInputFocusRequester,
+                    onConfirm = { confirmIfValid() }
+                )
             }
         },
         confirmButton = {
@@ -213,7 +216,8 @@ private fun EnterWeightValue(
     weightPattern: Regex,
     units: String,
     isWeightValid: Boolean,
-    weightInputFocusRequester: FocusRequester
+    weightInputFocusRequester: FocusRequester,
+    onConfirm: () -> Unit
 ) {
     OutlinedTextField(
         value = weightFieldValue,
@@ -225,7 +229,13 @@ private fun EnterWeightValue(
         label = { Text("Weight ($units)") },
         placeholder = { Text("000.0") },
         singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Decimal,
+            imeAction = ImeAction.Done
+        ),
+        keyboardActions = KeyboardActions(
+            onDone = { onConfirm() }
+        ),
         isError = weightFieldValue.text.isNotEmpty() && !isWeightValid,
         supportingText = {
             if (weightFieldValue.text.isNotEmpty() && !isWeightValid) {

@@ -2,20 +2,20 @@ package com.lbthomas.healthcoach.features.settings.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CornerSize
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.LinkOff
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
@@ -24,6 +24,7 @@ import com.lbthomas.healthcoach.core.di.previewAppModule
 import com.lbthomas.healthcoach.core.sync.SyncConfig
 import com.lbthomas.healthcoach.core.sync.p2p.DiscoveredPeer
 import com.lbthomas.healthcoach.features.settings.SettingsViewModel
+import com.lbthomas.healthcoach.features.settings.data.PeerSyncSettings
 import com.lbthomas.healthcoach.features.settings.data.SettingsData
 import kotlinx.coroutines.launch
 import org.koin.compose.KoinApplication
@@ -69,10 +70,11 @@ internal fun PeerClientSettingsSection(
                         modifier = Modifier.padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Row(
+                        FlowRow(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            itemVerticalAlignment = Alignment.CenterVertically
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
@@ -90,7 +92,13 @@ internal fun PeerClientSettingsSection(
                             }
                             SuggestionChip(
                                 onClick = {},
-                                label = { Text("Paired & Ready") },
+                                label = {
+                                    Text(
+                                        text = "Paired & Ready",
+                                        maxLines = 1,
+                                        softWrap = false
+                                    )
+                                },
                                 colors = SuggestionChipDefaults.suggestionChipColors(
                                     containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
                                     labelColor = MaterialTheme.colorScheme.primary
@@ -105,8 +113,7 @@ internal fun PeerClientSettingsSection(
                         )
 
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.wrapContentWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             OutlinedButton(
@@ -115,46 +122,62 @@ internal fun PeerClientSettingsSection(
                                     testConnectionResult = null
                                     coroutineScope.launch {
                                         val result = settingsViewModel.testPeerConnection(
-                                            settings.peerSync.serverHost,
-                                            settings.peerSync.serverPort
+                                            host = settings.peerSync.serverHost,
+                                            port = settings.peerSync.serverPort,
+                                            token = settings.peerSync.serverToken
                                         )
                                         isTestingConnection = false
                                         testConnectionResult = if (result.isSuccess) {
-                                            true to "Connection test successful (HTTP 200 OK)."
+                                            val status = result.getOrNull()
+                                            if (status != null && status.isAccessGranted) {
+                                                true to "Connection verified. Access granted to '${status.deviceName.ifBlank { "server" }}'."
+                                            } else {
+                                                false to "Endpoint reachable, but pairing is required (PIN or token invalid/expired)."
+                                            }
                                         } else {
                                             false to (result.exceptionOrNull()?.message ?: "Could not connect to peer server.")
                                         }
                                     }
                                 },
                                 enabled = !isTestingConnection,
-                                modifier = Modifier.weight(1f)
+                                shape = MaterialTheme.shapes.small.copy(
+                                    topEnd = CornerSize(0.dp),
+                                    bottomEnd = CornerSize(0.dp)
+                                ),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
                             ) {
                                 if (isTestingConnection) {
                                     CircularProgressIndicator(
-                                        modifier = Modifier.size(16.dp),
+                                        modifier = Modifier.size(14.dp),
                                         strokeWidth = 2.dp
                                     )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text("Testing...", maxLines = 1)
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Testing...", maxLines = 1, softWrap = false)
                                 } else {
-                                    Text("Test Connection", maxLines = 1)
+                                    Icon(imageVector = Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Test", maxLines = 1, softWrap = false)
                                 }
                             }
 
-                            Button(
+                            FilledTonalButton(
                                 onClick = {
                                     settingsViewModel.disconnectPeerClient()
                                     testConnectionResult = null
                                 },
-                                colors = ButtonDefaults.buttonColors(
+                                colors = ButtonDefaults.filledTonalButtonColors(
                                     containerColor = MaterialTheme.colorScheme.errorContainer,
                                     contentColor = MaterialTheme.colorScheme.onErrorContainer
                                 ),
-                                modifier = Modifier.weight(1f)
+                                shape = MaterialTheme.shapes.small.copy(
+                                    topStart = CornerSize(0.dp),
+                                    bottomStart = CornerSize(0.dp)
+                                ),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
                             ) {
                                 Icon(imageVector = Icons.Default.LinkOff, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Disconnect", maxLines = 1)
+                                Text("Disconnect", maxLines = 1, softWrap = false)
                             }
                         }
 
@@ -235,8 +258,7 @@ internal fun PeerClientSettingsSection(
                 )
                 IconButton(
                     onClick = {
-                        settingsViewModel.clearDiscoveredPeers()
-                        settingsViewModel.startDiscovery()
+                        settingsViewModel.refreshDiscovery()
                     }
                 ) {
                     Icon(imageVector = Icons.Default.Refresh, contentDescription = "Rescan Network")
@@ -408,6 +430,27 @@ private fun PeerPairingModalDialog(
                     placeholder = { Text("e.g. 1234") },
                     singleLine = true,
                     visualTransformation = if (pinVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.NumberPassword,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            if (pinInput.isNotBlank() && !isPairing) {
+                                isPairing = true
+                                errorMessage = null
+                                coroutineScope.launch {
+                                    val result = settingsViewModel.pairWithPeer(host, port, pinInput)
+                                    isPairing = false
+                                    if (result.isSuccess) {
+                                        onPaired()
+                                    } else {
+                                        errorMessage = result.exceptionOrNull()?.message ?: "Pairing handshake failed."
+                                    }
+                                }
+                            }
+                        }
+                    ),
                     trailingIcon = {
                         IconButton(onClick = { pinVisible = !pinVisible }) {
                             Icon(
@@ -499,6 +542,36 @@ private fun ManualPeerPairingModalDialog(
     var isPairing by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
+    val portFocusRequester = remember { FocusRequester() }
+    val pinFocusRequester = remember { FocusRequester() }
+
+    fun submitPairing() {
+        val port = portInput.toIntOrNull()
+        if (hostInput.isBlank()) {
+            errorMessage = "Please enter server IP or hostname."
+            return
+        }
+        if (port == null || port !in 1..65535) {
+            errorMessage = "Please enter a valid port number."
+            return
+        }
+        if (pinInput.isBlank()) {
+            errorMessage = "Please enter the server PIN."
+            return
+        }
+        isPairing = true
+        errorMessage = null
+        coroutineScope.launch {
+            val result = settingsViewModel.pairWithPeer(hostInput, port, pinInput)
+            isPairing = false
+            if (result.isSuccess) {
+                onPaired()
+            } else {
+                errorMessage = result.exceptionOrNull()?.message ?: "Pairing handshake failed."
+            }
+        }
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -520,6 +593,13 @@ private fun ManualPeerPairingModalDialog(
                     label = { Text("Server IP / Hostname") },
                     placeholder = { Text("192.168.1.100") },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Uri,
+                        imeAction = ImeAction.Next
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onNext = { portFocusRequester.requestFocus() }
+                    ),
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -529,7 +609,16 @@ private fun ManualPeerPairingModalDialog(
                     label = { Text("Server Port") },
                     placeholder = { Text("8765") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Next
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onNext = { pinFocusRequester.requestFocus() }
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(portFocusRequester)
                 )
 
                 OutlinedTextField(
@@ -539,6 +628,13 @@ private fun ManualPeerPairingModalDialog(
                     placeholder = { Text("e.g. 1234") },
                     singleLine = true,
                     visualTransformation = if (pinVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.NumberPassword,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = { submitPairing() }
+                    ),
                     trailingIcon = {
                         IconButton(onClick = { pinVisible = !pinVisible }) {
                             Icon(
@@ -547,7 +643,9 @@ private fun ManualPeerPairingModalDialog(
                             )
                         }
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(pinFocusRequester)
                 )
 
                 Row(
@@ -580,32 +678,7 @@ private fun ManualPeerPairingModalDialog(
         },
         confirmButton = {
             Button(
-                onClick = {
-                    val port = portInput.toIntOrNull()
-                    if (hostInput.isBlank()) {
-                        errorMessage = "Please enter server IP or hostname."
-                        return@Button
-                    }
-                    if (port == null || port !in 1..65535) {
-                        errorMessage = "Please enter a valid port number."
-                        return@Button
-                    }
-                    if (pinInput.isBlank()) {
-                        errorMessage = "Please enter the server PIN."
-                        return@Button
-                    }
-                    isPairing = true
-                    errorMessage = null
-                    coroutineScope.launch {
-                        val result = settingsViewModel.pairWithPeer(hostInput, port, pinInput)
-                        isPairing = false
-                        if (result.isSuccess) {
-                            onPaired()
-                        } else {
-                            errorMessage = result.exceptionOrNull()?.message ?: "Pairing handshake failed."
-                        }
-                    }
-                },
+                onClick = { submitPairing() },
                 enabled = !isPairing && hostInput.isNotBlank() && pinInput.isNotBlank()
             ) {
                 if (isPairing) {
@@ -629,7 +702,8 @@ private fun ManualPeerPairingModalDialog(
     )
 }
 
-@Preview
+@Preview(name="PeerSyncData not present",
+    device = "spec:width=250dp,height=780dp,dpi=420")
 @Composable
 private fun PeerClientSettingsSectionPreview() {
     KoinApplication(
@@ -640,6 +714,29 @@ private fun PeerClientSettingsSectionPreview() {
             Surface(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                 PeerClientSettingsSection(
                     settings = settings,
+                    settingsViewModel = settingsViewModel
+                )
+            }
+        }
+    )
+}
+
+@Preview(
+    name="PeerSyncData present",
+    device = "spec:width=250dp,height=780dp,dpi=420")
+@Composable
+private fun PeerClientSettingsSectionWithServerPreview() {
+    KoinApplication(
+        configuration = koinConfiguration(declaration = { modules(previewAppModule) }),
+        content = {
+            val settingsViewModel: SettingsViewModel = koinInject()
+            val settings by settingsViewModel.settings.collectAsState()
+            Surface(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                PeerClientSettingsSection(
+                    settings = settings.copy(
+                        peerSync = PeerSyncSettings(
+                            deviceName="TestDevice",
+                            serverToken = "TestToken")),
                     settingsViewModel = settingsViewModel
                 )
             }

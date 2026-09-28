@@ -113,8 +113,11 @@ open class SettingsStore(private val settingsFile: File) {
 
     fun addServerHistoryRecord(record: PeerClientRecord) {
         updateSettings { current ->
+            val existing = current.peerSync.localServerHistory.find { it.clientInstanceId == record.clientInstanceId }
+            val tokenToUse = record.authToken.ifBlank { existing?.authToken.orEmpty() }
+            val mergedRecord = record.copy(authToken = tokenToUse)
             val filtered = current.peerSync.localServerHistory.filter { it.clientInstanceId != record.clientInstanceId }
-            current.copy(peerSync = current.peerSync.copy(localServerHistory = listOf(record) + filtered))
+            current.copy(peerSync = current.peerSync.copy(localServerHistory = listOf(mergedRecord) + filtered))
         }
     }
 
