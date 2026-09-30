@@ -52,7 +52,7 @@ fun SettingsDialog(
         onDismissRequest = onDismiss,
         modifier = Modifier
             .widthIn(min = 600.dp, max = 860.dp)
-            .fillMaxWidth(0.96f)
+            .fillMaxWidth(0.97f)
             .focusRequester(focusRequester)
             .focusable()
             .testTag("settings_dialog")

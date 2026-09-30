@@ -76,7 +76,9 @@ internal fun PeerServerSettingsSection(
             // Server Status Banner
             Surface(
                 shape = MaterialTheme.shapes.small,
-                color = if (serverStatus.isRunning) {
+                color = if (serverStatus.isStopping || serverStatus.isStarting) {
+                    MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f)
+                } else if (serverStatus.isRunning) {
                     MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
                 } else if (!serverStatus.errorMessage.isNullOrBlank()) {
                     MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
@@ -85,7 +87,8 @@ internal fun PeerServerSettingsSection(
                 },
                 border = BorderStroke(
                     1.dp,
-                    if (serverStatus.isRunning) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                    if (serverStatus.isStopping || serverStatus.isStarting) MaterialTheme.colorScheme.tertiary.copy(alpha = 0.5f)
+                    else if (serverStatus.isRunning) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                     else if (!serverStatus.errorMessage.isNullOrBlank()) MaterialTheme.colorScheme.error.copy(alpha = 0.5f)
                     else MaterialTheme.colorScheme.outlineVariant
                 ),
@@ -95,26 +98,48 @@ internal fun PeerServerSettingsSection(
                     modifier = Modifier.padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = if (serverStatus.isRunning) Icons.Default.CheckCircle
-                        else if (!serverStatus.errorMessage.isNullOrBlank()) Icons.Default.Error
-                        else Icons.Default.Info,
-                        contentDescription = null,
-                        tint = if (serverStatus.isRunning) MaterialTheme.colorScheme.primary
-                        else if (!serverStatus.errorMessage.isNullOrBlank()) MaterialTheme.colorScheme.error
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    if (serverStatus.isStopping || serverStatus.isStarting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.tertiary
+                        )
+                    } else {
+                        Icon(
+                            imageVector = if (serverStatus.isRunning) Icons.Default.CheckCircle
+                            else if (!serverStatus.errorMessage.isNullOrBlank()) Icons.Default.Error
+                            else Icons.Default.Info,
+                            contentDescription = null,
+                            tint = if (serverStatus.isRunning) MaterialTheme.colorScheme.primary
+                            else if (!serverStatus.errorMessage.isNullOrBlank()) MaterialTheme.colorScheme.error
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                     Spacer(modifier = Modifier.width(8.dp))
                     Column {
                         Text(
-                            text = if (serverStatus.isRunning) "Server Active & Advertising"
+                            text = if (serverStatus.isStopping) "Stopping Peer Server..."
+                            else if (serverStatus.isStarting) "Starting Peer Server..."
+                            else if (serverStatus.isRunning) "Server Active & Advertising"
                             else if (!serverStatus.errorMessage.isNullOrBlank()) "Server Error: ${serverStatus.errorMessage}"
                             else "Server Inactive",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold
                         )
-                        if (serverStatus.isRunning) {
+                        if (serverStatus.isStopping) {
+                            Text(
+                                text = "Closing network connections and unregistering services...",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        } else if (serverStatus.isStarting) {
+                            Text(
+                                text = "Binding port and starting mDNS advertising...",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        } else if (serverStatus.isRunning) {
                             Text(
                                 text = "Listening on port ${serverStatus.port} • Local Node ID: ${settings.peerSync.instanceId.take(8)}...",
                                 style = MaterialTheme.typography.bodySmall,

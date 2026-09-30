@@ -5,8 +5,9 @@ import kotlinx.serialization.Serializable
 @Serializable
 enum class SelectedPage {
     WeightView,
-    GraphsView,
-    BloodPressureView
+    JournalView,
+    BloodPressureView,
+    GraphsView
 }
 
 typealias AppPage = SelectedPage

@@ -1,0 +1,91 @@
+CREATE TABLE mealEntry (
+    id TEXT PRIMARY KEY NOT NULL,
+    date TEXT NOT NULL,
+    mealTime TEXT NOT NULL,
+    foodId TEXT,
+    foodName TEXT NOT NULL,
+    foodDescription TEXT,
+    brand TEXT,
+    unitName TEXT NOT NULL,
+    unitQuantity REAL NOT NULL,
+    caloriesPerUnit REAL NOT NULL,
+    portionMultiplier REAL NOT NULL,
+    totalCalories REAL NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+insert:
+INSERT INTO mealEntry (id, date, mealTime, foodId, foodName, foodDescription, brand, unitName, unitQuantity, caloriesPerUnit, portionMultiplier, totalCalories, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+update:
+UPDATE mealEntry
+SET date = ?, mealTime = ?, foodId = ?, foodName = ?, foodDescription = ?, brand = ?, unitName = ?, unitQuantity = ?, caloriesPerUnit = ?, portionMultiplier = ?, totalCalories = ?, updated_at = ?
+WHERE id = ?;
+
+delete:
+DELETE FROM mealEntry
+WHERE id = ?;
+
+selectAll:
+SELECT *
+FROM mealEntry
+ORDER BY date DESC, updated_at DESC;
+
+selectById:
+SELECT *
+FROM mealEntry
+WHERE id = ?;
+
+selectByDate:
+SELECT *
+FROM mealEntry
+WHERE date = ?
+ORDER BY updated_at ASC;
+
+selectByDateRange:
+SELECT *
+FROM mealEntry
+WHERE date >= ? AND date <= ?
+ORDER BY date ASC, updated_at ASC;
+
+selectDailyCalorieTotals:
+SELECT date, SUM(totalCalories) AS totalCalories
+FROM mealEntry
+GROUP BY date
+ORDER BY date ASC;
+
+selectDailyCalorieTotalByDate:
+SELECT SUM(totalCalories) AS totalCalories
+FROM mealEntry
+WHERE date = ?;
+
+selectFoodUsageStats:
+SELECT foodId, COUNT(*) AS usageCount, MAX(updated_at) AS lastUsedAt
+FROM mealEntry
+WHERE foodId IS NOT NULL
+GROUP BY foodId;
+
+selectRecentFoodItems:
+SELECT fi.*
+FROM foodItem fi
+JOIN (
+    SELECT foodId, MAX(updated_at) AS lastUsedAt
+    FROM mealEntry
+    WHERE foodId IS NOT NULL
+    GROUP BY foodId
+) me ON fi.id = me.foodId
+ORDER BY me.lastUsedAt DESC
+LIMIT :limit;
+
+selectFrequentFoodItems:
+SELECT fi.*
+FROM foodItem fi
+JOIN (
+    SELECT foodId, COUNT(*) AS usageCount, MAX(updated_at) AS lastUsedAt
+    FROM mealEntry
+    WHERE foodId IS NOT NULL
+    GROUP BY foodId
+) me ON fi.id = me.foodId
+ORDER BY me.usageCount DESC, me.lastUsedAt DESC
+LIMIT :limit;

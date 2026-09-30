@@ -60,12 +60,25 @@ internal fun GraphHeader(
             FilterChip(
                 selected = settings.bloodPressure.showInGraph,
                 onClick = { settingsViewModel.setShowBloodPressureInGraph(!settings.bloodPressure.showInGraph) },
-                label = { Text("Blood Pressure", style = MaterialTheme.typography.labelMedium) },
+                label = { Text("BP", style = MaterialTheme.typography.labelMedium) },
                 leadingIcon = {
                     Box(
                         Modifier
                             .size(8.dp)
                             .background(extColors.graphSystolic.color, CircleShape)
+                    )
+                }
+            )
+
+            FilterChip(
+                selected = settings.foodJournal.showInGraph,
+                onClick = { settingsViewModel.setShowFoodJournalInGraph(!settings.foodJournal.showInGraph) },
+                label = { Text("Calories", style = MaterialTheme.typography.labelMedium) },
+                leadingIcon = {
+                    Box(
+                        Modifier
+                            .size(8.dp)
+                            .background(extColors.graphCalories.color, CircleShape)
                     )
                 }
             )

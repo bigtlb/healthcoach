@@ -13,6 +13,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.material3.Text
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -112,4 +114,38 @@ fun VerticalSplitter(
                 )
         )
     }
+}
+
+@Preview(name = "Horizontal Split Pane Preview")
+@Composable
+fun HorizontalSplitPanePreview() {
+    HorizontalSplitPane(
+        initialFraction = 0.4f,
+        first = {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Left Pane (40%)",
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+        },
+        second = {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.secondaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Right Pane (60%)",
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+            }
+        }
+    )
 }

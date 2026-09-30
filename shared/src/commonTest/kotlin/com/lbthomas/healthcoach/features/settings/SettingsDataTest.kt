@@ -9,9 +9,11 @@ import com.lbthomas.healthcoach.core.logging.LoggingConfig
 import com.lbthomas.healthcoach.core.sync.SyncConfig
 import com.lbthomas.healthcoach.core.sync.SyncProviderType
 import com.lbthomas.healthcoach.core.sync.p2p.PeerClientRecord
+import com.lbthomas.healthcoach.core.sync.p2p.PeerServerStatus
 import com.lbthomas.healthcoach.core.theme.AppTheme
 import com.lbthomas.healthcoach.features.settings.data.AppearanceSettings
 import com.lbthomas.healthcoach.features.settings.data.BloodPressureSettings
+import com.lbthomas.healthcoach.features.settings.data.FoodJournalSettings
 import com.lbthomas.healthcoach.features.settings.data.PeerSyncSettings
 import com.lbthomas.healthcoach.features.settings.data.SettingsData
 import com.lbthomas.healthcoach.features.settings.data.SyncSettings
@@ -90,6 +92,9 @@ class SettingsDataTest {
         assertEquals(true, settings.weight.showInGraph)
         assertEquals(WeightUnit.US, settings.weight.unit)
 
+        // Food Journal
+        assertEquals(true, settings.foodJournal.showInGraph)
+
         // Convenience getters
         assertEquals(GraphTimeFrame.ALL, settings.graphTimeFrame)
     }
@@ -115,6 +120,9 @@ class SettingsDataTest {
                 showMonthlyAverages = false,
                 showMonthlyChanges = false,
                 showPulseInGraph = true
+            ),
+            foodJournal = FoodJournalSettings(
+                showInGraph = false
             ),
             peerSync = PeerSyncSettings(
                 deviceName = "My Desktop Node",
@@ -390,5 +398,24 @@ class SettingsDataTest {
         assertEquals(SyncConfig.DEFAULT_P2P_PORT, viewModel.settings.value.peerSync.serverPort)
         assertEquals("", viewModel.settings.value.peerSync.serverToken)
         assertEquals("", viewModel.settings.value.peerSync.serverName)
+
+        // Test syncEnabled toggles
+        viewModel.setSyncEnabled(false)
+        assertEquals(false, viewModel.settings.value.sync.syncEnabled)
+        viewModel.initializeServerIfEnabled() // Should not start server when sync is disabled
+
+        viewModel.setSyncEnabled(true)
+        assertEquals(true, viewModel.settings.value.sync.syncEnabled)
+
+        // Test PeerServerStatus state defaults
+        val defaultStatus = PeerServerStatus()
+        assertEquals(false, defaultStatus.isRunning)
+        assertEquals(false, defaultStatus.isStarting)
+        assertEquals(false, defaultStatus.isStopping)
+        assertEquals(null, defaultStatus.errorMessage)
+
+        val stoppingStatus = defaultStatus.copy(isStopping = true)
+        assertEquals(true, stoppingStatus.isStopping)
+        assertEquals(false, stoppingStatus.isStarting)
     }
 }

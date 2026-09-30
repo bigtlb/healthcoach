@@ -30,6 +30,11 @@ class AppInfoTest {
             assertTrue(attribution.licenseUrl.startsWith("https://"), "Attribution licenseUrl must be a valid URL")
             assertTrue(attribution.projectUrl.startsWith("https://"), "Attribution projectUrl must be a valid URL")
         }
+
+        assertTrue(
+            AppInfo.attributions.any { it.name.contains("USDA FoodData Central") },
+            "Should include USDA FoodData Central attribution"
+        )
     }
 
     @Test

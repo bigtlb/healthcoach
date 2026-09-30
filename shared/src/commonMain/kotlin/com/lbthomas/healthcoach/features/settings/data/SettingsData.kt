@@ -29,6 +29,11 @@ data class BloodPressureSettings(
 )
 
 @Serializable
+data class FoodJournalSettings(
+    val showInGraph: Boolean = true
+)
+
+@Serializable
 data class PeerSyncSettings(
     val deviceName: String = "",
     val instanceId: String = "",
@@ -89,6 +94,7 @@ data class WeightSettings(
 data class SettingsData(
     val appearance: AppearanceSettings = AppearanceSettings(),
     val bloodPressure: BloodPressureSettings = BloodPressureSettings(),
+    val foodJournal: FoodJournalSettings = FoodJournalSettings(),
     val peerSync: PeerSyncSettings = PeerSyncSettings(),
     val sync: SyncSettings = SyncSettings(),
     val ui: UiSettings = UiSettings(),

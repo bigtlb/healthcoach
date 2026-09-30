@@ -7,6 +7,7 @@ import com.lbthomas.healthcoach.core.database.DriverFactory
 import com.lbthomas.healthcoach.core.database.createDatabaseForPath
 import com.lbthomas.healthcoach.core.database.getDbVersion
 import com.lbthomas.healthcoach.core.database.setDbVersion
+import com.lbthomas.healthcoach.core.sync.handlers.*
 import com.lbthomas.healthcoach.core.utils.currentEpochMillis
 import com.lbthomas.healthcoach.features.settings.data.SettingsStore
 import kotlinx.coroutines.CancellationException
@@ -36,7 +37,13 @@ class SyncEngine(
     private val localDatabase: Database,
     private val driverFactory: DriverFactory,
     private val settingsStore: SettingsStore? = null,
-    val tableHandlers: List<TableSyncHandler> = listOf(WeightTableSyncHandler, BloodPressureTableSyncHandler)
+    val tableHandlers: List<TableSyncHandler> = listOf(
+        WeightTableSyncHandler,
+        BloodPressureTableSyncHandler,
+        FoodUnitTableSyncHandler,
+        FoodItemTableSyncHandler,
+        MealEntryTableSyncHandler
+    )
 ) {
     companion object {
         private const val MAX_SYNC_RETRIES = 3

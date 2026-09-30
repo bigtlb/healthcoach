@@ -29,6 +29,7 @@ Ktor Framework                              Apache-2.0     https://ktor.io/
 JmDNS                                       Apache-2.0     https://github.com/jmdns/jmdns
 Outfit Font Family                          SIL OFL 1.1    https://github.com/Omnibus-Type/Outfit
 Inter Font Family                           SIL OFL 1.1    https://rsms.me/inter/
+USDA FoodData Central                       Public Domain  https://fdc.nal.usda.gov
 
 ================================================================================
 THIRD-PARTY NOTICES & COPYRIGHT STATEMENTS
@@ -82,6 +83,11 @@ THIRD-PARTY NOTICES & COPYRIGHT STATEMENTS
 12. Inter Font Family
     Copyright © 2016-2024 The Inter Project Authors (Rasmus Andersson)
     Licensed under the SIL Open Font License, Version 1.1.
+
+13. USDA FoodData Central
+    Nutritional reference data provided in part by the U.S. Department of Agriculture,
+    Agricultural Research Service. FoodData Central (https://fdc.nal.usda.gov).
+    Published as a work of the United States Government (Public Domain under 17 U.S.C. § 105).
 
 ================================================================================
 FULL LICENSE TEXTS

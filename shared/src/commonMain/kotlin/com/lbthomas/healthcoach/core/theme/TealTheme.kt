@@ -316,6 +316,12 @@ val tealExtendedLight = ExtendedColorScheme(
         Color(0xFFFFD6FE),
         Color(0xFF613766),
     ),
+    graphCalories = ColorFamily(
+        Color(0xFF2E7D32),
+        Color.White,
+        Color(0xFFC8E6C9),
+        Color(0xFF00390B),
+    ),
     weightIncrease = ColorFamily(
         Color.Red,
         Color.White,
@@ -360,6 +366,12 @@ val tealExtendedDark = ExtendedColorScheme(
         Color(0xFF49204E),
         Color(0xFF613766),
         Color(0xFFFFD6FE),
+    ),
+    graphCalories = ColorFamily(
+        Color(0xFF81C784),
+        Color(0xFF0C390C),
+        Color(0xFF235021),
+        Color(0xFFBCF0B1),
     ),
     weightIncrease = ColorFamily(
         Color(0xFFFF5449),

@@ -39,6 +39,7 @@ fun App() {
     var showSettings by remember { mutableStateOf(false) }
     var showAddWeightEntry by remember { mutableStateOf(false) }
     var showAddBloodPressureEntry by remember { mutableStateOf(false) }
+    var showLogFood by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
@@ -58,7 +59,7 @@ fun App() {
             val isWideLayout = settings.appearance.adaptiveDisplay && maxWidth >= 1200.dp
             val focusRequester = remember { FocusRequester() }
 
-            LaunchedEffect(selectedPage, showSettings, showAddWeightEntry, showAddBloodPressureEntry) {
+            LaunchedEffect(selectedPage, showSettings, showAddWeightEntry, showAddBloodPressureEntry, showLogFood) {
                 yield()
                 runCatching {
                     focusRequester.requestFocus()
@@ -82,6 +83,7 @@ fun App() {
                         ) {
                             when (keyEvent.key) {
                                 Key.W -> settingsViewModel.setSelectedPage(SelectedPage.WeightView)
+                                Key.J, Key.F -> settingsViewModel.setSelectedPage(SelectedPage.JournalView)
                                 Key.B -> settingsViewModel.setSelectedPage(SelectedPage.BloodPressureView)
                                 Key.G -> {
                                     if (isWideLayout) {
@@ -98,6 +100,8 @@ fun App() {
                                         showAddWeightEntry = true
                                     } else if (selectedPage == SelectedPage.BloodPressureView) {
                                         showAddBloodPressureEntry = true
+                                    } else if (selectedPage == SelectedPage.JournalView) {
+                                        showLogFood = true
                                     }
                                 }
 
@@ -128,13 +132,14 @@ fun App() {
                     }
                 },
                 floatingActionButton = {
-                    if (!isWideLayout && (selectedPage == SelectedPage.WeightView || selectedPage == SelectedPage.BloodPressureView)) {
+                    if (!isWideLayout && (selectedPage == SelectedPage.WeightView || selectedPage == SelectedPage.BloodPressureView || selectedPage == SelectedPage.JournalView)) {
                         FloatingActionButton(
                             onClick = {
-                                if (selectedPage == SelectedPage.WeightView) {
-                                    showAddWeightEntry = true
-                                } else {
-                                    showAddBloodPressureEntry = true
+                                when (selectedPage) {
+                                    SelectedPage.WeightView -> showAddWeightEntry = true
+                                    SelectedPage.BloodPressureView -> showAddBloodPressureEntry = true
+                                    SelectedPage.JournalView -> showLogFood = true
+                                    SelectedPage.GraphsView -> {}
                                 }
                             },
                             containerColor = MaterialTheme.colorScheme.primary,
@@ -143,10 +148,11 @@ fun App() {
                             Tooltip("Add new entry\n(Ctrl + N or '+')") {
                                 Icon(
                                     imageVector = Icons.Default.Add,
-                                    contentDescription = if (selectedPage == SelectedPage.WeightView) {
-                                        "Add new weight"
-                                    } else {
-                                        "Add new blood pressure"
+                                    contentDescription = when (selectedPage) {
+                                        SelectedPage.WeightView -> "Add new weight"
+                                        SelectedPage.BloodPressureView -> "Add new blood pressure"
+                                        SelectedPage.JournalView -> "Log food"
+                                        SelectedPage.GraphsView -> "Add new entry"
                                     }
                                 )
                             }
@@ -168,6 +174,11 @@ fun App() {
                     showAddBloodPressureEntry = showAddBloodPressureEntry,
                     onAddBloodPressureDismiss = {
                         showAddBloodPressureEntry = false
+                        runCatching { focusRequester.requestFocus() }
+                    },
+                    showLogFood = showLogFood,
+                    onLogFoodDismiss = {
+                        showLogFood = false
                         runCatching { focusRequester.requestFocus() }
                     },
                     onRequestFocus = {

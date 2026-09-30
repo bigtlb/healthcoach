@@ -11,9 +11,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.lbthomas.healthcoach.core.sync.SyncProviderType
 import com.lbthomas.healthcoach.core.ui.Tooltip
+import com.lbthomas.healthcoach.features.settings.data.PeerSyncSettings
+import com.lbthomas.healthcoach.features.settings.data.SettingsData
+import com.lbthomas.healthcoach.features.settings.data.SyncSettings
+import kotlinx.coroutines.flow.MutableStateFlow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -118,5 +123,66 @@ fun SyncActionButton(
                 }
             }
         )
+    }
+}
+
+@Preview(name = "Sync Button - Idle")
+@Composable
+fun SyncActionButtonIdlePreview() {
+    val settings = SettingsData(
+        sync = SyncSettings(syncEnabled = true)
+    )
+    val viewModel = SyncViewModel(
+        syncState = MutableStateFlow(SyncState.Idle),
+        settings = MutableStateFlow(settings)
+    )
+    Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+        SyncActionButton(syncViewModel = viewModel)
+    }
+}
+
+@Preview(name = "Sync Button - Syncing")
+@Composable
+fun SyncActionButtonSyncingPreview() {
+    val settings = SettingsData(
+        sync = SyncSettings(syncEnabled = true)
+    )
+    val viewModel = SyncViewModel(
+        syncState = MutableStateFlow(SyncState.Syncing),
+        settings = MutableStateFlow(settings)
+    )
+    Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+        SyncActionButton(syncViewModel = viewModel)
+    }
+}
+
+@Preview(name = "Sync Button - Error State")
+@Composable
+fun SyncActionButtonErrorPreview() {
+    val settings = SettingsData(
+        sync = SyncSettings(syncEnabled = true, lastSyncFailed = true)
+    )
+    val viewModel = SyncViewModel(
+        syncState = MutableStateFlow(SyncState.Error("Connection timed out")),
+        settings = MutableStateFlow(settings)
+    )
+    Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+        SyncActionButton(syncViewModel = viewModel)
+    }
+}
+
+@Preview(name = "Sync Button - P2P Server Host")
+@Composable
+fun SyncActionButtonServerModePreview() {
+    val settings = SettingsData(
+        sync = SyncSettings(syncEnabled = true, syncProvider = SyncProviderType.PEER_TO_PEER),
+        peerSync = PeerSyncSettings(isServerMode = true, deviceName = "Living Room Hub")
+    )
+    val viewModel = SyncViewModel(
+        syncState = MutableStateFlow(SyncState.Idle),
+        settings = MutableStateFlow(settings)
+    )
+    Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+        SyncActionButton(syncViewModel = viewModel)
     }
 }

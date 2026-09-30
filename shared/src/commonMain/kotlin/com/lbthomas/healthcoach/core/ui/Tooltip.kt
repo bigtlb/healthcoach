@@ -2,7 +2,12 @@ package com.lbthomas.healthcoach.core.ui
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipAnchorPosition
@@ -12,6 +17,8 @@ import androidx.compose.material3.TooltipState
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.PopupPositionProvider
 
 /**
@@ -44,6 +51,21 @@ fun Tooltip(
             modifier = Modifier.wrapContentSize(),
             content = content
         )
+    }
+}
+
+@Preview(name = "Tooltip Preview")
+@Composable
+fun TooltipPreview() {
+    Box(modifier = Modifier.padding(24.dp)) {
+        Tooltip(tooltip = "Click to inspect details") {
+            IconButton(onClick = {}) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = "Info"
+                )
+            }
+        }
     }
 }
 

@@ -1,0 +1,40 @@
+CREATE TABLE foodItem (
+    id TEXT PRIMARY KEY NOT NULL,
+    name TEXT NOT NULL,
+    brand TEXT,
+    upc TEXT,
+    description TEXT,
+    unitName TEXT NOT NULL,
+    unitQuantity REAL NOT NULL,
+    caloriesPerUnit REAL NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+insert:
+INSERT INTO foodItem (id, name, brand, upc, description, unitName, unitQuantity, caloriesPerUnit, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+update:
+UPDATE foodItem
+SET name = ?, brand = ?, upc = ?, description = ?, unitName = ?, unitQuantity = ?, caloriesPerUnit = ?, updated_at = ?
+WHERE id = ?;
+
+delete:
+DELETE FROM foodItem
+WHERE id = ?;
+
+selectAll:
+SELECT *
+FROM foodItem
+ORDER BY name ASC;
+
+selectById:
+SELECT *
+FROM foodItem
+WHERE id = ?;
+
+searchByName:
+SELECT *
+FROM foodItem
+WHERE name LIKE '%' || :query || '%' OR (brand IS NOT NULL AND brand LIKE '%' || :query || '%')
+ORDER BY name ASC;

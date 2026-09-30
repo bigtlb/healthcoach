@@ -102,6 +102,12 @@ class PeerServerManager(
             return Result.success(_serverStatus.value.port)
         }
 
+        _serverStatus.value = _serverStatus.value.copy(
+            isStarting = true,
+            isStopping = false,
+            errorMessage = null
+        )
+
         val initialPort = preferredPort
             ?: settingsStore.settings.value.peerSync.localServerPort.takeIf { it > 0 }
             ?: SyncConfig.DEFAULT_P2P_PORT
@@ -138,6 +144,8 @@ class PeerServerManager(
 
                 _serverStatus.value = PeerServerStatus(
                     isRunning = true,
+                    isStarting = false,
+                    isStopping = false,
                     host = "0.0.0.0",
                     port = actualPort,
                     activePin = activePin,
@@ -178,6 +186,8 @@ class PeerServerManager(
             LoggingConfig.serverLogger.e(errorMsg, lastException)
             _serverStatus.value = PeerServerStatus(
                 isRunning = false,
+                isStarting = false,
+                isStopping = false,
                 port = initialPort,
                 activePin = activePin,
                 errorMessage = errorMsg
@@ -190,6 +200,14 @@ class PeerServerManager(
      * Stops the embedded Ktor server.
      */
     suspend fun stop(): Unit = serverMutex.withLock {
+        if (!_serverStatus.value.isRunning && embeddedServerInstance == null && !_serverStatus.value.isStarting) {
+            _serverStatus.value = _serverStatus.value.copy(isStopping = false, isStarting = false)
+            return
+        }
+        _serverStatus.value = _serverStatus.value.copy(
+            isStopping = true,
+            isStarting = false
+        )
         try {
             if (embeddedServerInstance != null) {
                 SyncNotificationManager.postNotification("Shutting down Peer-to-Peer server...")
@@ -198,11 +216,19 @@ class PeerServerManager(
             embeddedServerInstance = null
             _serverStatus.value = _serverStatus.value.copy(
                 isRunning = false,
+                isStarting = false,
+                isStopping = false,
                 errorMessage = null
             )
             LoggingConfig.serverLogger.i("P2P server stopped")
         } catch (e: Throwable) {
             LoggingConfig.serverLogger.e("Error stopping P2P server: ${e.message}", e)
+            _serverStatus.value = _serverStatus.value.copy(
+                isRunning = false,
+                isStarting = false,
+                isStopping = false,
+                errorMessage = e.message
+            )
         }
     }
 

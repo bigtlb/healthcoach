@@ -130,12 +130,75 @@ class DatabaseMigrationTest {
     }
 
     @Test
-    fun testSchemaVersionIsFourOnCreation() {
+    fun testSchemaVersionIsFiveOnCreation() {
         val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
-        assertEquals(4L, Database.Schema.version)
+        assertEquals(5L, Database.Schema.version)
 
         Database.Schema.create(driver)
         setDbVersion(driver, Database.Schema.version)
-        assertEquals(4L, getDbVersion(driver))
+        assertEquals(5L, getDbVersion(driver))
+    }
+
+    @Test
+    fun testMigrationFromV4ToV5CreatesFoodJournalTablesAndSeedsUnits() = runBlocking {
+        val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
+
+        // Initialize schema at version 4 (UUID weightEntry and bloodPressureEntry)
+        driver.execute(
+            null,
+            """
+            CREATE TABLE weightEntry (
+                id TEXT PRIMARY KEY NOT NULL,
+                date TEXT NOT NULL,
+                weight REAL NOT NULL,
+                updated_at INTEGER NOT NULL
+            );
+            """.trimIndent(),
+            0
+        )
+
+        driver.execute(
+            null,
+            """
+            CREATE TABLE bloodPressureEntry (
+                id TEXT PRIMARY KEY NOT NULL,
+                dateTime TEXT NOT NULL,
+                systolic INTEGER NOT NULL,
+                diastolic INTEGER NOT NULL,
+                pulse INTEGER,
+                updated_at INTEGER NOT NULL
+            );
+            """.trimIndent(),
+            0
+        )
+
+        setDbVersion(driver, 4L)
+
+        // Migrate 4 -> 5 (runs 4.sqm)
+        Database.Schema.migrate(driver, 4L, 5L)
+        setDbVersion(driver, 5L)
+
+        assertEquals(5L, getDbVersion(driver))
+
+        val database = Database(driver)
+        val units = database.foodUnitQueries.selectAll().executeAsList()
+        assertEquals(15, units.size)
+        assertTrue(units.any { it.name == "Each" })
+        assertTrue(units.any { it.name == "Piece" })
+        assertTrue(units.any { it.name == "Slice" })
+        assertTrue(units.any { it.name == "Cup" })
+        assertTrue(units.any { it.name == "oz" })
+        assertTrue(units.any { it.name == "grams" })
+        assertTrue(units.any { it.name == "Tablespoon" })
+        assertTrue(units.any { it.name == "Teaspoon" })
+        assertTrue(units.any { it.name == "Lbs" })
+        assertTrue(units.any { it.name == "Package" })
+
+        // Check foodItem and mealEntry can be queried
+        val foodItems = database.foodItemQueries.selectAll().executeAsList()
+        assertEquals(0, foodItems.size)
+
+        val mealEntries = database.mealEntryQueries.selectAll().executeAsList()
+        assertEquals(0, mealEntries.size)
     }
 }

@@ -1,0 +1,52 @@
+CREATE TABLE foodUnit (
+    id TEXT PRIMARY KEY NOT NULL,
+    name TEXT NOT NULL,
+    abbreviation TEXT,
+    isDefault INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+CREATE TABLE foodItem (
+    id TEXT PRIMARY KEY NOT NULL,
+    name TEXT NOT NULL,
+    brand TEXT,
+    upc TEXT,
+    description TEXT,
+    unitName TEXT NOT NULL,
+    unitQuantity REAL NOT NULL,
+    caloriesPerUnit REAL NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+CREATE TABLE mealEntry (
+    id TEXT PRIMARY KEY NOT NULL,
+    date TEXT NOT NULL,
+    mealTime TEXT NOT NULL,
+    foodId TEXT,
+    foodName TEXT NOT NULL,
+    foodDescription TEXT,
+    brand TEXT,
+    unitName TEXT NOT NULL,
+    unitQuantity REAL NOT NULL,
+    caloriesPerUnit REAL NOT NULL,
+    portionMultiplier REAL NOT NULL,
+    totalCalories REAL NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+INSERT INTO foodUnit (id, name, abbreviation, isDefault, updated_at) VALUES
+('unit-each', 'Each', 'ea', 1, 0),
+('unit-piece', 'Piece', 'pc', 1, 0),
+('unit-slice', 'Slice', 'slice', 1, 0),
+('unit-cup', 'Cup', 'cup', 1, 0),
+('unit-oz', 'oz', 'oz', 1, 0),
+('unit-grams', 'grams', 'g', 1, 0),
+('unit-tablespoon', 'Tablespoon', 'tbsp', 1, 0),
+('unit-teaspoon', 'Teaspoon', 'tsp', 1, 0),
+('unit-lbs', 'Lbs', 'lbs', 1, 0),
+('unit-package', 'Package', 'pkg', 1, 0),
+('unit-fl-oz', 'fl oz', 'fl oz', 1, 0),
+('unit-scoop', 'Scoop', 'scoop', 1, 0),
+('unit-bar', 'Bar', 'bar', 1, 0),
+('unit-can', 'Can', 'can', 1, 0),
+('unit-bottle', 'Bottle', 'btl', 1, 0);

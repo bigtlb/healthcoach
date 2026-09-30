@@ -15,6 +15,7 @@ import com.lbthomas.healthcoach.core.enums.WeightUnit
 import com.lbthomas.healthcoach.core.utils.displayDate
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianLayerRangeProvider
 import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarker
+import com.patrykandpatrick.vico.compose.cartesian.marker.ColumnCartesianLayerMarkerTarget
 import com.patrykandpatrick.vico.compose.cartesian.marker.DefaultCartesianMarker
 import com.patrykandpatrick.vico.compose.cartesian.marker.LineCartesianLayerMarkerTarget
 import com.patrykandpatrick.vico.compose.cartesian.marker.rememberDefaultCartesianMarker
@@ -33,7 +34,8 @@ internal class TimeFrameChartRangeProvider(
     private val forcedMinX: Double?,
     private val forcedMaxX: Double?,
     private val minPadding: Double = 5.0,
-    private val maxPadding: Double = 5.0
+    private val maxPadding: Double = 5.0,
+    private val yPaddingFraction: Double = 0.05
 ) : CartesianLayerRangeProvider {
     override fun getMinX(minX: Double, maxX: Double, extraStore: ExtraStore): Double {
         return forcedMinX ?: minX
@@ -45,13 +47,13 @@ internal class TimeFrameChartRangeProvider(
 
     override fun getMinY(minY: Double, maxY: Double, extraStore: ExtraStore): Double {
         val diff = maxY - minY
-        val padding = if (diff <= 0.0) minPadding else max(1.0, diff * 0.05)
+        val padding = if (diff <= 0.0) minPadding else max(1.0, diff * yPaddingFraction)
         return (minY - padding).coerceAtLeast(0.0)
     }
 
     override fun getMaxY(minY: Double, maxY: Double, extraStore: ExtraStore): Double {
         val diff = maxY - minY
-        val padding = if (diff <= 0.0) maxPadding else max(1.0, diff * 0.05)
+        val padding = if (diff <= 0.0) maxPadding else max(1.0, diff * yPaddingFraction)
         return maxY + padding
     }
 }
@@ -60,11 +62,13 @@ internal class TimeFrameChartRangeProvider(
 internal fun rememberHealthChartMarker(
     hasWeight: Boolean,
     hasBp: Boolean,
+    hasCalories: Boolean = false,
     weightUnit: WeightUnit,
     weightLineColor: Color,
     bpSystolicColor: Color,
     bpDiastolicColor: Color,
     bpPulseColor: Color,
+    calorieColor: Color = Color(0xFF2E7D32),
     unitLabel: String
 ): CartesianMarker {
     val markerLabelBackground = rememberShapeComponent(
@@ -81,16 +85,18 @@ internal fun rememberHealthChartMarker(
             fontWeight = FontWeight.Medium,
             textAlign = TextAlign.Center
         ),
-        lineCount = 4,
+        lineCount = 5,
         padding = Insets(horizontal = 10.dp, vertical = 6.dp),
         background = markerLabelBackground
     )
 
-    val markerValueFormatter = remember(hasWeight, hasBp, weightUnit) {
+    val markerValueFormatter = remember(hasWeight, hasBp, hasCalories, weightUnit) {
         DefaultCartesianMarker.ValueFormatter { _, targets ->
             val points = targets.filterIsInstance<LineCartesianLayerMarkerTarget>().flatMap { it.points }
-            if (points.isNotEmpty()) {
-                val firstX = points.first().entry.x
+            val columns = targets.filterIsInstance<ColumnCartesianLayerMarkerTarget>().flatMap { it.columns }
+
+            val firstX = points.firstOrNull()?.entry?.x ?: columns.firstOrNull()?.entry?.x
+            if (firstX != null) {
                 val date = LocalDate.fromEpochDays(firstX.toLong())
                 val lines = mutableListOf(date.displayDate())
 
@@ -106,6 +112,14 @@ internal fun rememberHealthChartMarker(
                         else -> lines.add(formatted)
                     }
                 }
+
+                columns.forEach { column ->
+                    val y = column.entry.y
+                    val rounded = round(y * 10) / 10.0
+                    val formatted = if (rounded % 1.0 == 0.0) rounded.toInt().toString() else rounded.toString()
+                    lines.add("Calories: $formatted kcal")
+                }
+
                 lines.joinToString("\n")
             } else {
                 ""

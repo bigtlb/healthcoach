@@ -5,6 +5,7 @@ import com.lbthomas.healthcoach.core.utils.formatTime
 import com.lbthomas.healthcoach.features.bloodpressure.data.BloodPressureEntryData
 import com.lbthomas.healthcoach.features.weight.data.WeightEntryData
 import kotlinx.datetime.LocalDate
+import kotlin.math.round
 
 internal data class WeightGraphEntries(
     val entries: List<WeightEntryData>,
@@ -24,6 +25,18 @@ internal data class BpGraphPoint(
 
 internal data class BpGraphEntries(
     val points: List<BpGraphPoint>,
+    val minEpochDay: Double?,
+    val maxEpochDay: Double?
+)
+
+internal data class CalorieGraphPoint(
+    val date: LocalDate,
+    val x: Double,
+    val calories: Double
+)
+
+internal data class CalorieGraphEntries(
+    val points: List<CalorieGraphPoint>,
     val minEpochDay: Double?,
     val maxEpochDay: Double?
 )
@@ -117,13 +130,14 @@ internal fun buildBpGraphEntries(
 
     val points = sorted.map { entry ->
         val fractionOfDay = if (entry.hasTime && entry.time != null) {
-            (entry.time!!.hour * 3600 + entry.time!!.minute * 60 + entry.time!!.second) / 86400.0
+            round(((entry.time!!.hour * 3600 + entry.time!!.minute * 60 + entry.time!!.second) / 86400.0) * 10000.0) / 10000.0
         } else {
             0.0
         }
+        val rawX = entry.date.toEpochDays().toDouble() + fractionOfDay
         BpGraphPoint(
             id = entry.id,
-            x = entry.date.toEpochDays().toDouble() + fractionOfDay,
+            x = round(rawX * 10000.0) / 10000.0,
             date = entry.date,
             systolic = entry.systolic.toDouble(),
             diastolic = entry.diastolic.toDouble(),
@@ -194,6 +208,59 @@ internal fun buildBpGraphEntries(
 
     return BpGraphEntries(
         points = listOfNotNull(interpolateEdgePoint()) + filteredPoints,
+        minEpochDay = minEpochDay.toDouble(),
+        maxEpochDay = maxEpochDay
+    )
+}
+
+internal fun buildCalorieGraphEntries(
+    rawTotals: Map<LocalDate, Double>,
+    timeFrame: GraphTimeFrame
+): CalorieGraphEntries {
+    val sorted = rawTotals.entries.sortedBy { it.key }
+
+    if (sorted.isEmpty()) {
+        return CalorieGraphEntries(
+            points = emptyList(),
+            minEpochDay = null,
+            maxEpochDay = null
+        )
+    }
+
+    val points = sorted.map { (date, calories) ->
+        CalorieGraphPoint(
+            date = date,
+            x = date.toEpochDays().toDouble(),
+            calories = calories
+        )
+    }
+
+    if (timeFrame == GraphTimeFrame.ALL) {
+        return CalorieGraphEntries(
+            points = points,
+            minEpochDay = null,
+            maxEpochDay = null
+        )
+    }
+
+    val latestDate = sorted.last().key
+    val latestEpochDay = latestDate.toEpochDays()
+    val minEpochDay = if (timeFrame == GraphTimeFrame.YEAR_TO_DATE) {
+        LocalDate(latestDate.year, 1, 1).toEpochDays()
+    } else {
+        val days = timeFrame.days ?: return CalorieGraphEntries(
+            points = points,
+            minEpochDay = null,
+            maxEpochDay = null
+        )
+        latestEpochDay - days
+    }
+    val maxEpochDay = latestEpochDay.toDouble()
+
+    val filteredPoints = points.filter { it.x >= minEpochDay.toDouble() }
+
+    return CalorieGraphEntries(
+        points = filteredPoints,
         minEpochDay = minEpochDay.toDouble(),
         maxEpochDay = maxEpochDay
     )

@@ -21,6 +21,7 @@ data class ExtendedColorScheme(
     val graphSystolic: ColorFamily,
     val graphDiastolic: ColorFamily,
     val graphPulse: ColorFamily,
+    val graphCalories: ColorFamily,
     val weightIncrease: ColorFamily,
     val weightDecrease: ColorFamily,
     val weightNoChange: ColorFamily,

@@ -12,6 +12,7 @@ import androidx.compose.ui.unit.dp
 import com.lbthomas.healthcoach.core.enums.SelectedPage
 import com.lbthomas.healthcoach.core.ui.HorizontalSplitPane
 import com.lbthomas.healthcoach.features.bloodpressure.BloodPressureView
+import com.lbthomas.healthcoach.features.foodjournal.JournalView
 import com.lbthomas.healthcoach.features.graphs.GraphsView
 import com.lbthomas.healthcoach.features.weight.WeightView
 
@@ -25,6 +26,8 @@ fun AppContent(
     onAddWeightDismiss: () -> Unit = {},
     showAddBloodPressureEntry: Boolean,
     onAddBloodPressureDismiss: () -> Unit = {},
+    showLogFood: Boolean = false,
+    onLogFoodDismiss: () -> Unit = {},
     onRequestFocus: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -35,26 +38,32 @@ fun AppContent(
             .then(if (isWideLayout) Modifier.padding(top = 5.dp) else Modifier),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        if (isWideLayout && (selectedPage == SelectedPage.WeightView || selectedPage == SelectedPage.BloodPressureView)) {
+        if (isWideLayout && (selectedPage == SelectedPage.WeightView || selectedPage == SelectedPage.BloodPressureView || selectedPage == SelectedPage.JournalView)) {
             HorizontalSplitPane(
                 modifier = Modifier.fillMaxSize(),
                 initialFraction = splitterPosition,
                 onFractionChange = onSplitterPositionChange,
                 first = {
-                    if (selectedPage == SelectedPage.WeightView) {
-                        WeightView(
+                    when (selectedPage) {
+                        SelectedPage.WeightView -> WeightView(
                             showAddWeightEntry = showAddWeightEntry,
                             isWideLayout = true,
                             onAddDismiss = onAddWeightDismiss,
                             onRequestFocus = onRequestFocus
                         )
-                    } else {
-                        BloodPressureView(
+                        SelectedPage.BloodPressureView -> BloodPressureView(
                             showAddBloodPressureEntry = showAddBloodPressureEntry,
                             isWideLayout = true,
                             onAddDismiss = onAddBloodPressureDismiss,
                             onRequestFocus = onRequestFocus
                         )
+                        SelectedPage.JournalView -> JournalView(
+                            showLogFood = showLogFood,
+                            isWideLayout = true,
+                            onLogFoodDismiss = onLogFoodDismiss,
+                            onRequestFocus = onRequestFocus
+                        )
+                        SelectedPage.GraphsView -> {}
                     }
                 },
                 second = {
@@ -67,6 +76,13 @@ fun AppContent(
                     showAddWeightEntry = showAddWeightEntry,
                     isWideLayout = false,
                     onAddDismiss = onAddWeightDismiss,
+                    onRequestFocus = onRequestFocus
+                )
+
+                SelectedPage.JournalView -> JournalView(
+                    showLogFood = showLogFood,
+                    isWideLayout = false,
+                    onLogFoodDismiss = onLogFoodDismiss,
                     onRequestFocus = onRequestFocus
                 )
 

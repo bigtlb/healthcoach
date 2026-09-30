@@ -6,6 +6,7 @@ import app.cash.sqldelight.db.SqlDriver
 import co.touchlab.kermit.Logger
 import com.lbthomas.healthcoach.Database
 import com.lbthomas.healthcoach.Database.Companion.Schema
+import com.lbthomas.healthcoach.features.foodjournal.data.DefaultFoodData
 
 fun createDatabase(driverFactory: DriverFactory): Database {
     val driver = driverFactory.createDriver()
@@ -37,6 +38,9 @@ fun createDatabaseForDriver(driver: SqlDriver): Database {
             }
         }
     }
+
+    DefaultFoodData.ensureDefaultFoodData(database)
+
     return database
 }
 

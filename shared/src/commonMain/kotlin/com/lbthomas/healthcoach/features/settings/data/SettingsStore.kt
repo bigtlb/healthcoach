@@ -179,6 +179,10 @@ open class SettingsStore(private val settingsFile: File) {
         updateSettings { it.copy(bloodPressure = it.bloodPressure.copy(showPulseInGraph = show)) }
     }
 
+    fun setShowFoodJournalInGraph(show: Boolean) {
+        updateSettings { it.copy(foodJournal = it.foodJournal.copy(showInGraph = show)) }
+    }
+
     fun setBloodPressureDisplaySettings(
         showDailyAverages: Boolean,
         showMonthlyAverages: Boolean,

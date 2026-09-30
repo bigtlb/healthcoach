@@ -1,0 +1,35 @@
+CREATE TABLE foodUnit (
+    id TEXT PRIMARY KEY NOT NULL,
+    name TEXT NOT NULL,
+    abbreviation TEXT,
+    isDefault INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+insert:
+INSERT INTO foodUnit (id, name, abbreviation, isDefault, updated_at)
+VALUES (?, ?, ?, ?, ?);
+
+update:
+UPDATE foodUnit
+SET name = ?, abbreviation = ?, isDefault = ?, updated_at = ?
+WHERE id = ?;
+
+delete:
+DELETE FROM foodUnit
+WHERE id = ?;
+
+selectAll:
+SELECT *
+FROM foodUnit
+ORDER BY name ASC;
+
+selectById:
+SELECT *
+FROM foodUnit
+WHERE id = ?;
+
+selectByName:
+SELECT *
+FROM foodUnit
+WHERE name = ? COLLATE NOCASE;

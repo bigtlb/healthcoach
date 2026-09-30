@@ -4,6 +4,7 @@ import com.lbthomas.healthcoach.core.enums.GraphTimeFrame
 import com.lbthomas.healthcoach.core.enums.WeightUnit
 import com.lbthomas.healthcoach.features.bloodpressure.data.BloodPressureEntryData
 import com.lbthomas.healthcoach.features.graphs.data.buildBpGraphEntries
+import com.lbthomas.healthcoach.features.graphs.data.buildCalorieGraphEntries
 import com.lbthomas.healthcoach.features.graphs.data.buildWeightGraphEntries
 import com.lbthomas.healthcoach.features.weight.data.WeightEntryData
 import kotlinx.datetime.LocalDate
@@ -79,6 +80,31 @@ class GraphsDataTest {
         assertEquals(70, result.points[0].pulse)
         assertEquals(72, result.points[1].pulse)
         assertNull(result.points[2].pulse)
+    }
+
+    @Test
+    fun testBuildCalorieGraphEntries() {
+        val totals = mapOf(
+            LocalDate(2026, 1, 10) to 1800.0,
+            LocalDate(2026, 1, 15) to 2150.0,
+            LocalDate(2026, 2, 20) to 1950.0
+        )
+
+        val resultAll = buildCalorieGraphEntries(totals, GraphTimeFrame.ALL)
+        assertEquals(3, resultAll.points.size)
+        assertEquals(1800.0, resultAll.points[0].calories)
+        assertEquals(2150.0, resultAll.points[1].calories)
+        assertEquals(1950.0, resultAll.points[2].calories)
+
+        val resultOneMonth = buildCalorieGraphEntries(totals, GraphTimeFrame.ONE_MONTH)
+        assertEquals(1, resultOneMonth.points.size)
+        assertEquals(LocalDate(2026, 2, 20), resultOneMonth.points[0].date)
+        assertEquals(1950.0, resultOneMonth.points[0].calories)
+
+        val emptyResult = buildCalorieGraphEntries(emptyMap(), GraphTimeFrame.ALL)
+        assertTrue(emptyResult.points.isEmpty())
+        assertNull(emptyResult.minEpochDay)
+        assertNull(emptyResult.maxEpochDay)
     }
 
     @Test

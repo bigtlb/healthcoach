@@ -101,6 +101,8 @@ data class PeerClientRecord(
 @Serializable
 data class PeerServerStatus(
     val isRunning: Boolean = false,
+    val isStarting: Boolean = false,
+    val isStopping: Boolean = false,
     val host: String = "",
     val port: Int = 8765,
     val activePin: String = "",

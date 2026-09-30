@@ -1,5 +1,6 @@
 package com.lbthomas.healthcoach.features.settings.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -29,6 +30,7 @@ internal fun SyncTabContent(
     settingsViewModel: SettingsViewModel
 ) {
     var selectedSubTab by remember { mutableStateOf(SyncSubTab.STORAGE_AUTH) }
+    val serverStatus by settingsViewModel.serverStatus.collectAsState()
 
     Column(
         modifier = Modifier
@@ -60,6 +62,42 @@ internal fun SyncTabContent(
                     checked = settings.sync.syncEnabled,
                     onCheckedChange = { settingsViewModel.setSyncEnabled(it) }
                 )
+            }
+
+            if (!settings.sync.syncEnabled && (serverStatus.isStopping || serverStatus.isStarting)) {
+                Surface(
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.5f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.tertiary
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                text = if (serverStatus.isStopping) "Stopping background peer services..." else "Starting background peer services...",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer
+                            )
+                            Text(
+                                text = if (serverStatus.isStopping) "Closing network connections and unregistering services..." else "Binding port and starting mDNS advertising...",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f)
+                            )
+                        }
+                    }
+                }
             }
         }
 

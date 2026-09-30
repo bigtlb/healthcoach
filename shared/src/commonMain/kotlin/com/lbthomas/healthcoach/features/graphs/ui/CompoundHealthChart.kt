@@ -17,18 +17,18 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lbthomas.healthcoach.core.enums.WeightUnit
+import com.lbthomas.healthcoach.core.theme.HealthCoachTheme
 import com.lbthomas.healthcoach.core.theme.extendedColors
 import com.lbthomas.healthcoach.features.graphs.data.BpGraphPoint
+import com.lbthomas.healthcoach.features.graphs.data.CalorieGraphPoint
+import com.lbthomas.healthcoach.features.graphs.ui.components.*
 import com.lbthomas.healthcoach.features.weight.data.WeightEntryData
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.Zoom
 import com.patrykandpatrick.vico.compose.cartesian.axis.*
-import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
+import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModel
+import com.patrykandpatrick.vico.compose.cartesian.data.CartesianLayerModel
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
-import com.patrykandpatrick.vico.compose.cartesian.data.lineModel
-import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
-import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
-import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarkerController
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
@@ -43,26 +43,29 @@ internal fun CompoundHealthChart(
     showWeight: Boolean,
     showBp: Boolean,
     showPulse: Boolean,
+    showCalories: Boolean = false,
     weightEntries: List<WeightEntryData>,
     bpPoints: List<BpGraphPoint>,
+    caloriePoints: List<CalorieGraphPoint> = emptyList(),
     weightUnit: WeightUnit,
     weightMinEpoch: Double?,
     weightMaxEpoch: Double?,
     bpMinEpoch: Double?,
     bpMaxEpoch: Double?,
+    calorieMinEpoch: Double? = null,
+    calorieMaxEpoch: Double? = null,
     modifier: Modifier = Modifier
 ) {
-    val modelProducer = remember { CartesianChartModelProducer() }
-
     val hasWeight = showWeight && weightEntries.isNotEmpty()
     val hasBp = showBp && bpPoints.isNotEmpty()
+    val hasCalories = showCalories && caloriePoints.isNotEmpty()
     val hasPulseSeries = hasBp && showPulse && bpPoints.any { it.pulse != null }
     val pulsePoints = remember(hasPulseSeries, bpPoints) {
         if (hasPulseSeries) bpPoints.filter { it.pulse != null } else emptyList()
     }
 
     // Global X min/max calculation across active datasets
-    val globalMinX = remember(hasWeight, hasBp, weightMinEpoch, bpMinEpoch, weightEntries, bpPoints) {
+    val globalMinX = remember(hasWeight, hasBp, hasCalories, weightMinEpoch, bpMinEpoch, calorieMinEpoch, weightEntries, bpPoints, caloriePoints) {
         val mins = mutableListOf<Double>()
         if (hasWeight) {
             weightMinEpoch?.let { mins.add(it) } ?: weightEntries.firstOrNull()?.date?.toEpochDays()?.toDouble()?.let { mins.add(it) }
@@ -70,10 +73,13 @@ internal fun CompoundHealthChart(
         if (hasBp) {
             bpMinEpoch?.let { mins.add(it) } ?: bpPoints.firstOrNull()?.x?.let { mins.add(it) }
         }
+        if (hasCalories) {
+            calorieMinEpoch?.let { mins.add(it) } ?: caloriePoints.firstOrNull()?.x?.let { mins.add(it) }
+        }
         mins.minOrNull()
     }
 
-    val globalMaxX = remember(hasWeight, hasBp, weightMaxEpoch, bpMaxEpoch, weightEntries, bpPoints) {
+    val globalMaxX = remember(hasWeight, hasBp, hasCalories, weightMaxEpoch, bpMaxEpoch, calorieMaxEpoch, weightEntries, bpPoints, caloriePoints) {
         val maxs = mutableListOf<Double>()
         if (hasWeight) {
             weightMaxEpoch?.let { maxs.add(it) } ?: weightEntries.lastOrNull()?.date?.toEpochDays()?.toDouble()?.let { maxs.add(it) }
@@ -81,62 +87,28 @@ internal fun CompoundHealthChart(
         if (hasBp) {
             bpMaxEpoch?.let { maxs.add(it) } ?: bpPoints.lastOrNull()?.x?.let { maxs.add(it) }
         }
+        if (hasCalories) {
+            calorieMaxEpoch?.let { maxs.add(it) } ?: caloriePoints.lastOrNull()?.x?.let { maxs.add(it) }
+        }
         maxs.maxOrNull()
     }
 
-    LaunchedEffect(hasWeight, hasBp, weightEntries, bpPoints, weightUnit, hasPulseSeries, pulsePoints) {
-        modelProducer.runTransaction {
-            if (hasWeight && hasBp) {
-                // Layer 0: Weight (Left/Start Axis)
-                lineModel {
-                    series(
-                        x = weightEntries.map { it.date.toEpochDays().toDouble() },
-                        y = weightEntries.map { it.getWeightInCurrentUnits(weightUnit) }
-                    )
-                }
-                // Layer 1: Blood Pressure and optional Pulse (Right/End Axis)
-                lineModel {
-                    series(
-                        x = bpPoints.map { it.x },
-                        y = bpPoints.map { it.systolic }
-                    )
-                    series(
-                        x = bpPoints.map { it.x },
-                        y = bpPoints.map { it.diastolic }
-                    )
-                    if (hasPulseSeries) {
-                        series(
-                            x = pulsePoints.map { it.x },
-                            y = pulsePoints.map { it.pulse!!.toDouble() }
-                        )
-                    }
-                }
-            } else if (hasWeight) {
-                lineModel {
-                    series(
-                        x = weightEntries.map { it.date.toEpochDays().toDouble() },
-                        y = weightEntries.map { it.getWeightInCurrentUnits(weightUnit) }
-                    )
-                }
-            } else if (hasBp) {
-                lineModel {
-                    series(
-                        x = bpPoints.map { it.x },
-                        y = bpPoints.map { it.systolic }
-                    )
-                    series(
-                        x = bpPoints.map { it.x },
-                        y = bpPoints.map { it.diastolic }
-                    )
-                    if (hasPulseSeries) {
-                        series(
-                            x = pulsePoints.map { it.x },
-                            y = pulsePoints.map { it.pulse!!.toDouble() }
-                        )
-                    }
-                }
-            }
+    val chartModel = remember(
+        hasWeight, hasBp, hasCalories,
+        weightEntries, bpPoints, caloriePoints,
+        weightUnit, hasPulseSeries, pulsePoints
+    ) {
+        val models = mutableListOf<CartesianLayerModel>()
+        if (hasCalories) {
+            buildCalorieLayerModel(caloriePoints)?.let { models.add(it) }
         }
+        if (hasWeight) {
+            buildWeightLayerModel(weightEntries, weightUnit)?.let { models.add(it) }
+        }
+        if (hasBp) {
+            buildBpLayerModel(bpPoints, hasPulseSeries, pulsePoints)?.let { models.add(it) }
+        }
+        CartesianChartModel(models)
     }
 
     val unitLabel = if (weightUnit == WeightUnit.METRIC) "kg" else "lb"
@@ -145,84 +117,62 @@ internal fun CompoundHealthChart(
     val bpSystolicColor = extColors.graphSystolic.color
     val bpDiastolicColor = extColors.graphDiastolic.color
     val bpPulseColor = extColors.graphPulse.color
+    val calorieColor = extColors.graphCalories.color
 
-    val weightLine = LineCartesianLayer.rememberLine(
-        fill = LineCartesianLayer.LineFill.single(Fill(weightLineColor)),
-        stroke = LineCartesianLayer.LineStroke.Continuous(thickness = 2.5.dp),
-        pointProvider = null,
-        areaFill = null
+    // Weight Layer
+    val weightLine = rememberWeightLine(weightLineColor)
+    val weightLayer = if (hasWeight) {
+        rememberWeightCartesianLayer(
+            weightLine = weightLine,
+            globalMinX = globalMinX,
+            globalMaxX = globalMaxX,
+            axisPosition = Axis.Position.Vertical.Start
+        )
+    } else null
+
+    // Blood Pressure Layer
+    val bpLines = rememberBpLines(
+        systolicColor = bpSystolicColor,
+        diastolicColor = bpDiastolicColor,
+        pulseColor = bpPulseColor,
+        includePulse = hasPulseSeries
     )
-
-    val bpSystolicLine = LineCartesianLayer.rememberLine(
-        fill = LineCartesianLayer.LineFill.single(Fill(bpSystolicColor)),
-        stroke = LineCartesianLayer.LineStroke.Continuous(thickness = 2.5.dp),
-        pointProvider = null,
-        areaFill = null
-    )
-
-    val bpDiastolicLine = LineCartesianLayer.rememberLine(
-        fill = LineCartesianLayer.LineFill.single(Fill(bpDiastolicColor)),
-        stroke = LineCartesianLayer.LineStroke.Continuous(thickness = 2.5.dp),
-        pointProvider = null,
-        areaFill = null
-    )
-
-    val bpPulseLine = LineCartesianLayer.rememberLine(
-        fill = LineCartesianLayer.LineFill.single(Fill(bpPulseColor)),
-        stroke = LineCartesianLayer.LineStroke.Continuous(thickness = 2.5.dp),
-        pointProvider = null,
-        areaFill = null
-    )
-
-    val globalRangeProvider = remember(globalMinX, globalMaxX) {
-        TimeFrameChartRangeProvider(
-            forcedMinX = globalMinX,
-            forcedMaxX = globalMaxX
+    val bpLayer = if (hasBp) {
+        rememberBpCartesianLayer(
+            bpLines = bpLines,
+            globalMinX = globalMinX,
+            globalMaxX = globalMaxX,
+            axisPosition = if (hasWeight || hasCalories) Axis.Position.Vertical.End else Axis.Position.Vertical.Start
         )
-    }
+    } else null
 
-    val bpLines = if (hasPulseSeries) {
-        listOf(bpSystolicLine, bpDiastolicLine, bpPulseLine)
-    } else {
-        listOf(bpSystolicLine, bpDiastolicLine)
-    }
+    // Calorie Layer: unbound from vertical axis when Weight is present, bound to Start when Weight is absent
+    val calorieLayer = if (hasCalories) {
+        rememberCalorieCartesianLayer(
+            globalMinX = globalMinX,
+            globalMaxX = globalMaxX,
+            color = calorieColor,
+            axisPosition = if (!hasWeight) Axis.Position.Vertical.Start else null
+        )
+    } else null
 
-    val lineLayers = if (hasWeight && hasBp) {
-        val weightLayer = rememberLineCartesianLayer(
-            lineProvider = LineCartesianLayer.LineProvider.series(weightLine),
-            rangeProvider = globalRangeProvider,
-            verticalAxisPosition = Axis.Position.Vertical.Start
-        )
-        val bpLayer = rememberLineCartesianLayer(
-            lineProvider = LineCartesianLayer.LineProvider.series(bpLines),
-            rangeProvider = globalRangeProvider,
-            verticalAxisPosition = Axis.Position.Vertical.End
-        )
-        listOf(weightLayer, bpLayer)
-    } else if (hasWeight) {
-        val weightLayer = rememberLineCartesianLayer(
-            lineProvider = LineCartesianLayer.LineProvider.series(weightLine),
-            rangeProvider = globalRangeProvider,
-            verticalAxisPosition = Axis.Position.Vertical.Start
-        )
-        listOf(weightLayer)
-    } else {
-        val bpLayer = rememberLineCartesianLayer(
-            lineProvider = LineCartesianLayer.LineProvider.series(bpLines),
-            rangeProvider = globalRangeProvider,
-            verticalAxisPosition = Axis.Position.Vertical.Start
-        )
-        listOf(bpLayer)
+    val allLayers = buildList {
+        // Column bars placed first so they render behind all line plots (Z-order)
+        calorieLayer?.let { add(it) }
+        weightLayer?.let { add(it) }
+        bpLayer?.let { add(it) }
     }
 
     val marker = rememberHealthChartMarker(
         hasWeight = hasWeight,
         hasBp = hasBp,
+        hasCalories = hasCalories,
         weightUnit = weightUnit,
         weightLineColor = weightLineColor,
         bpSystolicColor = bpSystolicColor,
         bpDiastolicColor = bpDiastolicColor,
         bpPulseColor = bpPulseColor,
+        calorieColor = calorieColor,
         unitLabel = unitLabel
     )
 
@@ -236,11 +186,11 @@ internal fun CompoundHealthChart(
 
     val horizontalAxisSpacing = remember(daySpan) {
         when {
-            daySpan <= 30 -> 7     // 1 week
-            daySpan <= 120 -> 14   // 2 weeks
-            daySpan <= 365 -> 30   // ~1 month
-            daySpan <= 730 -> 90   // ~1 quarter
-            else -> 180            // ~6 months
+            daySpan <= 30 -> 7
+            daySpan <= 120 -> 14
+            daySpan <= 365 -> 30
+            daySpan <= 730 -> 90
+            else -> 180
         }
     }
 
@@ -256,12 +206,14 @@ internal fun CompoundHealthChart(
         }
     }
 
-    val startAxisValueFormatter = remember(hasWeight, hasBp, weightUnit) {
+    val startAxisValueFormatter = remember(hasWeight, hasBp, hasCalories, weightUnit) {
         CartesianValueFormatter { _, value, _ ->
             val rounded = round(value * 10) / 10.0
             val num = if (rounded % 1.0 == 0.0) "${rounded.toInt()}" else "$rounded"
             if (hasWeight) {
                 "$num $unitLabel"
+            } else if (hasCalories) {
+                "$num kcal"
             } else {
                 "$num mmHg"
             }
@@ -295,7 +247,7 @@ internal fun CompoundHealthChart(
         )
     )
 
-    val endAxis = if (hasWeight && hasBp) {
+    val endAxis = if (hasBp && (hasWeight || hasCalories)) {
         VerticalAxis.rememberEnd(
             horizontalLabelPosition = VerticalAxis.HorizontalLabelPosition.Inside,
             valueFormatter = endAxisValueFormatter,
@@ -312,9 +264,6 @@ internal fun CompoundHealthChart(
     }
 
     val bottomAxis = HorizontalAxis.rememberBottom(
-        itemPlacer = remember(horizontalAxisSpacing) {
-            HorizontalAxis.ItemPlacer.aligned(spacing = { horizontalAxisSpacing })
-        },
         valueFormatter = bottomAxisValueFormatter,
         label = rememberAxisLabelComponent(
             style = TextStyle(
@@ -326,39 +275,32 @@ internal fun CompoundHealthChart(
     )
 
     val chart = rememberCartesianChart(
-        *lineLayers.toTypedArray(),
+        *allLayers.toTypedArray(),
         startAxis = startAxis,
         endAxis = endAxis,
         bottomAxis = bottomAxis,
         marker = marker,
-        markerController = CartesianMarkerController.rememberShowOnHover()
+        markerController = CartesianMarkerController.rememberShowOnHover(),
+        getXStep = { _, _, _ -> 1.0 }
     )
 
     Column(modifier = modifier) {
-        // Legend: only shown when Blood Pressure is active to distinguish Systolic, Diastolic, and Pulse lines
-        if (hasBp) {
-            FlowRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 2.dp, bottom = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-                itemVerticalAlignment = Alignment.CenterVertically
-            ) {
-                if (hasWeight) {
-                    LegendItem(color = weightLineColor, label = "Weight ($unitLabel)")
-                }
-                LegendItem(color = bpSystolicColor, label = "Systolic")
-                LegendItem(color = bpDiastolicColor, label = "Diastolic")
-                if (showPulse) {
-                    LegendItem(color = bpPulseColor, label = "Pulse")
-                }
-            }
-        }
+        ChartLegend(
+            hasCalories = hasCalories,
+            calorieColor = calorieColor,
+            hasWeight = hasWeight,
+            weightColor = weightLineColor,
+            weightUnitLabel = unitLabel,
+            hasBp = hasBp,
+            systolicColor = bpSystolicColor,
+            diastolicColor = bpDiastolicColor,
+            showPulse = showPulse,
+            pulseColor = bpPulseColor
+        )
 
         CartesianChartHost(
             chart = chart,
-            modelProducer = modelProducer,
+            model = chartModel,
             scrollState = rememberVicoScrollState(scrollEnabled = false),
             zoomState = rememberVicoZoomState(zoomEnabled = false, initialZoom = Zoom.Content),
             modifier = Modifier.weight(1f).fillMaxWidth()
@@ -366,48 +308,236 @@ internal fun CompoundHealthChart(
     }
 }
 
+private val previewWeightEntries = listOf(
+    WeightEntryData("1", LocalDate(2026, 1, 1), 175.0),
+    WeightEntryData("2", LocalDate(2026, 1, 15), 174.2),
+    WeightEntryData("3", LocalDate(2026, 2, 1), 173.0),
+    WeightEntryData("4", LocalDate(2026, 2, 15), 171.5),
+    WeightEntryData("5", LocalDate(2026, 3, 1), 170.0)
+)
+
+private val previewBpPoints = listOf(
+    BpGraphPoint("1", LocalDate(2026, 1, 1).toEpochDays().toDouble(), LocalDate(2026, 1, 1), 120.0, 80.0, 70),
+    BpGraphPoint("2", LocalDate(2026, 1, 15).toEpochDays().toDouble(), LocalDate(2026, 1, 15), 118.0, 78.0, 68),
+    BpGraphPoint("3", LocalDate(2026, 2, 1).toEpochDays().toDouble(), LocalDate(2026, 2, 1), 122.0, 82.0, 72),
+    BpGraphPoint("4", LocalDate(2026, 2, 15).toEpochDays().toDouble(), LocalDate(2026, 2, 15), 116.0, 76.0, 66),
+    BpGraphPoint("5", LocalDate(2026, 3, 1).toEpochDays().toDouble(), LocalDate(2026, 3, 1), 114.0, 74.0, 64)
+)
+
+private val previewCaloriePoints = listOf(
+    CalorieGraphPoint(LocalDate(2026, 1, 1), LocalDate(2026, 1, 1).toEpochDays().toDouble(), 1850.0),
+    CalorieGraphPoint(LocalDate(2026, 1, 15), LocalDate(2026, 1, 15).toEpochDays().toDouble(), 2100.0),
+    CalorieGraphPoint(LocalDate(2026, 2, 1), LocalDate(2026, 2, 1).toEpochDays().toDouble(), 1950.0),
+    CalorieGraphPoint(LocalDate(2026, 2, 15), LocalDate(2026, 2, 15).toEpochDays().toDouble(), 2250.0),
+    CalorieGraphPoint(LocalDate(2026, 3, 1), LocalDate(2026, 3, 1).toEpochDays().toDouble(), 2000.0)
+)
+
+@Preview(
+    name = "Compound Chart - All Metrics",
+    showBackground = true,
+    widthDp = 400,
+    heightDp = 600
+)
 @Composable
-internal fun LegendItem(color: Color, label: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            modifier = Modifier
-                .size(8.dp)
-                .background(color, CircleShape)
-        )
-        Spacer(modifier = Modifier.width(4.dp))
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            softWrap = false
-        )
+private fun CompoundHealthChartAllMetricsPreview() {
+    HealthCoachTheme {
+        Surface(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+            CompoundHealthChart(
+                showWeight = true,
+                showBp = true,
+                showPulse = true,
+                showCalories = true,
+                weightEntries = previewWeightEntries,
+                bpPoints = previewBpPoints,
+                caloriePoints = previewCaloriePoints,
+                weightUnit = WeightUnit.US,
+                weightMinEpoch = null,
+                weightMaxEpoch = null,
+                bpMinEpoch = null,
+                bpMaxEpoch = null,
+                calorieMinEpoch = null,
+                calorieMaxEpoch = null
+            )
+        }
     }
 }
 
-@Preview
+@Preview(
+    name = "Compound Chart - Weight Only",
+    showBackground = true,
+    widthDp = 400,
+    heightDp = 600
+)
 @Composable
-private fun CompoundHealthChartPreview() {
-    Surface(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        CompoundHealthChart(
-            showWeight = true,
-            showBp = true,
-            showPulse = true,
-            weightEntries = listOf(
-                WeightEntryData("1", LocalDate(2026, 1, 1), 175.0),
-                WeightEntryData("2", LocalDate(2026, 1, 15), 174.2),
-                WeightEntryData("3", LocalDate(2026, 2, 1), 173.0)
-            ),
-            bpPoints = listOf(
-                BpGraphPoint("1", LocalDate(2026, 1, 1).toEpochDays().toDouble(), LocalDate(2026, 1, 1), 120.0, 80.0, 70),
-                BpGraphPoint("2", LocalDate(2026, 1, 15).toEpochDays().toDouble(), LocalDate(2026, 1, 15), 118.0, 78.0, 68),
-                BpGraphPoint("3", LocalDate(2026, 2, 1).toEpochDays().toDouble(), LocalDate(2026, 2, 1), 115.0, 75.0, 65)
-            ),
-            weightUnit = WeightUnit.US,
-            weightMinEpoch = null,
-            weightMaxEpoch = null,
-            bpMinEpoch = null,
-            bpMaxEpoch = null
-        )
+private fun CompoundHealthChartWeightOnlyPreview() {
+    HealthCoachTheme {
+        Surface(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+            CompoundHealthChart(
+                showWeight = true,
+                showBp = false,
+                showPulse = false,
+                showCalories = false,
+                weightEntries = previewWeightEntries,
+                bpPoints = emptyList(),
+                caloriePoints = emptyList(),
+                weightUnit = WeightUnit.US,
+                weightMinEpoch = null,
+                weightMaxEpoch = null,
+                bpMinEpoch = null,
+                bpMaxEpoch = null,
+                calorieMinEpoch = null,
+                calorieMaxEpoch = null
+            )
+        }
+    }
+}
+
+@Preview(
+    name = "Compound Chart - Blood Pressure Only",
+    showBackground = true,
+    widthDp = 400,
+    heightDp = 600
+)
+@Composable
+private fun CompoundHealthChartBpOnlyPreview() {
+    HealthCoachTheme {
+        Surface(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+            CompoundHealthChart(
+                showWeight = false,
+                showBp = true,
+                showPulse = true,
+                showCalories = false,
+                weightEntries = emptyList(),
+                bpPoints = previewBpPoints,
+                caloriePoints = emptyList(),
+                weightUnit = WeightUnit.US,
+                weightMinEpoch = null,
+                weightMaxEpoch = null,
+                bpMinEpoch = null,
+                bpMaxEpoch = null,
+                calorieMinEpoch = null,
+                calorieMaxEpoch = null
+            )
+        }
+    }
+}
+
+@Preview(
+    name = "Compound Chart - Calories Only",
+    showBackground = true,
+    widthDp = 400,
+    heightDp = 600
+)
+@Composable
+private fun CompoundHealthChartCaloriesOnlyPreview() {
+    HealthCoachTheme {
+        Surface(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+            CompoundHealthChart(
+                showWeight = false,
+                showBp = false,
+                showPulse = false,
+                showCalories = true,
+                weightEntries = emptyList(),
+                bpPoints = emptyList(),
+                caloriePoints = previewCaloriePoints,
+                weightUnit = WeightUnit.US,
+                weightMinEpoch = null,
+                weightMaxEpoch = null,
+                bpMinEpoch = null,
+                bpMaxEpoch = null,
+                calorieMinEpoch = null,
+                calorieMaxEpoch = null
+            )
+        }
+    }
+}
+
+@Preview(
+    name = "Compound Chart - Weight and BP",
+    showBackground = true,
+    widthDp = 400,
+    heightDp = 600
+)
+@Composable
+private fun CompoundHealthChartWeightAndBpPreview() {
+    HealthCoachTheme {
+        Surface(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+            CompoundHealthChart(
+                showWeight = true,
+                showBp = true,
+                showPulse = true,
+                showCalories = false,
+                weightEntries = previewWeightEntries,
+                bpPoints = previewBpPoints,
+                caloriePoints = emptyList(),
+                weightUnit = WeightUnit.US,
+                weightMinEpoch = null,
+                weightMaxEpoch = null,
+                bpMinEpoch = null,
+                bpMaxEpoch = null,
+                calorieMinEpoch = null,
+                calorieMaxEpoch = null
+            )
+        }
+    }
+}
+
+@Preview(
+    name = "Compound Chart - Weight and Calories",
+    showBackground = true,
+    widthDp = 400,
+    heightDp = 600
+)
+@Composable
+private fun CompoundHealthChartWeightAndCaloriesPreview() {
+    HealthCoachTheme {
+        Surface(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+            CompoundHealthChart(
+                showWeight = true,
+                showBp = false,
+                showPulse = false,
+                showCalories = true,
+                weightEntries = previewWeightEntries,
+                bpPoints = emptyList(),
+                caloriePoints = previewCaloriePoints,
+                weightUnit = WeightUnit.US,
+                weightMinEpoch = null,
+                weightMaxEpoch = null,
+                bpMinEpoch = null,
+                bpMaxEpoch = null,
+                calorieMinEpoch = null,
+                calorieMaxEpoch = null
+            )
+        }
+    }
+}
+
+@Preview(
+    name = "Compound Chart - BP and Calories",
+    showBackground = true,
+    widthDp = 400,
+    heightDp = 600
+)
+@Composable
+private fun CompoundHealthChartBpAndCaloriesPreview() {
+    HealthCoachTheme {
+        Surface(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+            CompoundHealthChart(
+                showWeight = false,
+                showBp = true,
+                showPulse = true,
+                showCalories = true,
+                weightEntries = emptyList(),
+                bpPoints = previewBpPoints,
+                caloriePoints = previewCaloriePoints,
+                weightUnit = WeightUnit.US,
+                weightMinEpoch = null,
+                weightMaxEpoch = null,
+                bpMinEpoch = null,
+                bpMaxEpoch = null,
+                calorieMinEpoch = null,
+                calorieMaxEpoch = null
+            )
+        }
     }
 }

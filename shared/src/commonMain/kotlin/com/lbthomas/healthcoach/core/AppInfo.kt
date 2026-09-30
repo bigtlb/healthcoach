@@ -113,6 +113,14 @@ object AppInfo {
             licenseName = "SIL OFL 1.1",
             licenseUrl = "https://openfontlicense.org/",
             projectUrl = "https://rsms.me/inter/"
+        ),
+        OpenSourceAttribution(
+            name = "USDA FoodData Central",
+            version = "SR Legacy & FNDDS",
+            copyright = "Public Domain (U.S. Department of Agriculture, Agricultural Research Service)",
+            licenseName = "Public Domain",
+            licenseUrl = "https://fdc.nal.usda.gov",
+            projectUrl = "https://fdc.nal.usda.gov"
         )
     )
 

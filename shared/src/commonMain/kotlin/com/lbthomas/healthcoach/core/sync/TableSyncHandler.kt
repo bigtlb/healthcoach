@@ -1,8 +1,6 @@
 package com.lbthomas.healthcoach.core.sync
 
 import com.lbthomas.healthcoach.Database
-import com.lbthomas.healthcoach.bloodpressure.data.BloodPressureEntry
-import com.lbthomas.healthcoach.weight.data.WeightEntry
 
 /**
  * Interface defining synchronization operations for an individual database table.
@@ -32,16 +30,32 @@ abstract class GenericTableSyncHandler<T : Any>(
     abstract fun update(database: Database, entity: T)
     abstract fun delete(database: Database, id: String)
 
-    override fun hasRecords(database: Database): Boolean = selectAll(database).isNotEmpty()
+    override fun hasRecords(database: Database): Boolean = selectAll(database).any { getUpdatedAt(it) > 0L }
 
-    override fun selectRecordCount(database: Database): Int = selectAll(database).size
+    override fun selectRecordCount(database: Database): Int = selectAll(database).count { getUpdatedAt(it) > 0L }
 
     override fun bootstrap(sourceDb: Database, targetDb: Database): SyncStats {
         val records = selectAll(sourceDb)
+        var downloaded = 0
         targetDb.transaction {
-            records.forEach { insert(targetDb, it) }
+            val existingTarget = selectAll(targetDb).associateBy { getId(it) }
+            records.forEach { record ->
+                val id = getId(record)
+                val existing = existingTarget[id]
+                if (existing == null) {
+                    insert(targetDb, record)
+                    if (getUpdatedAt(record) > 0L) {
+                        downloaded++
+                    }
+                } else if (existing != record && getUpdatedAt(record) > getUpdatedAt(existing)) {
+                    update(targetDb, record)
+                    if (getUpdatedAt(record) > 0L) {
+                        downloaded++
+                    }
+                }
+            }
         }
-        return SyncStats(uploaded = 0, downloaded = records.size)
+        return SyncStats(uploaded = 0, downloaded = downloaded)
     }
 
     override fun unionMerge(localDb: Database, remoteDb: Database): SyncStats {
@@ -63,18 +77,18 @@ abstract class GenericTableSyncHandler<T : Any>(
                     }
                     if (l == null) {
                         insert(localDb, winning)
-                        downloaded++
+                        if (getUpdatedAt(winning) > 0L) downloaded++
                     } else if (l != winning) {
                         update(localDb, winning)
-                        downloaded++
+                        if (getUpdatedAt(winning) > 0L) downloaded++
                     }
 
                     if (r == null) {
                         insert(remoteDb, winning)
-                        uploaded++
+                        if (getUpdatedAt(winning) > 0L) uploaded++
                     } else if (r != winning) {
                         update(remoteDb, winning)
-                        uploaded++
+                        if (getUpdatedAt(winning) > 0L) uploaded++
                     }
                 }
             }
@@ -198,65 +212,5 @@ abstract class GenericTableSyncHandler<T : Any>(
             }
         }
         return SyncStats(uploaded = uploaded, downloaded = downloaded)
-    }
-}
-
-/**
- * Synchronization handler for the `weightEntry` table.
- */
-object WeightTableSyncHandler : GenericTableSyncHandler<WeightEntry>("weightEntry") {
-    override fun selectAll(database: Database): List<WeightEntry> =
-        database.weightEntryQueries.selectAll().executeAsList()
-
-    override fun getId(entity: WeightEntry): String = entity.id
-    override fun getUpdatedAt(entity: WeightEntry): Long = entity.updated_at
-
-    override fun insert(database: Database, entity: WeightEntry) {
-        database.weightEntryQueries.insert(entity.id, entity.date, entity.weight, entity.updated_at)
-    }
-
-    override fun update(database: Database, entity: WeightEntry) {
-        database.weightEntryQueries.update(entity.date, entity.weight, entity.updated_at, entity.id)
-    }
-
-    override fun delete(database: Database, id: String) {
-        database.weightEntryQueries.delete(id)
-    }
-}
-
-/**
- * Synchronization handler for the `bloodPressureEntry` table.
- */
-object BloodPressureTableSyncHandler : GenericTableSyncHandler<BloodPressureEntry>("bloodPressureEntry") {
-    override fun selectAll(database: Database): List<BloodPressureEntry> =
-        database.bloodPressureEntryQueries.selectAll().executeAsList()
-
-    override fun getId(entity: BloodPressureEntry): String = entity.id
-    override fun getUpdatedAt(entity: BloodPressureEntry): Long = entity.updated_at
-
-    override fun insert(database: Database, entity: BloodPressureEntry) {
-        database.bloodPressureEntryQueries.insert(
-            entity.id,
-            entity.dateTime,
-            entity.systolic,
-            entity.diastolic,
-            entity.pulse,
-            entity.updated_at
-        )
-    }
-
-    override fun update(database: Database, entity: BloodPressureEntry) {
-        database.bloodPressureEntryQueries.update(
-            entity.dateTime,
-            entity.systolic,
-            entity.diastolic,
-            entity.pulse,
-            entity.updated_at,
-            entity.id
-        )
-    }
-
-    override fun delete(database: Database, id: String) {
-        database.bloodPressureEntryQueries.delete(id)
     }
 }
