@@ -1,6 +1,5 @@
 package com.lbthomas.healthcoach.features.foodjournal.ui
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
@@ -24,19 +23,16 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import com.lbthomas.healthcoach.core.enums.MealTime
 import com.lbthomas.healthcoach.core.ui.onDialogKeyEvents
 import com.lbthomas.healthcoach.core.utils.today
 import com.lbthomas.healthcoach.features.foodjournal.data.FoodItemData
 import com.lbthomas.healthcoach.features.foodjournal.data.MealEntryData
 import kotlinx.coroutines.yield
-import kotlinx.datetime.LocalDate
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.atTime
-import kotlinx.datetime.toInstant
-import kotlinx.datetime.toLocalDateTime
-import kotlin.time.Instant
+import kotlinx.datetime.*
 import kotlin.math.roundToInt
+import kotlin.time.Instant
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,6 +41,7 @@ fun PortionEntryDialog(
     initialMealTime: MealTime = MealTime.BREAKFAST,
     foodItem: FoodItemData? = null,
     existingMealEntry: MealEntryData? = null,
+    isWide: Boolean = false,
     onConfirm: (MealEntryData) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
@@ -113,7 +110,15 @@ fun PortionEntryDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        modifier = modifier
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+        modifier = (
+            if (isWide) {
+                Modifier.width(800.dp)
+            } else {
+                Modifier.fillMaxSize()
+            }
+        )
+            .then(modifier)
             .testTag("portion_entry_dialog")
             .onDialogKeyEvents(
                 onConfirm = { confirmIfValid() },
@@ -128,13 +133,20 @@ fun PortionEntryDialog(
             )
         },
         text = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(8.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+            Box(
+                modifier = if (isWide) Modifier.fillMaxWidth() else Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
             ) {
+                Column(
+                    modifier = Modifier
+                        .widthIn(max = 600.dp)
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(8.dp)
+                        .imePadding(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
                 // Food Info Card
                 Card(
                     colors = CardDefaults.cardColors(
@@ -255,51 +267,6 @@ fun PortionEntryDialog(
                     }
                 }
 
-                // Portion Multiplier Input
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = portionText,
-                        onValueChange = { portionText = it },
-                        label = { Text("Portion Multiplier") },
-                        placeholder = { Text("1.0") },
-                        singleLine = true,
-                        isError = portionText.text.isNotEmpty() && !isMultiplierValid,
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Decimal,
-                            imeAction = ImeAction.Done
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onDone = { confirmIfValid() }
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .focusRequester(focusRequester)
-                    )
-
-                    // Quick portion preset chips
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        listOf(0.5, 1.0, 1.5, 2.0).forEach { preset ->
-                            val presetText = if (preset % 1.0 == 0.0) "${preset.toLong()}x" else "${preset}x"
-                            val isSelected = parsedMultiplier == preset
-                            SuggestionChip(
-                                onClick = {
-                                    portionText = TextFieldValue(
-                                        text = preset.toString(),
-                                        selection = TextRange(preset.toString().length)
-                                    )
-                                },
-                                label = { Text(presetText) },
-                                colors = SuggestionChipDefaults.suggestionChipColors(
-                                    containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
-                                )
-                            )
-                        }
-                    }
-                }
-
                 // Total Calories Banner Card
                 Card(
                     colors = CardDefaults.cardColors(
@@ -328,7 +295,59 @@ fun PortionEntryDialog(
                         )
                     }
                 }
+
+                // Portion Multiplier Input
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+
+                    // Quick portion preset chips
+                    SingleChoiceSegmentedButtonRow(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                    ) {
+//                    Row(
+//                        modifier = Modifier.fillMaxWidth(),
+//                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+//                    ) {
+                        val multiplierOptions = listOf(0.5, 1.0, 1.5, 2.0, 2.5, 3.0)
+                        val optionCount = multiplierOptions.size
+
+                        multiplierOptions.forEachIndexed { idx, preset ->
+                            val presetText = if (preset % 1.0 == 0.0) "${preset.toLong()}x" else "${preset}x"
+                            val isSelected = parsedMultiplier == preset
+                            SegmentedButton(
+                                onClick = {
+                                    portionText = TextFieldValue(
+                                        text = preset.toString(),
+                                        selection = TextRange(preset.toString().length)
+                                    )
+                                },
+                                selected = isSelected,
+                                shape = SegmentedButtonDefaults.itemShape(index = idx, count = optionCount)
+                            ){ Text(presetText) }
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = portionText,
+                        onValueChange = { portionText = it },
+                        label = { Text("Portion Multiplier") },
+                        placeholder = { Text("1.0") },
+                        singleLine = true,
+                        isError = portionText.text.isNotEmpty() && !isMultiplierValid,
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Decimal,
+                            imeAction = ImeAction.Done
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onDone = { confirmIfValid() }
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(focusRequester)
+                    )
+
+                }
             }
+        }
         },
         confirmButton = {
             TextButton(

@@ -1,6 +1,5 @@
 package com.lbthomas.healthcoach.features.foodjournal.ui
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
@@ -17,11 +16,13 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import com.lbthomas.healthcoach.core.ui.onDialogKeyEvents
 import com.lbthomas.healthcoach.features.foodjournal.data.FoodItemData
 import com.lbthomas.healthcoach.features.foodjournal.data.FoodUnitData
@@ -32,6 +33,7 @@ import kotlinx.coroutines.yield
 fun MasterFoodEditDialog(
     foodItem: FoodItemData,
     availableUnits: List<FoodUnitData>,
+    isWide: Boolean = false,
     onConfirm: (FoodItemData) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
@@ -80,6 +82,7 @@ fun MasterFoodEditDialog(
     val isUnitNameValid = unitName.isNotBlank()
 
     val isValid = isNameValid && isUnitNameValid && isUnitQtyValid && isCaloriesValid
+    val imeAction = if (isValid) ImeAction.Done else ImeAction.Next
 
     fun confirmIfValid() {
         val qty = parsedUnitQty
@@ -101,6 +104,10 @@ fun MasterFoodEditDialog(
         }
     }
 
+    val keyboardActions = KeyboardActions(
+        onDone = { confirmIfValid() }
+    )
+
     val nameInputFocusRequester = remember { FocusRequester() }
 
     LaunchedEffect(foodItem) {
@@ -110,7 +117,15 @@ fun MasterFoodEditDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        modifier = modifier
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+        modifier = (
+            if (isWide) {
+                Modifier.width(800.dp)
+            } else {
+                Modifier.fillMaxSize()
+            }
+        )
+            .then(modifier)
             .testTag("master_food_edit_dialog")
             .onDialogKeyEvents(
                 onConfirm = { confirmIfValid() },
@@ -125,13 +140,20 @@ fun MasterFoodEditDialog(
             )
         },
         text = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(8.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+            Box(
+                modifier = if (isWide) Modifier.fillMaxWidth() else Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
             ) {
+                Column(
+                    modifier = Modifier
+                        .widthIn(max = 600.dp)
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(8.dp)
+                        .imePadding(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
                 // Name (required)
                 OutlinedTextField(
                     value = name,
@@ -140,7 +162,11 @@ fun MasterFoodEditDialog(
                     placeholder = { Text("e.g. Rolled Oats") },
                     singleLine = true,
                     isError = name.isNotEmpty() && !isNameValid,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Words,
+                        imeAction = imeAction
+                    ),
+                    keyboardActions = keyboardActions,
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(nameInputFocusRequester)
@@ -153,7 +179,11 @@ fun MasterFoodEditDialog(
                     label = { Text("Brand (Optional)") },
                     placeholder = { Text("e.g. Quaker") },
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Words,
+                        imeAction = imeAction
+                    ),
+                    keyboardActions = keyboardActions,
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -172,8 +202,9 @@ fun MasterFoodEditDialog(
                         isError = unitQuantityText.text.isNotEmpty() && !isUnitQtyValid,
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Decimal,
-                            imeAction = ImeAction.Next
+                            imeAction = imeAction
                         ),
+                        keyboardActions = keyboardActions,
                         modifier = Modifier.weight(1f)
                     )
 
@@ -185,6 +216,11 @@ fun MasterFoodEditDialog(
                             label = { Text("Unit *") },
                             placeholder = { Text("Cup, oz, g") },
                             singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                capitalization = KeyboardCapitalization.Words,
+                                imeAction = imeAction
+                            ),
+                            keyboardActions = keyboardActions,
                             trailingIcon = {
                                 IconButton(onClick = { unitDropdownExpanded = true }) {
                                     Icon(
@@ -232,12 +268,18 @@ fun MasterFoodEditDialog(
                                 "Portion baseline: ${unitQuantityText.text} $unitName = ${caloriesText.text} kcal",
                                 style = MaterialTheme.typography.bodySmall
                             )
+                        } else {
+                            Text(
+                                "Portion baseline not currently defined",
+                                style = MaterialTheme.typography.bodySmall
+                            )
                         }
                     },
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Decimal,
-                        imeAction = ImeAction.Next
+                        imeAction = imeAction
                     ),
+                    keyboardActions = keyboardActions,
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -247,7 +289,13 @@ fun MasterFoodEditDialog(
                     onValueChange = { description = it },
                     label = { Text("Description (Optional)") },
                     placeholder = { Text("e.g. 100% whole grain, quick-cooking") },
+                    minLines = 3,
                     maxLines = 3,
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Sentences,
+                        imeAction = ImeAction.Default
+                    ),
+                    keyboardActions = keyboardActions,
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -260,14 +308,13 @@ fun MasterFoodEditDialog(
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Number,
-                        imeAction = ImeAction.Done
+                        imeAction = imeAction
                     ),
-                    keyboardActions = KeyboardActions(
-                        onDone = { confirmIfValid() }
-                    ),
+                    keyboardActions = keyboardActions,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
+        }
         },
         confirmButton = {
             TextButton(

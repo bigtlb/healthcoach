@@ -12,11 +12,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import com.lbthomas.healthcoach.core.di.previewAppModule
 import com.lbthomas.healthcoach.core.ui.onDialogKeyEvents
 import com.lbthomas.healthcoach.features.settings.ui.*
@@ -37,6 +39,7 @@ internal enum class SettingsTab(val title: String, val icon: ImageVector) {
 @Composable
 fun SettingsDialog(
     settingsViewModel: SettingsViewModel,
+    isWide: Boolean = false,
     onDismiss: () -> Unit
 ) {
     val settings by settingsViewModel.settings.collectAsState()
@@ -50,9 +53,14 @@ fun SettingsDialog(
 
     BasicAlertDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier
-            .widthIn(min = 600.dp, max = 860.dp)
-            .fillMaxWidth(0.97f)
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+        modifier = (
+            if (isWide) {
+                Modifier.width(800.dp)
+            } else {
+                Modifier.fillMaxSize()
+            }
+        )
             .focusRequester(focusRequester)
             .focusable()
             .testTag("settings_dialog")
@@ -62,9 +70,10 @@ fun SettingsDialog(
             ),
     ) {
         Surface(
-            shape = AlertDialogDefaults.shape,
+            shape = if (isWide) AlertDialogDefaults.shape else RectangleShape,
             color = AlertDialogDefaults.containerColor,
-            tonalElevation = AlertDialogDefaults.TonalElevation
+            tonalElevation = if (isWide) AlertDialogDefaults.TonalElevation else 0.dp,
+            modifier = if (isWide) Modifier else Modifier.fillMaxSize()
         ) {
             BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                 val isCompact = maxWidth < 600.dp
@@ -75,9 +84,13 @@ fun SettingsDialog(
                 val dialogMaxHeight = if (isCompact) 580.dp else 680.dp
 
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = dialogMinHeight, max = dialogMaxHeight)
+                    modifier = if (isWide) {
+                        Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = dialogMinHeight, max = dialogMaxHeight)
+                    } else {
+                        Modifier.fillMaxSize()
+                    }
                 ) {
                     // Header
                     Row(
@@ -150,14 +163,23 @@ fun SettingsDialog(
                             modifier = Modifier
                                 .weight(1f)
                                 .fillMaxHeight()
-                                .padding(horizontal = contentHorizontalPadding, vertical = contentVerticalPadding)
+                                .padding(horizontal = contentHorizontalPadding, vertical = contentVerticalPadding),
+                            contentAlignment = Alignment.TopCenter
                         ) {
-                            when (selectedTab) {
-                                SettingsTab.APPEARANCE -> AppearanceTabContent(settings, settingsViewModel)
-                                SettingsTab.WEIGHT -> WeightTabContent(settings, settingsViewModel)
-                                SettingsTab.BLOOD_PRESSURE -> BloodPressureTabContent(settings, settingsViewModel)
-                                SettingsTab.SYNC -> SyncTabContent(settings, settingsViewModel)
-                                SettingsTab.ABOUT -> AboutTabContent()
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxHeight()
+                                    .widthIn(max = 600.dp)
+                                    .fillMaxWidth(),
+                                contentAlignment = Alignment.TopCenter
+                            ) {
+                                when (selectedTab) {
+                                    SettingsTab.APPEARANCE -> AppearanceTabContent(settings, settingsViewModel)
+                                    SettingsTab.WEIGHT -> WeightTabContent(settings, settingsViewModel)
+                                    SettingsTab.BLOOD_PRESSURE -> BloodPressureTabContent(settings, settingsViewModel)
+                                    SettingsTab.SYNC -> SyncTabContent(settings, settingsViewModel)
+                                    SettingsTab.ABOUT -> AboutTabContent()
+                                }
                             }
                         }
                     }
@@ -182,7 +204,7 @@ fun SettingsDialog(
     }
 }
 
-@Preview
+@Preview(widthDp = 800, heightDp = 700)
 @Composable
 private fun SettingsDialogPreview() {
     KoinApplication(
@@ -191,6 +213,23 @@ private fun SettingsDialogPreview() {
             val settingsViewModel: SettingsViewModel = koinInject()
             SettingsDialog(
                 settingsViewModel = settingsViewModel,
+                isWide = false,
+                onDismiss = {}
+            )
+        }
+    )
+}
+
+@Preview(widthDp = 1050, heightDp = 650)
+@Composable
+private fun SettingsDialogWidePreview() {
+    KoinApplication(
+        configuration = koinConfiguration(declaration = { modules(previewAppModule) }),
+        content = {
+            val settingsViewModel: SettingsViewModel = koinInject()
+            SettingsDialog(
+                settingsViewModel = settingsViewModel,
+                isWide = true,
                 onDismiss = {}
             )
         }

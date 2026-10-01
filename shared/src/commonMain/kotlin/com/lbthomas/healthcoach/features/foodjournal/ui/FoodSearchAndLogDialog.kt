@@ -23,13 +23,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import com.lbthomas.healthcoach.core.enums.MealTime
 import com.lbthomas.healthcoach.core.ui.Tooltip
 import com.lbthomas.healthcoach.core.ui.onDialogKeyEvents
 import com.lbthomas.healthcoach.core.utils.today
 import com.lbthomas.healthcoach.features.foodjournal.FoodJournalViewModel
 import com.lbthomas.healthcoach.features.foodjournal.data.FoodItemData
-import com.lbthomas.healthcoach.features.foodjournal.data.MealEntryData
 import kotlinx.coroutines.yield
 import kotlinx.datetime.LocalDate
 
@@ -37,6 +37,7 @@ import kotlinx.datetime.LocalDate
 @Composable
 fun FoodSearchAndLogDialog(
     viewModel: FoodJournalViewModel,
+    isWide: Boolean = false,
     initialMealTime: MealTime = MealTime.BREAKFAST,
     initialDate: LocalDate = today,
     onDismiss: () -> Unit,
@@ -74,10 +75,16 @@ fun FoodSearchAndLogDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        modifier = modifier
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+        modifier = (
+            if (isWide) {
+                Modifier.width(800.dp)
+            } else {
+                Modifier.fillMaxSize()
+            }
+        )
+            .then(modifier)
             .testTag("food_search_and_log_dialog")
-            .fillMaxWidth(0.97f)
-            .fillMaxHeight(0.92f)
             .onDialogKeyEvents(
                 onConfirm = {},
                 onDismiss = onDismiss
@@ -400,6 +407,7 @@ fun FoodSearchAndLogDialog(
                 updatedAt = 0L
             ),
             availableUnits = availableUnits,
+            isWide = isWide,
             onConfirm = { newItem ->
                 val newId = viewModel.addFoodItem(
                     name = newItem.name,
@@ -424,6 +432,7 @@ fun FoodSearchAndLogDialog(
         MasterFoodEditDialog(
             foodItem = itemToEdit,
             availableUnits = availableUnits,
+            isWide = isWide,
             onConfirm = { updatedItem ->
                 if (updatedItem.id.isEmpty()) {
                     val newId = viewModel.addFoodItem(
@@ -468,6 +477,7 @@ fun FoodSearchAndLogDialog(
             initialDate = initialDate,
             initialMealTime = initialMealTime,
             foodItem = food,
+            isWide = isWide,
             onConfirm = { mealEntry ->
                 viewModel.logMeal(
                     date = mealEntry.date,
@@ -481,6 +491,7 @@ fun FoodSearchAndLogDialog(
                     foodDescription = mealEntry.foodDescription,
                     brand = mealEntry.brand
                 )
+                viewModel.clearSearchQuery()
                 selectedFoodForPortion = null
                 onDismiss()
             },

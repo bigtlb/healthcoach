@@ -51,6 +51,7 @@ fun JournalView(
     if (showSearchAndLogDialog) {
         FoodSearchAndLogDialog(
             viewModel = viewModel,
+            isWide = isWideLayout,
             initialMealTime = targetMealTime,
             initialDate = selectedDate,
             onDismiss = {
@@ -66,6 +67,7 @@ fun JournalView(
             initialDate = entry.date,
             initialMealTime = entry.mealTime,
             existingMealEntry = entry,
+            isWide = isWideLayout,
             onConfirm = { updatedEntry ->
                 viewModel.updateMealEntry(updatedEntry)
                 entryToEdit = null

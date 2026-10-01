@@ -190,6 +190,7 @@ fun App() {
             if (showSettings) {
                 SettingsDialog(
                     settingsViewModel = settingsViewModel,
+                    isWide = isWideLayout,
                     onDismiss = {
                         showSettings = false
                         runCatching { focusRequester.requestFocus() }
