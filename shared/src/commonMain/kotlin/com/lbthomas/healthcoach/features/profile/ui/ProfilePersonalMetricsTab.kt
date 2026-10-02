@@ -23,6 +23,18 @@ import com.lbthomas.healthcoach.features.profile.ProfileViewModel
 import com.lbthomas.healthcoach.features.profile.data.ActivityLevel
 import com.lbthomas.healthcoach.features.profile.data.Gender
 
+sealed interface ProfilePersonalMetricsEvent {
+    data class NameChanged(val name: String) : ProfilePersonalMetricsEvent
+    data class GenderChanged(val gender: Gender) : ProfilePersonalMetricsEvent
+    data object ShowGenderGuide : ProfilePersonalMetricsEvent
+    data class AgeChanged(val age: String) : ProfilePersonalMetricsEvent
+    data class HeightFeetChanged(val feet: String) : ProfilePersonalMetricsEvent
+    data class HeightInchesChanged(val inches: String) : ProfilePersonalMetricsEvent
+    data class HeightCmChanged(val cm: String) : ProfilePersonalMetricsEvent
+    data class WeightChanged(val weight: String) : ProfilePersonalMetricsEvent
+    data class ActivityLevelChanged(val level: ActivityLevel) : ProfilePersonalMetricsEvent
+}
+
 @Composable
 fun ProfilePersonalMetricsTab(
     profileViewModel: ProfileViewModel,
@@ -34,15 +46,19 @@ fun ProfilePersonalMetricsTab(
     ProfilePersonalMetricsTab(
         formState = formState,
         weightUnit = weightUnit,
-        onNameChange = { profileViewModel.onNameChange(it) },
-        onGenderChange = { profileViewModel.onGenderChange(it) },
-        onShowGenderGuide = onShowGenderGuide,
-        onAgeChange = { profileViewModel.onAgeChange(it) },
-        onHeightFeetChange = { profileViewModel.onHeightFeetChange(it) },
-        onHeightInchesChange = { profileViewModel.onHeightInchesChange(it) },
-        onHeightCmChange = { profileViewModel.onHeightCmChange(it) },
-        onWeightChange = { profileViewModel.onWeightChange(it) },
-        onActivityLevelChange = { profileViewModel.onActivityLevelChange(it) },
+        onEvent = { event ->
+            when (event) {
+                is ProfilePersonalMetricsEvent.NameChanged -> profileViewModel.onNameChange(event.name)
+                is ProfilePersonalMetricsEvent.GenderChanged -> profileViewModel.onGenderChange(event.gender)
+                is ProfilePersonalMetricsEvent.ShowGenderGuide -> onShowGenderGuide()
+                is ProfilePersonalMetricsEvent.AgeChanged -> profileViewModel.onAgeChange(event.age)
+                is ProfilePersonalMetricsEvent.HeightFeetChanged -> profileViewModel.onHeightFeetChange(event.feet)
+                is ProfilePersonalMetricsEvent.HeightInchesChanged -> profileViewModel.onHeightInchesChange(event.inches)
+                is ProfilePersonalMetricsEvent.HeightCmChanged -> profileViewModel.onHeightCmChange(event.cm)
+                is ProfilePersonalMetricsEvent.WeightChanged -> profileViewModel.onWeightChange(event.weight)
+                is ProfilePersonalMetricsEvent.ActivityLevelChanged -> profileViewModel.onActivityLevelChange(event.level)
+            }
+        },
         modifier = modifier
     )
 }
@@ -51,15 +67,7 @@ fun ProfilePersonalMetricsTab(
 fun ProfilePersonalMetricsTab(
     formState: ProfileFormState,
     weightUnit: WeightUnit,
-    onNameChange: (String) -> Unit,
-    onGenderChange: (Gender) -> Unit,
-    onShowGenderGuide: () -> Unit,
-    onAgeChange: (String) -> Unit,
-    onHeightFeetChange: (String) -> Unit,
-    onHeightInchesChange: (String) -> Unit,
-    onHeightCmChange: (String) -> Unit,
-    onWeightChange: (String) -> Unit,
-    onActivityLevelChange: (ActivityLevel) -> Unit,
+    onEvent: (ProfilePersonalMetricsEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var activityDropdownExpanded by remember { mutableStateOf(false) }
@@ -71,7 +79,7 @@ fun ProfilePersonalMetricsTab(
         // Name
         OutlinedTextField(
             value = formState.name,
-            onValueChange = onNameChange,
+            onValueChange = { onEvent(ProfilePersonalMetricsEvent.NameChanged(it)) },
             label = { Text("Name / Nickname (Optional)") },
             keyboardOptions = KeyboardOptions(
                 capitalization = KeyboardCapitalization.Words
@@ -92,7 +100,7 @@ fun ProfilePersonalMetricsTab(
                 Gender.entries.forEachIndexed { index, gender ->
                     SegmentedButton(
                         selected = formState.gender == gender,
-                        onClick = { onGenderChange(gender) },
+                        onClick = { onEvent(ProfilePersonalMetricsEvent.GenderChanged(gender)) },
                         shape = SegmentedButtonDefaults.itemShape(
                             index = index,
                             count = Gender.entries.size
@@ -106,7 +114,7 @@ fun ProfilePersonalMetricsTab(
             // Gender & Metabolic Calculations Guide Link
             Row(
                 modifier = Modifier
-                    .clickable { onShowGenderGuide() }
+                    .clickable { onEvent(ProfilePersonalMetricsEvent.ShowGenderGuide) }
                     .padding(vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -134,7 +142,7 @@ fun ProfilePersonalMetricsTab(
             // Age
             OutlinedTextField(
                 value = formState.ageText,
-                onValueChange = onAgeChange,
+                onValueChange = { onEvent(ProfilePersonalMetricsEvent.AgeChanged(it)) },
                 label = { Text("Age (years)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.weight(1f),
@@ -145,7 +153,7 @@ fun ProfilePersonalMetricsTab(
             if (weightUnit == WeightUnit.US) {
                 OutlinedTextField(
                     value = formState.heightFeetText,
-                    onValueChange = onHeightFeetChange,
+                    onValueChange = { onEvent(ProfilePersonalMetricsEvent.HeightFeetChanged(it)) },
                     label = { Text("Height (ft)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.weight(1f),
@@ -153,7 +161,7 @@ fun ProfilePersonalMetricsTab(
                 )
                 OutlinedTextField(
                     value = formState.heightInchesText,
-                    onValueChange = onHeightInchesChange,
+                    onValueChange = { onEvent(ProfilePersonalMetricsEvent.HeightInchesChanged(it)) },
                     label = { Text("Height (in)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.weight(1f),
@@ -162,7 +170,7 @@ fun ProfilePersonalMetricsTab(
             } else {
                 OutlinedTextField(
                     value = formState.heightCmText,
-                    onValueChange = onHeightCmChange,
+                    onValueChange = { onEvent(ProfilePersonalMetricsEvent.HeightCmChanged(it)) },
                     label = { Text("Height (cm)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.weight(2f),
@@ -179,7 +187,7 @@ fun ProfilePersonalMetricsTab(
             // Weight
             OutlinedTextField(
                 value = formState.weightText,
-                onValueChange = onWeightChange,
+                onValueChange = { onEvent(ProfilePersonalMetricsEvent.WeightChanged(it)) },
                 label = { Text("Weight (${if (weightUnit == WeightUnit.US) "lbs" else "kg"})", maxLines=1) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.weight(1f),
@@ -226,7 +234,7 @@ fun ProfilePersonalMetricsTab(
                                 }
                             },
                             onClick = {
-                                onActivityLevelChange(level)
+                                onEvent(ProfilePersonalMetricsEvent.ActivityLevelChanged(level))
                                 activityDropdownExpanded = false
                             }
                         )

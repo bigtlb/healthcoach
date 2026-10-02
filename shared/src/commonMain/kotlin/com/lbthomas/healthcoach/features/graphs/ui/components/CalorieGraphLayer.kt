@@ -24,15 +24,17 @@ internal fun rememberCalorieCartesianLayer(
     globalMinX: Double?,
     globalMaxX: Double?,
     color: Color = MaterialTheme.extendedColors.graphCalories.color,
-    axisPosition: Axis.Position.Vertical? = null
+    axisPosition: Axis.Position.Vertical? = null,
+    yStepMultiple: Double = 50.0
 ): ColumnCartesianLayer {
-    val calorieRangeProvider = remember(globalMinX, globalMaxX) {
+    val calorieRangeProvider = remember(globalMinX, globalMaxX, yStepMultiple) {
         TimeFrameChartRangeProvider(
             forcedMinX = globalMinX,
             forcedMaxX = globalMaxX,
             forcedMinY = 0.0,
             minPadding = 50.0,
-            maxPadding = 100.0
+            maxPadding = 100.0,
+            yStepMultiple = yStepMultiple
         )
     }
 
@@ -114,15 +116,17 @@ internal fun rememberMetabolicCartesianLayer(
     metabolicLines: List<LineCartesianLayer.Line>,
     globalMinX: Double?,
     globalMaxX: Double?,
-    axisPosition: Axis.Position.Vertical? = null
+    axisPosition: Axis.Position.Vertical? = null,
+    yStepMultiple: Double = 50.0
 ): LineCartesianLayer {
-    val calorieRangeProvider = remember(globalMinX, globalMaxX) {
+    val calorieRangeProvider = remember(globalMinX, globalMaxX, yStepMultiple) {
         TimeFrameChartRangeProvider(
             forcedMinX = globalMinX,
             forcedMaxX = globalMaxX,
             forcedMinY = 0.0,
             minPadding = 50.0,
-            maxPadding = 100.0
+            maxPadding = 100.0,
+            yStepMultiple = yStepMultiple
         )
     }
 

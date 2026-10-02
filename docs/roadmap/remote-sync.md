@@ -169,5 +169,5 @@ graph TD
 | **Phase 2: Local & Desktop Cloud Storage** | `LocalFolderAdapter`, `GoogleDriveStorageAdapter` (Desktop PKCE flow), atomic writes. | **Completed** |
 | **Phase 3: 3-Way Snapshot Merge Engine** | Differential delta extraction, `updated_at` LWW conflict resolution, schema gating, concurrency retries. | **Completed** |
 | **Phase 4: Sync UI, Action Button & Feedback** | Modernized Settings Sync tab, animated `SyncActionButton`, failure overlays, cancel modals, toast dispatch. | **Completed** |
-| **Phase 5: Peer-to-Peer LAN Synchronization** | Embedded Ktor server, binary DB streaming, mDNS discovery, PIN pairing, live DB reset, `PeerToPeerStorageAdapter`. | **Active / In Progress** |
-| **Phase 6: Android Google Drive & Future Cloud** | Android native Google Play Services Drive integration, Microsoft OneDrive. | **Upcoming** |
+| **Phase 5: Peer-to-Peer LAN Synchronization** | Embedded Ktor server, binary DB streaming, mDNS discovery, PIN pairing, live DB reset, `PeerToPeerStorageAdapter`. | **Completed** |
+| **Phase 6: Android Google Drive & Future Cloud** | Android native Google Drive integration, Microsoft OneDrive. | **Active / Upcoming** |

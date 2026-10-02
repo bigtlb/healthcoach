@@ -1,6 +1,6 @@
 # Food Journaling (Phase 1 & Future Expansion)
 
-### Status: In Discovery (Detail TBD)
+### Status: Phase 1 Implemented; Future Enhancements In Discovery
 
 ---
 
@@ -10,9 +10,7 @@ Dietary tracking is a fundamental pillar of personal health and weight managemen
 
 ---
 
-## 2. Phase 1: Core Daily Food Logging
-
-*Detail: TBD (Initial Design & Prototyping)*
+## 2. Phase 1: Core Daily Food Logging (Implemented)
 
 ### Key Capabilities:
 * **Daily Consumption Capture**:
@@ -20,11 +18,12 @@ Dietary tracking is a fundamental pillar of personal health and weight managemen
   * Log estimated or measured caloric intake (kcal) for each entry.
   * Categorize entries into standard meal slots: **Breakfast**, **Lunch**, **Dinner**, and **Snacks**.
 * **Search & Past Entry Reuse**:
-  * Search previous entries to quickly re-add frequent meals and items without re-typing descriptions or caloric values.
-  * Recent and favorite item shortcuts for rapid single-click logging.
+  * Search previous entries and master catalog to quickly re-add frequent meals and items without re-typing descriptions or caloric values.
+  * Recent and frequent item shortcuts for rapid single-click logging.
+  * In-line master food creator and custom portion calculator.
 * **Daily Aggregates & Insights**:
-  * Real-time calculation of total daily caloric intake against user-configured targets.
-  * Historical timeline view showing calorie consumption trends overlaid with weight progression charts.
+  * Real-time calculation of total daily caloric intake against user-configured maintenance baseline and goal targets.
+  * Historical timeline view showing calorie consumption trends overlaid with weight progression and blood pressure charts.
 
 ---
 

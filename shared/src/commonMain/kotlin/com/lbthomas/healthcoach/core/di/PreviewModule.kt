@@ -2,7 +2,7 @@ package com.lbthomas.healthcoach.core.di
 
 
 import com.lbthomas.healthcoach.core.enums.MealTime
-import com.lbthomas.healthcoach.features.bloodpressure.BloodPressureViewModel
+import com.lbthomas.healthcoach.features.bloodpressure.ui.BloodPressureViewModel
 import com.lbthomas.healthcoach.features.bloodpressure.data.BloodPressureEntryData
 import com.lbthomas.healthcoach.features.foodjournal.FoodJournalViewModel
 import com.lbthomas.healthcoach.features.foodjournal.data.DailyMealSummaryData

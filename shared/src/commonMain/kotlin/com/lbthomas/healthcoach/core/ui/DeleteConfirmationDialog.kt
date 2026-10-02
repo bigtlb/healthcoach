@@ -1,5 +1,6 @@
-package com.lbthomas.healthcoach.features.foodjournal.ui
+package com.lbthomas.healthcoach.core.ui
 
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -9,27 +10,41 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.lbthomas.healthcoach.core.ui.onDialogKeyEvents
+import kotlinx.coroutines.yield
 
 @Composable
 fun DeleteConfirmationDialog(
-    title: String,
+    title: String = "Delete Entry",
     message: String,
     note: String? = null,
-    confirmButtonText: String = "Delete",
+    confirmButtonText: String = "OK",
+    testTag: String = "delete_confirmation_dialog",
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val focusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        yield()
+        focusRequester.requestFocus()
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         modifier = modifier
-            .testTag("delete_confirmation_dialog")
+            .focusRequester(focusRequester)
+            .focusable()
+            .testTag(testTag)
             .onDialogKeyEvents(
                 onConfirm = onConfirm,
                 onDismiss = onDismiss
@@ -80,26 +95,24 @@ fun DeleteConfirmationDialog(
     )
 }
 
-@Preview(name = "Delete Confirmation - Master Food (with Note)")
+@Preview(name = "Delete Confirmation - Simple")
 @Composable
-fun DeleteConfirmationDialogMasterFoodPreview() {
+private fun DeleteConfirmationDialogPreview() {
     DeleteConfirmationDialog(
-        title = "Delete Master Food Item",
-        message = "Are you sure you want to delete \"Rolled Oats\" from your food library?",
-        note = "Note: Historical meal entries previously logged using this food will remain preserved.",
-        confirmButtonText = "Delete",
+        title = "Delete Entry",
+        message = "Are you sure you want to delete this entry?",
         onConfirm = {},
         onDismiss = {}
     )
 }
 
-@Preview(name = "Delete Confirmation - Meal Entry (Simple)")
+@Preview(name = "Delete Confirmation - With Note")
 @Composable
-fun DeleteConfirmationDialogMealEntryPreview() {
+private fun DeleteConfirmationDialogWithNotePreview() {
     DeleteConfirmationDialog(
-        title = "Delete Meal Entry",
-        message = "Are you sure you want to delete this logged breakfast entry?",
-        note = null,
+        title = "Delete Master Food Item",
+        message = "Are you sure you want to delete \"Rolled Oats\" from your food library?",
+        note = "Note: Historical meal entries previously logged using this food will remain preserved.",
         confirmButtonText = "Delete",
         onConfirm = {},
         onDismiss = {}

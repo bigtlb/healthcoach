@@ -7,7 +7,7 @@ import com.lbthomas.healthcoach.core.database.DriverFactory
 import com.lbthomas.healthcoach.core.database.createDatabaseForDriver
 import com.lbthomas.healthcoach.core.sync.SyncEngine
 import com.lbthomas.healthcoach.core.sync.p2p.PeerServerManager
-import com.lbthomas.healthcoach.features.bloodpressure.BloodPressureViewModel
+import com.lbthomas.healthcoach.features.bloodpressure.ui.BloodPressureViewModel
 import com.lbthomas.healthcoach.features.bloodpressure.data.BloodPressureRepository
 import com.lbthomas.healthcoach.features.foodjournal.FoodJournalViewModel
 import com.lbthomas.healthcoach.features.foodjournal.data.FoodJournalRepository

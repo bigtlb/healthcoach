@@ -8,7 +8,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.lbthomas.healthcoach.core.di.previewAppModuleWith
 import com.lbthomas.healthcoach.core.theme.HealthCoachTheme
-import com.lbthomas.healthcoach.features.bloodpressure.BloodPressureViewModel
+import com.lbthomas.healthcoach.features.bloodpressure.ui.BloodPressureViewModel
 import com.lbthomas.healthcoach.features.foodjournal.FoodJournalViewModel
 import com.lbthomas.healthcoach.features.graphs.data.buildBpGraphEntries
 import com.lbthomas.healthcoach.features.graphs.data.buildCalorieGraphEntries
@@ -21,14 +21,11 @@ import com.lbthomas.healthcoach.features.settings.SettingsViewModel
 import com.lbthomas.healthcoach.features.settings.data.BloodPressureSettings
 import com.lbthomas.healthcoach.features.settings.data.FoodJournalSettings
 import com.lbthomas.healthcoach.features.settings.data.SettingsData
-import com.lbthomas.healthcoach.features.settings.data.SettingsStore
 import com.lbthomas.healthcoach.features.settings.data.WeightSettings
 import com.lbthomas.healthcoach.features.weight.WeightViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
 import org.koin.compose.KoinApplication
 import org.koin.compose.koinInject
 import org.koin.dsl.koinConfiguration
-import org.koin.dsl.module
 
 @Composable
 fun GraphsView(

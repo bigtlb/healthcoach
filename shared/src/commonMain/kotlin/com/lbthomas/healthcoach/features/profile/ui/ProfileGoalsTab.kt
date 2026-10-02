@@ -18,6 +18,15 @@ import com.lbthomas.healthcoach.features.profile.GoalInputMode
 import com.lbthomas.healthcoach.features.profile.ProfileFormState
 import com.lbthomas.healthcoach.features.profile.ProfileViewModel
 
+sealed interface ProfileGoalsEvent {
+    data class TargetWeightChanged(val targetWeight: String) : ProfileGoalsEvent
+    data class GoalInputModeChanged(val mode: GoalInputMode) : ProfileGoalsEvent
+    data class WeeklyRateChanged(val rate: Double, val unit: WeightUnit) : ProfileGoalsEvent
+    data class PresetRateSelected(val rate: Double, val unit: WeightUnit) : ProfileGoalsEvent
+    data class TargetWeeksChanged(val weeks: String, val unit: WeightUnit) : ProfileGoalsEvent
+    data class TargetCalorieDeltaChanged(val delta: String) : ProfileGoalsEvent
+}
+
 @Composable
 fun ProfileGoalsTab(
     profileViewModel: ProfileViewModel,
@@ -28,12 +37,16 @@ fun ProfileGoalsTab(
     ProfileGoalsTab(
         formState = formState,
         weightUnit = weightUnit,
-        onTargetWeightChange = { profileViewModel.onTargetWeightChange(it) },
-        onGoalInputModeChange = { profileViewModel.onGoalInputModeChange(it) },
-        onWeeklyRateChange = { rate, unit -> profileViewModel.onWeeklyRateChange(rate, unit) },
-        onPresetRateSelected = { rate, unit -> profileViewModel.onPresetRateSelected(rate, unit) },
-        onTargetWeeksChange = { weeks, unit -> profileViewModel.onTargetWeeksChange(weeks, unit) },
-        onTargetCalorieDeltaChange = { profileViewModel.onTargetCalorieDeltaChange(it) },
+        onEvent = { event ->
+            when (event) {
+                is ProfileGoalsEvent.TargetWeightChanged -> profileViewModel.onTargetWeightChange(event.targetWeight)
+                is ProfileGoalsEvent.GoalInputModeChanged -> profileViewModel.onGoalInputModeChange(event.mode)
+                is ProfileGoalsEvent.WeeklyRateChanged -> profileViewModel.onWeeklyRateChange(event.rate, event.unit)
+                is ProfileGoalsEvent.PresetRateSelected -> profileViewModel.onPresetRateSelected(event.rate, event.unit)
+                is ProfileGoalsEvent.TargetWeeksChanged -> profileViewModel.onTargetWeeksChange(event.weeks, event.unit)
+                is ProfileGoalsEvent.TargetCalorieDeltaChanged -> profileViewModel.onTargetCalorieDeltaChange(event.delta)
+            }
+        },
         modifier = modifier
     )
 }
@@ -42,12 +55,7 @@ fun ProfileGoalsTab(
 fun ProfileGoalsTab(
     formState: ProfileFormState,
     weightUnit: WeightUnit,
-    onTargetWeightChange: (String) -> Unit,
-    onGoalInputModeChange: (GoalInputMode) -> Unit,
-    onWeeklyRateChange: (Double, WeightUnit) -> Unit,
-    onPresetRateSelected: (Double, WeightUnit) -> Unit,
-    onTargetWeeksChange: (String, WeightUnit) -> Unit,
-    onTargetCalorieDeltaChange: (String) -> Unit,
+    onEvent: (ProfileGoalsEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -57,7 +65,7 @@ fun ProfileGoalsTab(
         // Target Weight Field
         OutlinedTextField(
             value = formState.targetWeightText,
-            onValueChange = onTargetWeightChange,
+            onValueChange = { onEvent(ProfileGoalsEvent.TargetWeightChanged(it)) },
             label = { Text("Target Weight (${if (weightUnit == WeightUnit.US) "lbs" else "kg"}) (Optional)") },
             placeholder = { Text("e.g. ${if (weightUnit == WeightUnit.US) "165" else "75"}") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -77,7 +85,7 @@ fun ProfileGoalsTab(
                 GoalInputMode.entries.forEachIndexed { index, mode ->
                     SegmentedButton(
                         selected = formState.goalInputMode == mode,
-                        onClick = { onGoalInputModeChange(mode) },
+                        onClick = { onEvent(ProfileGoalsEvent.GoalInputModeChanged(mode)) },
                         shape = SegmentedButtonDefaults.itemShape(
                             index = index,
                             count = GoalInputMode.entries.size
@@ -95,22 +103,22 @@ fun ProfileGoalsTab(
                 RateGoalControls(
                     formState = formState,
                     weightUnit = weightUnit,
-                    onWeeklyRateChange = onWeeklyRateChange,
-                    onPresetRateSelected = onPresetRateSelected
+                    onWeeklyRateChange = { rate, unit -> onEvent(ProfileGoalsEvent.WeeklyRateChanged(rate, unit)) },
+                    onPresetRateSelected = { rate, unit -> onEvent(ProfileGoalsEvent.PresetRateSelected(rate, unit)) }
                 )
             }
             GoalInputMode.TIMELINE -> {
                 TimelineGoalControls(
                     formState = formState,
                     weightUnit = weightUnit,
-                    onTargetWeeksChange = onTargetWeeksChange
+                    onTargetWeeksChange = { weeks, unit -> onEvent(ProfileGoalsEvent.TargetWeeksChanged(weeks, unit)) }
                 )
             }
             GoalInputMode.MANUAL -> {
                 ManualDeltaGoalControls(
                     formState = formState,
                     weightUnit = weightUnit,
-                    onTargetCalorieDeltaChange = onTargetCalorieDeltaChange
+                    onTargetCalorieDeltaChange = { onEvent(ProfileGoalsEvent.TargetCalorieDeltaChanged(it)) }
                 )
             }
         }

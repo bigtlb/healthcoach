@@ -5,105 +5,131 @@
 [![SQLite](https://img.shields.io/badge/Database-SqlDelight_SQLite-003B57?logo=sqlite&logoColor=white)](https://cashapp.github.io/sqldelight/)
 [![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
 
-**HealthCoach** is a modern, local-first personal health tracking desktop and mobile application built with **Kotlin Multiplatform (KMP)** and **Compose Multiplatform**. It empowers users to monitor vital health indicators—such as body weight, blood pressure, and pulse—with actionable analytics, AHA guideline integration, compound multi-axis charts, and customizable Material 3 themes.
+**HealthCoach** is a modern, local-first personal health management and analytics application built with **Kotlin Multiplatform (KMP)** and **Compose Multiplatform**. Designed to maximize user empowerment, health insight, and day-to-day tracking efficiency, HealthCoach gives you total control over your health metrics—including body weight, blood pressure, pulse, daily nutrition, and metabolic targets—backed by robust analytics, AHA clinical classifications, compound multi-axis charts, and seamless cross-device synchronization.
 
 ---
 
-## 📸 Screenshots & UI Showcase
+## 🔒 User Data Sovereignty & Absolute Privacy
 
-| Weight Tracking & Analytics | Blood Pressure & AHA Categories |
-| :---: | :---: |
-| ![Weight Tracking](docs/images/weight-tracking-lbs-preview.png) <br />![Weight Tracking](docs/images/weight-tracking-kgs-preview.png) | ![Blood Pressure Tracking](docs/images/blood-pressure-preview.png) |
+HealthCoach is engineered from the ground up around **complete user data sovereignty**:
 
-| Compound Multi-Axis Graphs | Tabbed Settings & Themes |
-| :---: | :---: |
-| ![Compound Health Graphs](docs/images/compound-graphs-adaptive-preview.png) <br /> ![Compound Health Graphs](docs/images/compound-graphs-preview.png) | ![Tabbed Settings](docs/images/tabbed-settings.png) <br /> ![Tabbed Settings](docs/images/tabbed-settings-weight.png) |
+* **100% Local-First Storage**: Your health information is stored in an embedded SQLite database (`healthcoach.db`) on your physical device.
+* **Zero Telemetry & Zero Analytics**: No tracking pixels, no telemetry hooks, no diagnostics reporting, and no background communication with any developer or analytics servers.
+* **No Third-Party Intermediaries**: Your personal records are never sent, sold, scanned, or uploaded to any third party or centralized cloud server.
+* **Explicit User-Controlled Sync**: Data only leaves your device when you explicitly configure and initiate synchronization. It is transmitted solely to storage endpoints you own and control:
+  * **Local / Mounted Folders**: Personal local folders, USB storage, or directories synchronized by your personal cloud clients (Proton Drive, OneDrive, Dropbox).
+  * **Google Drive Application Sandbox**: An isolated, private partition (`appDataFolder`) accessible only by your authenticated Google account, invisible to standard Drive file listings.
+  * **Peer-to-Peer LAN Streaming**: Direct, local Wi-Fi synchronization between your devices over a PIN-authenticated and paired connection without touching the public internet.
 
 ---
 
-## ✨ Key Features
+## 📸 Visual Showcase & Feature Gallery
 
-### ⚖️ Weight Tracking & History
-* **Effortless Logging**: Quickly record weight entries in either Imperial (`lbs`) or Metric (`kg`) units.
-* **Chronological Grouping**: Entries are grouped by Month and Year with Day-of-Week badges for intuitive timeline navigation.
-* **Delta Comparison Indicators**: Visual change indicators highlighting differences between consecutive weigh-ins (weight loss in green, gain in red, neutral in blue).
-* **Monthly Summaries**: Header statistics calculating net weight change per calendar month.
-* **Full CRUD Management**: In-line editing, updating, and safe deletion with confirmation modals.
+HealthCoach provides a tailored user experience across both desktop workstations and mobile devices:
+
+| Desktop Experience (Adaptive Dual-Pane Split View) | Mobile Experience (Touch-Optimized Single Pane) |
+| :---: | :---: |
+| [<img src="docs/images/theming-desktop.png" alt="HealthCoach Desktop Showcase" height="200" />](docs/images/theming-desktop.png) | [<img src="docs/images/theming-mobile.png" alt="HealthCoach Mobile Showcase" height="200" />](docs/images/theming-mobile.png) |
+| *Side-by-side data tables and live charts with custom themes* | *Responsive navigation and touch-first logging workflows* |
+
+👉 **[Explore the Complete Visual Feature Gallery (24 Screenshots across Desktop & Mobile)](docs/GALLERY.md)**
+
+*(Detailed visual walkthrough covering Weight Analytics, Blood Pressure classifications, Food Journaling & Portion Scaling, Metabolic Profiling, Multi-Axis Compound Graphs, and P2P Wi-Fi Sync.)*
+
+---
+
+## ✨ Key Capabilities & Features
+
+### ⚖️ Weight Tracking & Analytics
+* **Fast, Frictionless Logging**: Record body weight in Imperial (`lbs`) or Metric (`kg`) with instantaneous unit conversion.
+* **Chronological Grouping**: Entries structured by Month and Year with Day-of-Week badges for swift navigation across long histories.
+* **Visual Delta Indicators**: Clear color-coded change badges between consecutive weigh-ins (loss in green, gain in red, neutral in blue) to immediately highlight progression trends.
+* **Monthly Aggregates**: Header statistics calculating net weight change and overall trajectory per calendar month.
+* **Full CRUD Operations**: In-line editing, timestamp adjustments, and safe deletion guarded by confirmation dialogs.
 
 ### 🩺 Blood Pressure & Pulse Management
-* **Tri-Metric Logging**: Track **Systolic** (mmHg), **Diastolic** (mmHg), and optional **Pulse** (bpm) in a single flow.
-* **Flexible Date/Time Recording**: Support for date-only entries as well as precise localized time capture (persisted in RFC 3339 Zulu UTC format).
-* **Live AHA Category Classification**: Entries are automatically classified according to current [American Heart Association Guidelines](https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings):
+* **Tri-Metric Precision**: Capture **Systolic** (mmHg), **Diastolic** (mmHg), and optional **Pulse** (bpm) in a unified, streamlined interface.
+* **Flexible Date/Time Capture**: Log date-only entries or exact localized timestamps (persisted in standard RFC 3339 UTC format).
+* **Live AHA Guideline Classification**: Automatic categorization according to official [American Heart Association Guidelines](https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings):
   * 🟢 **Normal**: Systolic < 120 and Diastolic < 80
   * 🟡 **Elevated**: Systolic 120–129 and Diastolic < 80
   * 🟠 **Stage 1 Hypertension**: Systolic 130–139 or Diastolic 80–89
   * 🔴 **Stage 2 Hypertension**: Systolic ≥ 140 or Diastolic ≥ 90
   * 🚨 **Hypertensive Crisis**: Systolic > 180 and/or Diastolic > 120
-* **Interactive Category Tooltips**: Hover tooltips explaining the clinical criteria for each classification.
-* **Guideline Reference**: Integrated footer link directly accessing the official AHA High Blood Pressure Guide.
+* **Interactive Diagnostic Tooltips**: Contextual tooltips explaining clinical thresholds for each reading category.
+* **Integrated Medical Reference**: Quick-access link directly to the official AHA High Blood Pressure Guide.
 
-### 📈 Compound Health Graphs
-* **Dual-Axis Visualization**: Multi-layered time-series charts powered by [Vico](https://github.com/patrykandpatrick/vico).
-* **Decoupled Scaling**: Independent Y-axis scaling for Weight (Start/Left Axis) and Blood Pressure/Pulse (End/Right Axis), ensuring neither dataset compresses or distorts the other.
-* **Configurable Series**: Toggle individual chart series on the fly:
+### 🥗 Food Journaling & Caloric Tracking
+* **Daily Meal Breakdown**: Log meals organized into **Breakfast**, **Lunch**, **Dinner**, and **Snacks**.
+* **Master Food Library**: Maintain a personalized catalog of foods with standard serving sizes, unit measures, and caloric densities.
+* **Rapid Entry & Reuse**: Instantly re-log items from **Recent Foods** or **Frequent Foods** lists with single-click additions.
+* **Dynamic Portion Calculator**: Adjust serving quantities and units with automatic real-time calorie recalculation.
+* **Real-Time Caloric Summaries**: Daily overview cards displaying total consumed calories versus maintenance baseline and goal targets.
+
+### 👤 User Profile & Metabolic Goals
+* **Metabolic Baseline Estimation**: Automatically calculate Basal Metabolic Rate (**BMR**) and Total Daily Energy Expenditure (**TDEE**) using the validated **Mifflin-St Jeor formula**.
+* **Personalized Goal Modes**: Configure caloric deficit or surplus targets using **Rate Goals** (e.g., lose 1 lb/week), **Timeline Goals** (target weight by target date), or **Direct Manual Calorie Adjustments**.
+* **Goal Trajectory Projections**: Clear visual projections comparing expected weight loss/gain timelines against actual progress.
+
+### 📈 Compound Multi-Axis Graphs
+* **Decoupled Multi-Layer Visualization**: Built on [Vico](https://github.com/patrykandpatrick/vico) with independent scaling for Weight (Left Axis), Blood Pressure/Pulse (Right Axis), and Calories (Background/Left Axis).
+* **Intelligent Graduation Stepping**: Quantized Y-axis graduation intervals strictly divisible by 5 (for Weight and Blood Pressure) and 50 (for Calories), dynamically adapting step sizes (e.g., 5, 10, 15, 20, 25, 30, 50) to prevent visual crowding.
+* **Adaptive Long-Term Timeframes**: Smart bottom axis date formatting that transitions from daily/monthly labels to condensed `YY/MM` (e.g., `26/01`) across multi-year spans to maximize temporal clarity.
+* **Flexible Layer Toggles**: Turn individual series on or off dynamically:
   * 🔵 **Weight** (`lbs` / `kg`)
   * 🟠 **Systolic Pressure** (`mmHg`)
   * 🟢 **Diastolic Pressure** (`mmHg`)
   * 🟣 **Pulse** (`bpm`)
-* **Dynamic Time Frames**: Filter charts across **All Time**, **3 Years**, **1 Year**, **6 Months**, **3 Months**, **1 Month**, **2 Weeks**, **1 Week**, or **3 Days**.
-* **Interactive Tooltips & Legend**: Hover markers showing exact date and metric values along with a color-coded legend.
+  * 🟡 **Calorie Intake** (`kcal`)
+  * ⚪ **Maintenance & Target Calorie Lines**
+* **Mobile Touch & Desktop Hover Markers**: Interactive tooltips and data point inspection via hover on desktop and drag/touch on mobile devices.
 
-### 🎨 Theming & Typography
-* **4 Curated Material 3 Themes**:
-  * **Default Theme**: Burgundy / Rose palette
-  * **Blue Theme**: Indigo / Navy palette
-  * **Green Theme**: Forest / Olive palette
-  * **Teal Theme**: Cyan / Teal palette
-* **Theme Modes**: Full support for **Light**, **Dark**, and **System Default** modes.
-* **Typography**: Embedded Google Fonts bundled cross-platform—**Outfit** for headlines/titles and **Inter** for body text and labels.
+### 🔄 Multi-Device Synchronization & Networking
+* **3-Way Differential Merge Engine**: Robust reconciliation algorithm (`BASE`, `LOCAL`, `REMOTE`) with UUID keys and `updated_at` last-write-wins conflict resolution, guaranteeing zero data loss across concurrent edits.
+* **SQLite Schema Compatibility Gating**: Pre-sync validation via SQLite `PRAGMA user_version` protecting databases from schema mismatch corruption.
+* **Multiple Storage Targets**:
+  * **Local Folder & Mounted Drives**: Direct sync to local directories, USB keys, or desktop cloud mounts (Proton Drive, OneDrive, Dropbox).
+  * **Google Drive (`appDataFolder`)**: PKCE OAuth 2.0 desktop synchronization directly with Google Drive's isolated application storage.
+  * **Peer-to-Peer LAN Synchronization**: Symmetric embedded Ktor server/client enabling direct Wi-Fi sync between Desktop and Android devices with mDNS zero-configuration discovery and PIN-authenticated pairing.
+* **Audit Metadata & Live UI Indicators**: Animated top-bar sync button, error badge overlays, sync history timestamps, and toast notifications on remote connection.
 
-### 🖥️ Adaptive Layout & Split-Pane Mode
-* **Adaptive Dual-Pane Display**: On wide screens / desktop displays, view the data entry list on the left and the real-time compound graph on the right simultaneously.
-* **Adjustable Splitter**: Smoothly adjust the divider width between views with persisted positioning.
-* **Responsive Single-View**: Automatically collapses into a single-pane tabbed view on compact displays and mobile targets.
+### 🎨 Theming, Layout & Accessibility
+* **Adaptive Dual-Pane Split View**: On desktop and wide screens, view logs and live compound charts side-by-side with an adjustable, persistent splitter.
+* **Responsive Single-Pane View**: Seamlessly condenses into an intuitive single-pane navigation flow on compact mobile devices.
+* **4 Material 3 Palettes**: Default (Burgundy/Rose), Blue (Indigo/Navy), Green (Forest/Olive), and Teal (Cyan/Teal).
+* **Theme Modes**: Full support for Light, Dark, and System Default appearance.
+* **High-Legibility Typography**: Embedded Google Fonts bundled natively cross-platform—**Outfit** for headlines/titles and **Inter** for data grids and metrics.
 
 ### ⌨️ Desktop Keyboard Shortcuts
 | Shortcut | Action |
 | :--- | :--- |
-| `Ctrl + W` | Navigate to **Weight** view |
-| `Ctrl + B` | Navigate to **Blood Pressure** view |
-| `Ctrl + G` | Navigate to **Graphs** view |
-| `Ctrl + N` | Open **Add Entry** dialog for current feature |
-| `Ctrl + S` | Open **Settings** dialog |
+| `Ctrl + W` | Open **Weight** view |
+| `Ctrl + B` | Open **Blood Pressure** view |
+| `Ctrl + J` | Open **Food Journal** view |
+| `Ctrl + G` | Open **Compound Graphs** view |
+| `Ctrl + P` | Open **Profile & Goals** dialog |
+| `Ctrl + N` | Open **Add Entry** dialog for current view |
+| `Ctrl + S` | Open **Settings & Sync** dialog |
 | `Ctrl + Q` | Quit application |
 
 ---
 
-## 💾 Data Storage & Privacy
+## 💾 Local Data Storage & Platform Paths
 
-HealthCoach is **100% local-first and private**. No data is sent to external servers, cloud services, or telemetry endpoints. All personal health data and settings reside entirely on your local filesystem.
+All data is structured for high reliability, zero data corruption, and easy backups:
 
-### 1. Database Storage (`healthcoach.db`)
-* **Engine**: Embedded **SQLite** database managed via **SqlDelight**.
-* **Integrity & Migrations**: Schema evolution is strictly managed through versioned SQL migration scripts (`sqldelight/migrations`).
-* **Tables**:
-  * `weight_entry`: Stores chronological weight records and date values.
-  * `blood_pressure_entry`: Stores systolic, diastolic, pulse, and timestamp records.
+1. **Database (`healthcoach.db`)**: Embedded SQLite database managed with **SqlDelight**, featuring automated migration scripts for safe schema evolution.
+2. **Configuration (`settings.json`)**: Human-readable, pretty-printed JSON storing user preferences, theme selections, active sync configurations, and display toggles.
 
-### 2. Configuration & Preferences (`settings.json`)
-* **Format**: Human-readable, pretty-printed JSON powered by **Kotlinx.Serialization**.
-* **Persisted Options**: Active theme, theme mode (light/dark/system), weight unit (`LBS`/`KG`), adaptive split-pane state, graph series visibility toggles, and time-frame preferences.
-
-### 📂 File Storage Locations by Operating System
-
-| Platform | Database Path (`healthcoach.db`) | Settings Path (`settings.json`) |
+### Standard File Storage Paths
+| Platform | Database Location (`healthcoach.db`) | Preferences Location (`settings.json`) |
 | :--- | :--- | :--- |
 | **Linux** | `~/.local/share/healthcoach/healthcoach.db` | `~/.local/share/healthcoach/settings.json` |
-| **macOS** | `~/Library/Application Support/healthcoach/healthcoach.db` | `~/Library/Application Support/healthcoach/settings.json` |
 | **Windows** | `%LOCALAPPDATA%\healthcoach\healthcoach.db` | `%LOCALAPPDATA%\healthcoach\settings.json` |
+| **macOS** | `~/Library/Application Support/healthcoach/healthcoach.db` | `~/Library/Application Support/healthcoach/settings.json` |
 | **Android** | `/data/data/com.lbthomas.healthcoach/databases/healthcoach.db` | `/data/data/com.lbthomas.healthcoach/files/settings.json` |
 
-*Note: On Linux, if `$XDG_DATA_HOME` is set in your environment, the directory defaults to `$XDG_DATA_HOME/healthcoach/`.*
+*Note: On Linux, `$XDG_DATA_HOME/healthcoach/` is respected when set in your environment.*
 
 ---
 
@@ -111,19 +137,21 @@ HealthCoach is **100% local-first and private**. No data is sent to external ser
 
 ```
 HealthCoach/
-├── androidApp/               # Android platform entrypoint & manifest
-├── desktopApp/               # Desktop JVM launcher & packaging configuration
-└── shared/                   # Shared Multiplatform Kotlin module
-    ├── commonMain/           # UI (Compose), ViewModels, Repositories, Domain models, DB schema
-    ├── jvmMain/              # JVM JDBC driver factory & platform settings injection
-    └── androidMain/          # Android SQLite driver factory & context bindings
+├── androidApp/               # Android entrypoint, manifests & platform bindings
+├── desktopApp/               # Desktop JVM launcher & native packaging configs
+└── shared/                   # Shared Multiplatform Kotlin codebase
+    ├── commonMain/           # UI (Compose), ViewModels, Repositories, Domain models, Sync engine
+    ├── jvmMain/              # JVM JDBC driver factory, JmDNS discovery, PKCE auth server
+    └── androidMain/          # Android SQLite driver factory, NsdManager discovery, Android context
 ```
 
-* **UI Toolkit**: [Compose Multiplatform](https://www.jetbrains.com/lp/compose-multiplatform/) (Material 3)
+* **Core Language & Framework**: [Kotlin Multiplatform](https://kotlinlang.org/docs/multiplatform.html) & [Compose Multiplatform](https://www.jetbrains.com/lp/compose-multiplatform/) (Material 3)
 * **Dependency Injection**: [Koin](https://insert-koin.io/)
-* **Database**: [SqlDelight](https://cashapp.github.io/sqldelight/) with SQLite
-* **Charting Engine**: [Vico](https://github.com/patrykandpatrick/vico)
-* **Serialization & Async**: `kotlinx.serialization`, `kotlinx.coroutines`, `kotlinx.datetime`
+* **Database & Persistence**: [SqlDelight](https://cashapp.github.io/sqldelight/) with SQLite
+* **Data Visualization**: [Vico](https://github.com/patrykandpatrick/vico) Multiplatform Charting
+* **Networking & LAN Server**: [Ktor](https://ktor.io/) Client and Embedded CIO Server
+* **Discovery & Networking**: JmDNS (Desktop) & Android `NsdManager` (mDNS / DNS-SD)
+* **Concurrency & Time**: `kotlinx.coroutines`, `kotlinx.serialization`, `kotlinx.datetime`
 
 ---
 
@@ -131,14 +159,14 @@ HealthCoach/
 
 ### Prerequisites
 * **JDK 17** or higher
-* **Android SDK** (optional, only required when building the Android target)
+* **Android SDK** (API Level 34+; required only when building Android target)
 
 ### Desktop Application
-* **Run application**:
+* **Launch desktop application**:
   ```bash
   ./gradlew :desktopApp:run
   ```
-* **Hot reload (live development)**:
+* **Hot reload development**:
   ```bash
   ./gradlew :desktopApp:hotRun --auto
   ```
@@ -152,13 +180,17 @@ HealthCoach/
   ```bash
   ./gradlew :androidApp:assembleDebug
   ```
+* **Install to connected device/emulator**:
+  ```bash
+  ./gradlew :androidApp:installDebug
+  ```
 
-### Running Tests
-* **Execute all unit & shared tests**:
+### Running Test Suite
+* **Run shared Multiplatform unit tests**:
   ```bash
   ./gradlew :shared:jvmTest
   ```
-* **Execute full test suite**:
+* **Run all project tests**:
   ```bash
   ./gradlew test
   ```
@@ -167,7 +199,7 @@ HealthCoach/
 
 ## 👤 Author & Attribution
 
-* **Application**: HealthCoach (v0.9.0)
+* **Application**: HealthCoach
 * **Author**: Thomas Baker
 * **Repository**: [https://github.com/bigtlb/healthcoach](https://github.com/bigtlb/healthcoach)
 
@@ -175,5 +207,5 @@ HealthCoach/
 
 ## 📄 License & Third-Party Credits
 
-* **Application License**: This project is licensed under the Apache License, Version 2.0. See the [LICENSE](LICENSE) file for the full license text.
-* **Open Source Attributions**: HealthCoach incorporates open-source libraries, components, and font assets. See [OPEN_SOURCE_LICENSES.txt](OPEN_SOURCE_LICENSES.txt) for comprehensive third-party notices, copyright statements, and complete license texts.
+* **Application License**: Licensed under the Apache License, Version 2.0. See the [LICENSE](LICENSE) file for terms.
+* **Third-Party Notices**: HealthCoach incorporates open-source libraries and fonts. Detailed attributions and license texts are provided in [OPEN_SOURCE_LICENSES.txt](OPEN_SOURCE_LICENSES.txt).

@@ -9,11 +9,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.lbthomas.healthcoach.core.di.previewAppModule
+import com.lbthomas.healthcoach.core.ui.DeleteConfirmationDialog
 import com.lbthomas.healthcoach.core.utils.today
 import com.lbthomas.healthcoach.features.settings.SettingsViewModel
 import com.lbthomas.healthcoach.features.weight.data.WeightEntryData
 import com.lbthomas.healthcoach.features.weight.ui.AddWeightEntryButton
-import com.lbthomas.healthcoach.features.weight.ui.DeleteConfirmation
 import com.lbthomas.healthcoach.features.weight.ui.WeightEntryEditDialog
 import com.lbthomas.healthcoach.features.weight.ui.WeightEntryList
 import org.koin.compose.KoinApplication
@@ -42,8 +42,10 @@ fun WeightView(
     }
 
     entryToDelete?.let { entry ->
-        DeleteConfirmation(
-            entry = entry,
+        DeleteConfirmationDialog(
+            title = "Delete Entry",
+            message = "Are you sure you want to delete the weight entry for ${entry.date}?",
+            testTag = "delete_confirmation_dialog",
             onConfirm = {
                 viewModel.deleteEntry(entry.id)
                 entryToDelete = null

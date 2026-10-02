@@ -44,7 +44,7 @@ fun SettingsDialog(
 ) {
     val settings by settingsViewModel.settings.collectAsState()
     val focusRequester = remember { FocusRequester() }
-    var selectedTab by remember { mutableStateOf(SettingsTab.APPEARANCE) }
+    var selectedTab by remember { mutableStateOf(SettingsTab.ABOUT) }
 
     LaunchedEffect(Unit) {
         yield()
@@ -80,8 +80,8 @@ fun SettingsDialog(
                 val sidebarWidth = if (isCompact) 68.dp else 88.dp
                 val contentHorizontalPadding = if (isCompact) 12.dp else 24.dp
                 val contentVerticalPadding = if (isCompact) 12.dp else 16.dp
-                val dialogMinHeight = if (isCompact) 420.dp else 500.dp
-                val dialogMaxHeight = if (isCompact) 580.dp else 680.dp
+                val dialogMinHeight = if (isCompact) 420.dp else 900.dp
+                val dialogMaxHeight = if (isCompact) 580.dp else 1200.dp
 
                 Column(
                     modifier = if (isWide) {
@@ -220,7 +220,7 @@ private fun SettingsDialogPreview() {
     )
 }
 
-@Preview(widthDp = 1050, heightDp = 650)
+@Preview(widthDp = 1050, heightDp = 1000)
 @Composable
 private fun SettingsDialogWidePreview() {
     KoinApplication(

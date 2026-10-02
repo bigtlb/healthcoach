@@ -33,14 +33,16 @@ internal fun rememberWeightCartesianLayer(
     weightLine: LineCartesianLayer.Line,
     globalMinX: Double?,
     globalMaxX: Double?,
-    axisPosition: Axis.Position.Vertical = Axis.Position.Vertical.Start
+    axisPosition: Axis.Position.Vertical = Axis.Position.Vertical.Start,
+    yStepMultiple: Double = 5.0
 ): LineCartesianLayer {
-    val weightRangeProvider = remember(globalMinX, globalMaxX) {
+    val weightRangeProvider = remember(globalMinX, globalMaxX, yStepMultiple) {
         TimeFrameChartRangeProvider(
             forcedMinX = globalMinX,
             forcedMaxX = globalMaxX,
             minPadding = 3.0,
-            maxPadding = 3.0
+            maxPadding = 3.0,
+            yStepMultiple = yStepMultiple
         )
     }
 

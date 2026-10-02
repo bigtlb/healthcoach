@@ -53,15 +53,17 @@ internal fun rememberBpCartesianLayer(
     bpLines: List<LineCartesianLayer.Line>,
     globalMinX: Double?,
     globalMaxX: Double?,
-    axisPosition: Axis.Position.Vertical = Axis.Position.Vertical.End
+    axisPosition: Axis.Position.Vertical = Axis.Position.Vertical.End,
+    yStepMultiple: Double = 5.0
 ): LineCartesianLayer {
-    val bpRangeProvider = remember(globalMinX, globalMaxX) {
+    val bpRangeProvider = remember(globalMinX, globalMaxX, yStepMultiple) {
         TimeFrameChartRangeProvider(
             forcedMinX = globalMinX,
             forcedMaxX = globalMaxX,
             minPadding = 5.0,
             maxPadding = 5.0,
-            yPaddingFraction = 0.15
+            yPaddingFraction = 0.15,
+            yStepMultiple = yStepMultiple
         )
     }
 

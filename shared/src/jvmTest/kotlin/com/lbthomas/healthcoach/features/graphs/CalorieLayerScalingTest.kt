@@ -36,21 +36,24 @@ class CalorieLayerScalingTest {
             forcedMinX = globalMinX,
             forcedMaxX = globalMaxX,
             minPadding = 3.0,
-            maxPadding = 3.0
+            maxPadding = 3.0,
+            yStepMultiple = 5.0
         )
         val bpRangeProvider = TimeFrameChartRangeProvider(
             forcedMinX = globalMinX,
             forcedMaxX = globalMaxX,
             minPadding = 5.0,
             maxPadding = 5.0,
-            yPaddingFraction = 0.15
+            yPaddingFraction = 0.15,
+            yStepMultiple = 5.0
         )
         val calorieRangeProvider = TimeFrameChartRangeProvider(
             forcedMinX = globalMinX,
             forcedMaxX = globalMaxX,
             forcedMinY = 0.0,
             minPadding = 50.0,
-            maxPadding = 100.0
+            maxPadding = 100.0,
+            yStepMultiple = 50.0
         )
 
         val weightModel = buildWeightLayerModel(weightEntries, WeightUnit.US)!!

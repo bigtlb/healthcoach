@@ -9,11 +9,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.lbthomas.healthcoach.core.di.previewAppModule
+import com.lbthomas.healthcoach.core.ui.DeleteConfirmationDialog
+import com.lbthomas.healthcoach.core.utils.formatTime
 import com.lbthomas.healthcoach.core.utils.today
 import com.lbthomas.healthcoach.features.bloodpressure.data.BloodPressureEntryData
 import com.lbthomas.healthcoach.features.bloodpressure.ui.AddBloodPressureEntryButton
 import com.lbthomas.healthcoach.features.bloodpressure.ui.AhaGuideLinkFooter
+import com.lbthomas.healthcoach.features.bloodpressure.ui.BloodPressureEntryEditDialog
 import com.lbthomas.healthcoach.features.bloodpressure.ui.BloodPressureEntryList
+import com.lbthomas.healthcoach.features.bloodpressure.ui.BloodPressureViewModel
 import org.koin.compose.KoinApplication
 import org.koin.compose.koinInject
 import org.koin.dsl.koinConfiguration
@@ -45,8 +49,12 @@ fun BloodPressureView(
     }
 
     entryToDelete?.let { entry ->
-        DeleteBloodPressureConfirmation(
-            entry = entry,
+        val timeSuffix = if (entry.hasTime) " at ${entry.time?.formatTime()}" else ""
+        val message = "Are you sure you want to delete the blood pressure entry for ${entry.date}$timeSuffix (${entry.systolic}/${entry.diastolic} mmHg)?"
+        DeleteConfirmationDialog(
+            title = "Delete Entry",
+            message = message,
+            testTag = "delete_blood_pressure_confirmation_dialog",
             onConfirm = {
                 viewModel.deleteEntry(entry.id)
                 entryToDelete = null

@@ -13,10 +13,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.lbthomas.healthcoach.core.di.previewAppModule
 import com.lbthomas.healthcoach.core.enums.MealTime
+import com.lbthomas.healthcoach.core.ui.DeleteConfirmationDialog
 import com.lbthomas.healthcoach.core.ui.Tooltip
 import com.lbthomas.healthcoach.features.foodjournal.data.MealEntryData
 import com.lbthomas.healthcoach.features.foodjournal.ui.DailyCalorieSummaryCard
-import com.lbthomas.healthcoach.features.foodjournal.ui.DeleteConfirmationDialog
 import com.lbthomas.healthcoach.features.foodjournal.ui.FoodSearchAndLogDialog
 import com.lbthomas.healthcoach.features.foodjournal.ui.MealTimeCardList
 import com.lbthomas.healthcoach.features.foodjournal.ui.PortionEntryDialog

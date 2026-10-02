@@ -1,13 +1,11 @@
-package com.lbthomas.healthcoach.features.bloodpressure
+package com.lbthomas.healthcoach.features.bloodpressure.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,6 +23,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.lbthomas.healthcoach.core.di.previewAppModule
 import com.lbthomas.healthcoach.core.enums.BloodPressureCategory
+import com.lbthomas.healthcoach.core.ui.AppDatePickerDialog
+import com.lbthomas.healthcoach.core.ui.AppTimePickerDialog
+import com.lbthomas.healthcoach.core.ui.DatePickerField
+import com.lbthomas.healthcoach.core.ui.TimePickerField
 import com.lbthomas.healthcoach.core.ui.Tooltip
 import com.lbthomas.healthcoach.core.ui.onDialogKeyEvents
 import com.lbthomas.healthcoach.core.utils.*
@@ -33,7 +35,6 @@ import kotlinx.coroutines.yield
 import kotlinx.datetime.*
 import org.koin.compose.KoinApplication
 import org.koin.dsl.koinConfiguration
-import kotlin.time.Instant
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -136,9 +137,9 @@ fun BloodPressureEntryEditDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 // Date Selection
-                EnterDateValue(
+                DatePickerField(
                     selectedDate = selectedDate,
-                    onShowDatePicker = { showDatePicker = true }
+                    onClick = { showDatePicker = true }
                 )
 
                 // Optional Time Component
@@ -158,9 +159,9 @@ fun BloodPressureEntryEditDialog(
                 }
 
                 if (includeTime) {
-                    EnterTimeValue(
+                    TimePickerField(
                         selectedTime = selectedTime,
-                        onShowTimePicker = { showTimePicker = true }
+                        onClick = { showTimePicker = true }
                     )
                 }
 
@@ -241,7 +242,7 @@ fun BloodPressureEntryEditDialog(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(8.dp),
                             color = category.color.copy(alpha = 0.2f),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, category.color)
+                            border = BorderStroke(1.dp, category.color)
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
@@ -281,7 +282,7 @@ fun BloodPressureEntryEditDialog(
     )
 
     if (showDatePicker) {
-        BpDatePickerDialog(
+        AppDatePickerDialog(
             selectedDate = selectedDate,
             onDateSelected = { newDate ->
                 selectedDate = newDate
@@ -294,7 +295,7 @@ fun BloodPressureEntryEditDialog(
     }
 
     if (showTimePicker) {
-        BpTimePickerDialog(
+        AppTimePickerDialog(
             selectedTime = selectedTime,
             onTimeSelected = { newTime ->
                 selectedTime = newTime
@@ -305,144 +306,6 @@ fun BloodPressureEntryEditDialog(
             }
         )
     }
-}
-
-@Composable
-@OptIn(ExperimentalMaterial3Api::class)
-private fun EnterDateValue(
-    selectedDate: LocalDate,
-    onShowDatePicker: () -> Unit
-) {
-    OutlinedCard(
-        onClick = onShowDatePicker,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = selectedDate.displayDate(),
-                style = MaterialTheme.typography.bodyLarge
-            )
-            Icon(
-                imageVector = Icons.Default.CalendarMonth,
-                contentDescription = "Select date"
-            )
-        }
-    }
-}
-
-@Composable
-@OptIn(ExperimentalMaterial3Api::class)
-private fun EnterTimeValue(
-    selectedTime: LocalTime,
-    onShowTimePicker: () -> Unit
-) {
-    OutlinedCard(
-        onClick = onShowTimePicker,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = selectedTime.displayTime(),
-                style = MaterialTheme.typography.bodyLarge
-            )
-            Icon(
-                imageVector = Icons.Default.Schedule,
-                contentDescription = "Select time"
-            )
-        }
-    }
-}
-
-@Composable
-@OptIn(ExperimentalMaterial3Api::class)
-private fun BpDatePickerDialog(
-    selectedDate: LocalDate,
-    onDateSelected: (LocalDate) -> Unit,
-    onDismiss: () -> Unit
-) {
-    var dateChoice = selectedDate
-
-    val initialEpochMillis = remember(dateChoice) {
-        dateChoice.atTime(0, 0).toInstant(TimeZone.UTC).toEpochMilliseconds()
-    }
-    val datePickerState = rememberDatePickerState(initialSelectedDateMillis = initialEpochMillis)
-
-    DatePickerDialog(
-        onDismissRequest = { onDismiss() },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    datePickerState.selectedDateMillis?.let { millis ->
-                        dateChoice = Instant.fromEpochMilliseconds(millis)
-                            .toLocalDateTime(TimeZone.UTC)
-                            .date
-                    }
-                    onDateSelected(dateChoice)
-                }
-            ) {
-                Text("OK")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = { onDismiss() }) {
-                Text("Cancel")
-            }
-        }
-    ) {
-        DatePicker(state = datePickerState)
-    }
-}
-
-@Composable
-@OptIn(ExperimentalMaterial3Api::class)
-private fun BpTimePickerDialog(
-    selectedTime: LocalTime,
-    onTimeSelected: (LocalTime) -> Unit,
-    onDismiss: () -> Unit
-) {
-    val timePickerState = rememberTimePickerState(
-        initialHour = selectedTime.hour,
-        initialMinute = selectedTime.minute,
-        is24Hour = false
-    )
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    onTimeSelected(LocalTime(timePickerState.hour, timePickerState.minute, 0))
-                }
-            ) {
-                Text("OK")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        },
-        text = {
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.Center
-            ) {
-                TimePicker(state = timePickerState)
-            }
-        }
-    )
 }
 
 @Preview(name = "Blood Pressure Entry Dialog")
@@ -470,21 +333,6 @@ fun BloodPressureEntryWTimeEditDialogPreview() {
             BloodPressureEntryEditDialog(
                 entry = BloodPressureEntryData(id = "1", dateTime = "2026-09-23T15:00:00Z", systolic = 120, diastolic = 80, pulse = 70),
                 onConfirm = {},
-                onDismiss = {}
-            )
-        }
-    )
-}
-
-@Preview(name = "Blood Pressure Time Picker Dialog")
-@Composable
-fun BloodPressureTimePickerDialogPreview() {
-    KoinApplication(
-        configuration = koinConfiguration(declaration = { modules(previewAppModule) }),
-        content = {
-            BpTimePickerDialog(
-                selectedTime = LocalTime(11, 0, 0),
-                onTimeSelected = {},
                 onDismiss = {}
             )
         }

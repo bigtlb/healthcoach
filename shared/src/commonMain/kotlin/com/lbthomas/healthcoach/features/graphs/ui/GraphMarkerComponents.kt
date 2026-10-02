@@ -27,6 +27,8 @@ import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
 import com.patrykandpatrick.vico.compose.common.data.ExtraStore
 import kotlinx.datetime.LocalDate
+import kotlin.math.ceil
+import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.round
 
@@ -37,7 +39,8 @@ internal class TimeFrameChartRangeProvider(
     private val forcedMaxY: Double? = null,
     private val minPadding: Double = 5.0,
     private val maxPadding: Double = 5.0,
-    private val yPaddingFraction: Double = 0.05
+    private val yPaddingFraction: Double = 0.05,
+    private val yStepMultiple: Double? = null
 ) : CartesianLayerRangeProvider {
     override fun getMinX(minX: Double, maxX: Double, extraStore: ExtraStore): Double {
         return forcedMinX ?: minX
@@ -51,14 +54,24 @@ internal class TimeFrameChartRangeProvider(
         if (forcedMinY != null) return forcedMinY
         val diff = maxY - minY
         val padding = if (diff <= 0.0) minPadding else max(1.0, diff * yPaddingFraction)
-        return (minY - padding).coerceAtLeast(0.0)
+        val rawMin = (minY - padding).coerceAtLeast(0.0)
+        return if (yStepMultiple != null && yStepMultiple > 0.0) {
+            floor(rawMin / yStepMultiple) * yStepMultiple
+        } else {
+            rawMin
+        }
     }
 
     override fun getMaxY(minY: Double, maxY: Double, extraStore: ExtraStore): Double {
         if (forcedMaxY != null) return forcedMaxY
         val diff = maxY - minY
         val padding = if (diff <= 0.0) maxPadding else max(1.0, diff * yPaddingFraction)
-        return maxY + padding
+        val rawMax = maxY + padding
+        return if (yStepMultiple != null && yStepMultiple > 0.0) {
+            ceil(rawMax / yStepMultiple) * yStepMultiple
+        } else {
+            rawMax
+        }
     }
 }
 

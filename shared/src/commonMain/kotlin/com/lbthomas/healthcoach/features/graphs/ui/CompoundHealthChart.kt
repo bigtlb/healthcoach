@@ -69,32 +69,21 @@ internal fun CompoundHealthChart(
     }
 
     // Global X min/max calculation across active datasets
-    val globalMinX = remember(hasWeight, hasBp, hasCalories, weightMinEpoch, bpMinEpoch, calorieMinEpoch, weightEntries, bpPoints, caloriePoints) {
-        val mins = mutableListOf<Double>()
-        if (hasWeight) {
-            weightMinEpoch?.let { mins.add(it) } ?: weightEntries.firstOrNull()?.date?.toEpochDays()?.toDouble()?.let { mins.add(it) }
-        }
-        if (hasBp) {
-            bpMinEpoch?.let { mins.add(it) } ?: bpPoints.firstOrNull()?.x?.let { mins.add(it) }
-        }
-        if (hasCalories) {
-            calorieMinEpoch?.let { mins.add(it) } ?: caloriePoints.firstOrNull()?.x?.let { mins.add(it) }
-        }
-        mins.minOrNull()
-    }
-
-    val globalMaxX = remember(hasWeight, hasBp, hasCalories, weightMaxEpoch, bpMaxEpoch, calorieMaxEpoch, weightEntries, bpPoints, caloriePoints) {
-        val maxs = mutableListOf<Double>()
-        if (hasWeight) {
-            weightMaxEpoch?.let { maxs.add(it) } ?: weightEntries.lastOrNull()?.date?.toEpochDays()?.toDouble()?.let { maxs.add(it) }
-        }
-        if (hasBp) {
-            bpMaxEpoch?.let { maxs.add(it) } ?: bpPoints.lastOrNull()?.x?.let { maxs.add(it) }
-        }
-        if (hasCalories) {
-            calorieMaxEpoch?.let { maxs.add(it) } ?: caloriePoints.lastOrNull()?.x?.let { maxs.add(it) }
-        }
-        maxs.maxOrNull()
+    val (globalMinX, globalMaxX) = remember(hasWeight, hasBp, hasCalories, weightMinEpoch, bpMinEpoch, calorieMinEpoch, weightEntries, bpPoints, caloriePoints) {
+        calculateGlobalEpochBounds(
+            hasWeight = hasWeight,
+            hasBp = hasBp,
+            hasCalories = hasCalories,
+            weightEntries = weightEntries,
+            bpPoints = bpPoints,
+            caloriePoints = caloriePoints,
+            weightMinEpoch = weightMinEpoch,
+            weightMaxEpoch = weightMaxEpoch,
+            bpMinEpoch = bpMinEpoch,
+            bpMaxEpoch = bpMaxEpoch,
+            calorieMinEpoch = calorieMinEpoch,
+            calorieMaxEpoch = calorieMaxEpoch
+        )
     }
 
     val chartModel = remember(
@@ -104,25 +93,22 @@ internal fun CompoundHealthChart(
         globalMinX, globalMaxX,
         weightUnit, hasPulseSeries, pulsePoints
     ) {
-        val models = mutableListOf<CartesianLayerModel>()
-        if (hasCalories) {
-            buildCalorieLayerModel(caloriePoints)?.let { models.add(it) }
-        }
-        if (hasMetabolicLines && globalMinX != null && globalMaxX != null) {
-            buildMetabolicLinesLayerModel(
-                globalMinX = globalMinX,
-                globalMaxX = globalMaxX,
-                maintenanceCalories = maintenanceCalories,
-                targetCalories = targetCalories
-            )?.let { models.add(it) }
-        }
-        if (hasWeight) {
-            buildWeightLayerModel(weightEntries, weightUnit)?.let { models.add(it) }
-        }
-        if (hasBp) {
-            buildBpLayerModel(bpPoints, hasPulseSeries, pulsePoints)?.let { models.add(it) }
-        }
-        CartesianChartModel(models)
+        buildCompoundChartModel(
+            hasCalories = hasCalories,
+            caloriePoints = caloriePoints,
+            hasMetabolicLines = hasMetabolicLines,
+            globalMinX = globalMinX,
+            globalMaxX = globalMaxX,
+            maintenanceCalories = maintenanceCalories,
+            targetCalories = targetCalories,
+            hasWeight = hasWeight,
+            weightEntries = weightEntries,
+            weightUnit = weightUnit,
+            hasBp = hasBp,
+            bpPoints = bpPoints,
+            hasPulseSeries = hasPulseSeries,
+            pulsePoints = pulsePoints
+        )
     }
 
     val unitLabel = if (weightUnit == WeightUnit.METRIC) "kg" else "lb"
@@ -135,6 +121,37 @@ internal fun CompoundHealthChart(
     val maintenanceLineColor = MaterialTheme.colorScheme.outline
     val targetLineColor = MaterialTheme.colorScheme.primary
 
+    // Dynamic Y-axis Step Calculations (multiples of 5 or 50 adapted to data range)
+    val weightMinY = remember(weightEntries, weightUnit) {
+        weightEntries.minOfOrNull { it.getWeightInCurrentUnits(weightUnit) }
+    }
+    val weightMaxY = remember(weightEntries, weightUnit) {
+        weightEntries.maxOfOrNull { it.getWeightInCurrentUnits(weightUnit) }
+    }
+    val weightStep = remember(weightMinY, weightMaxY) {
+        calculateOptimalYStep(weightMinY, weightMaxY, defaultStep = 5.0)
+    }
+
+    val bpMinY = remember(bpPoints, hasPulseSeries, pulsePoints) {
+        val allPoints = if (hasPulseSeries) bpPoints + pulsePoints else bpPoints
+        allPoints.minOfOrNull { minOf(it.systolic, it.diastolic, it.pulse?.toDouble() ?: it.diastolic) }
+    }
+    val bpMaxY = remember(bpPoints, hasPulseSeries, pulsePoints) {
+        val allPoints = if (hasPulseSeries) bpPoints + pulsePoints else bpPoints
+        allPoints.maxOfOrNull { maxOf(it.systolic, it.diastolic, it.pulse?.toDouble() ?: it.diastolic) }
+    }
+    val bpStep = remember(bpMinY, bpMaxY) {
+        calculateOptimalYStep(bpMinY, bpMaxY, defaultStep = 5.0)
+    }
+
+    val calorieMaxY = remember(caloriePoints, maintenanceCalories, targetCalories) {
+        val maxPoints = caloriePoints.maxOfOrNull { it.calories } ?: 0.0
+        maxOf(maxPoints, maintenanceCalories ?: 0.0, targetCalories ?: 0.0)
+    }
+    val calorieStep = remember(calorieMaxY) {
+        calculateOptimalYStep(0.0, calorieMaxY, defaultStep = 50.0)
+    }
+
     // Weight Layer
     val weightLine = rememberWeightLine(weightLineColor)
     val weightLayer = if (hasWeight) {
@@ -142,7 +159,8 @@ internal fun CompoundHealthChart(
             weightLine = weightLine,
             globalMinX = globalMinX,
             globalMaxX = globalMaxX,
-            axisPosition = Axis.Position.Vertical.Start
+            axisPosition = Axis.Position.Vertical.Start,
+            yStepMultiple = weightStep
         )
     } else null
 
@@ -158,7 +176,8 @@ internal fun CompoundHealthChart(
             bpLines = bpLines,
             globalMinX = globalMinX,
             globalMaxX = globalMaxX,
-            axisPosition = if (hasWeight || hasAnyCalories) Axis.Position.Vertical.End else Axis.Position.Vertical.Start
+            axisPosition = if (hasWeight || hasAnyCalories) Axis.Position.Vertical.End else Axis.Position.Vertical.Start,
+            yStepMultiple = bpStep
         )
     } else null
 
@@ -178,7 +197,8 @@ internal fun CompoundHealthChart(
             globalMinX = globalMinX,
             globalMaxX = globalMaxX,
             color = calorieColor,
-            axisPosition = calorieAxisPosition
+            axisPosition = calorieAxisPosition,
+            yStepMultiple = calorieStep
         )
     } else null
 
@@ -194,7 +214,8 @@ internal fun CompoundHealthChart(
             metabolicLines = metabolicLines,
             globalMinX = globalMinX,
             globalMaxX = globalMaxX,
-            axisPosition = calorieAxisPosition
+            axisPosition = calorieAxisPosition,
+            yStepMultiple = calorieStep
         )
     } else null
 
@@ -229,70 +250,34 @@ internal fun CompoundHealthChart(
         }
     }
 
-    val horizontalAxisSpacing = remember(daySpan) {
-        when {
-            daySpan <= 30 -> 7
-            daySpan <= 120 -> 14
-            daySpan <= 365 -> 30
-            daySpan <= 730 -> 90
-            else -> 180
-        }
-    }
+    val horizontalAxisSpacing = remember(daySpan) { calculateHorizontalAxisSpacing(daySpan) }
 
-    val bottomAxisValueFormatter = remember(daySpan) {
-        CartesianValueFormatter { _, value, _ ->
-            val date = LocalDate.fromEpochDays(value.toLong())
-            when {
-                daySpan <= 120 -> "${date.month}/${date.day}"
-                daySpan <= 365 -> "${date.month.name.take(3)} ${date.day}"
-                daySpan <= 730 -> "${date.month.name.take(3)} '${date.year % 100}"
-                else -> "${date.year}"
-            }
-        }
-    }
+    val bottomAxisValueFormatter = remember(daySpan) { createBottomAxisValueFormatter(daySpan) }
 
-    val startAxisItemPlacer = remember(hasWeight, hasBp, hasCalories, hasMetabolicLines) {
-        if (!hasWeight && hasAnyCalories) {
-            VerticalAxis.ItemPlacer.step(step = { 50.0 })
+    val startAxisItemPlacer = remember(hasWeight, hasBp, hasCalories, hasMetabolicLines, weightStep, calorieStep, bpStep) {
+        if (hasWeight) {
+            VerticalAxis.ItemPlacer.step(step = { weightStep })
+        } else if (hasAnyCalories) {
+            VerticalAxis.ItemPlacer.step(step = { calorieStep })
         } else {
-            VerticalAxis.ItemPlacer.count()
+            VerticalAxis.ItemPlacer.step(step = { bpStep })
         }
     }
 
     val startAxisValueFormatter = remember(hasWeight, hasBp, hasCalories, hasMetabolicLines, weightUnit) {
-        CartesianValueFormatter { _, value, _ ->
-            if (hasWeight) {
-                val rounded = round(value * 10) / 10.0
-                val num = if (rounded % 1.0 == 0.0) "${rounded.toInt()}" else "$rounded"
-                "$num $unitLabel"
-            } else if (hasAnyCalories) {
-                val rounded = (round(value / 50.0) * 50).toInt()
-                "$rounded kcal"
-            } else {
-                val rounded = round(value).toInt()
-                "$rounded mmHg"
-            }
-        }
+        createStartAxisValueFormatter(hasWeight, hasAnyCalories, unitLabel)
     }
 
-    val endAxisItemPlacer = remember(hasBp, hasWeight, hasCalories, hasMetabolicLines) {
-        if (!hasBp && hasWeight && hasAnyCalories) {
-            VerticalAxis.ItemPlacer.step(step = { 50.0 })
+    val endAxisItemPlacer = remember(hasBp, hasWeight, hasCalories, hasMetabolicLines, bpStep, calorieStep) {
+        if (hasBp) {
+            VerticalAxis.ItemPlacer.step(step = { bpStep })
         } else {
-            VerticalAxis.ItemPlacer.count()
+            VerticalAxis.ItemPlacer.step(step = { calorieStep })
         }
     }
 
     val endAxisValueFormatter = remember(hasBp, hasWeight, hasCalories, hasMetabolicLines) {
-        CartesianValueFormatter { _, value, _ ->
-            if (hasBp) {
-                val rounded = round(value).toInt()
-                "$rounded mmHg"
-            } else {
-                val rounded = (round(value / 50.0) * 50).toInt()
-                "$rounded kcal"
-            }
-        }
+        createEndAxisValueFormatter(hasBp)
     }
 
     val startAxis = VerticalAxis.rememberStart(
@@ -352,7 +337,7 @@ internal fun CompoundHealthChart(
         endAxis = endAxis,
         bottomAxis = bottomAxis,
         marker = marker,
-        markerController = CartesianMarkerController.rememberShowOnHover(),
+        markerController = CartesianMarkerController.rememberShowOnPress(),
         getXStep = { _, _, _ -> 1.0 }
     )
 

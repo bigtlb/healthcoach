@@ -1,4 +1,4 @@
-package com.lbthomas.healthcoach.features.bloodpressure
+package com.lbthomas.healthcoach.features.bloodpressure.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
