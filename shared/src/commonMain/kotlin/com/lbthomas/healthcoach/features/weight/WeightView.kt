@@ -13,6 +13,8 @@ import com.lbthomas.healthcoach.core.utils.today
 import com.lbthomas.healthcoach.features.settings.SettingsViewModel
 import com.lbthomas.healthcoach.features.weight.data.WeightEntryData
 import com.lbthomas.healthcoach.features.weight.ui.AddWeightEntryButton
+import com.lbthomas.healthcoach.features.weight.ui.DeleteConfirmation
+import com.lbthomas.healthcoach.features.weight.ui.WeightEntryEditDialog
 import com.lbthomas.healthcoach.features.weight.ui.WeightEntryList
 import org.koin.compose.KoinApplication
 import org.koin.compose.koinInject

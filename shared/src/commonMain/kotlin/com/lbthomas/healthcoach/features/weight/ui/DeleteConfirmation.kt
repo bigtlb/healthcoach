@@ -1,4 +1,4 @@
-package com.lbthomas.healthcoach.features.weight
+package com.lbthomas.healthcoach.features.weight.ui
 
 import androidx.compose.foundation.focusable
 import androidx.compose.material3.AlertDialog

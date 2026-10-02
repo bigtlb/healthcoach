@@ -11,6 +11,8 @@ import com.lbthomas.healthcoach.features.bloodpressure.BloodPressureViewModel
 import com.lbthomas.healthcoach.features.bloodpressure.data.BloodPressureRepository
 import com.lbthomas.healthcoach.features.foodjournal.FoodJournalViewModel
 import com.lbthomas.healthcoach.features.foodjournal.data.FoodJournalRepository
+import com.lbthomas.healthcoach.features.profile.ProfileViewModel
+import com.lbthomas.healthcoach.features.profile.data.ProfileRepository
 import com.lbthomas.healthcoach.features.settings.SettingsViewModel
 import com.lbthomas.healthcoach.features.settings.data.SettingsStore
 import com.lbthomas.healthcoach.features.sync.SyncViewModel
@@ -48,13 +50,16 @@ val appModule = module {
     single { FoodJournalRepository(get()) }
     factory { FoodJournalViewModel(repository = get()) }
 
+    single { ProfileRepository(database = get(), weightRepository = get()) }
+    factory { ProfileViewModel(repository = get(), settingsStore = get()) }
+
     single { SyncEngine(localDatabase = get(), driverFactory = get(), settingsStore = get()) }
     single { SyncViewModel(syncEngine = get(), settingsStore = get()) }
     single {
         val driver: SqlDriver = get()
         PeerServerManager(driverFactory = get(), settingsStore = get()).apply {
             onDatabaseReset = {
-                driver.notifyListeners("weightEntry", "bloodPressureEntry", "foodUnit", "foodItem", "mealEntry")
+                driver.notifyListeners("weightEntry", "bloodPressureEntry", "foodUnit", "foodItem", "mealEntry", "profileSetting")
             }
         }
     }

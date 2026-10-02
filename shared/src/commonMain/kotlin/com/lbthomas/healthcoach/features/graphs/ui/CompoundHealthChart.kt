@@ -47,6 +47,8 @@ internal fun CompoundHealthChart(
     weightEntries: List<WeightEntryData>,
     bpPoints: List<BpGraphPoint>,
     caloriePoints: List<CalorieGraphPoint> = emptyList(),
+    maintenanceCalories: Double? = null,
+    targetCalories: Double? = null,
     weightUnit: WeightUnit,
     weightMinEpoch: Double?,
     weightMaxEpoch: Double?,
@@ -59,6 +61,8 @@ internal fun CompoundHealthChart(
     val hasWeight = showWeight && weightEntries.isNotEmpty()
     val hasBp = showBp && bpPoints.isNotEmpty()
     val hasCalories = showCalories && caloriePoints.isNotEmpty()
+    val hasMetabolicLines = showCalories && (maintenanceCalories != null || targetCalories != null)
+    val hasAnyCalories = hasCalories || hasMetabolicLines
     val hasPulseSeries = hasBp && showPulse && bpPoints.any { it.pulse != null }
     val pulsePoints = remember(hasPulseSeries, bpPoints) {
         if (hasPulseSeries) bpPoints.filter { it.pulse != null } else emptyList()
@@ -94,13 +98,23 @@ internal fun CompoundHealthChart(
     }
 
     val chartModel = remember(
-        hasWeight, hasBp, hasCalories,
+        hasWeight, hasBp, hasCalories, hasMetabolicLines,
         weightEntries, bpPoints, caloriePoints,
+        maintenanceCalories, targetCalories,
+        globalMinX, globalMaxX,
         weightUnit, hasPulseSeries, pulsePoints
     ) {
         val models = mutableListOf<CartesianLayerModel>()
         if (hasCalories) {
             buildCalorieLayerModel(caloriePoints)?.let { models.add(it) }
+        }
+        if (hasMetabolicLines && globalMinX != null && globalMaxX != null) {
+            buildMetabolicLinesLayerModel(
+                globalMinX = globalMinX,
+                globalMaxX = globalMaxX,
+                maintenanceCalories = maintenanceCalories,
+                targetCalories = targetCalories
+            )?.let { models.add(it) }
         }
         if (hasWeight) {
             buildWeightLayerModel(weightEntries, weightUnit)?.let { models.add(it) }
@@ -118,6 +132,8 @@ internal fun CompoundHealthChart(
     val bpDiastolicColor = extColors.graphDiastolic.color
     val bpPulseColor = extColors.graphPulse.color
     val calorieColor = extColors.graphCalories.color
+    val maintenanceLineColor = MaterialTheme.colorScheme.outline
+    val targetLineColor = MaterialTheme.colorScheme.primary
 
     // Weight Layer
     val weightLine = rememberWeightLine(weightLineColor)
@@ -142,23 +158,50 @@ internal fun CompoundHealthChart(
             bpLines = bpLines,
             globalMinX = globalMinX,
             globalMaxX = globalMaxX,
-            axisPosition = if (hasWeight || hasCalories) Axis.Position.Vertical.End else Axis.Position.Vertical.Start
+            axisPosition = if (hasWeight || hasAnyCalories) Axis.Position.Vertical.End else Axis.Position.Vertical.Start
         )
     } else null
 
-    // Calorie Layer: unbound from vertical axis when Weight is present, bound to Start when Weight is absent
+    // Calorie & Metabolic Layer Axis Position:
+    // If Weight is absent: Start (left axis)
+    // Else if BP is absent: End (right axis)
+    // Else (both Weight and BP present): null (unbound, uses global chart bounds with forcedMinY=0.0)
+    val calorieAxisPosition = when {
+        !hasWeight -> Axis.Position.Vertical.Start
+        !hasBp -> Axis.Position.Vertical.End
+        else -> null
+    }
+
+    // Calorie Layer
     val calorieLayer = if (hasCalories) {
         rememberCalorieCartesianLayer(
             globalMinX = globalMinX,
             globalMaxX = globalMaxX,
             color = calorieColor,
-            axisPosition = if (!hasWeight) Axis.Position.Vertical.Start else null
+            axisPosition = calorieAxisPosition
+        )
+    } else null
+
+    // Metabolic Reference Lines (Maintenance Baseline & Target Calorie Budget)
+    val metabolicLines = rememberMetabolicLines(
+        maintenanceColor = maintenanceLineColor,
+        targetColor = targetLineColor,
+        hasMaintenance = maintenanceCalories != null,
+        hasTarget = targetCalories != null
+    )
+    val metabolicLayer = if (hasMetabolicLines && globalMinX != null && globalMaxX != null && metabolicLines.isNotEmpty()) {
+        rememberMetabolicCartesianLayer(
+            metabolicLines = metabolicLines,
+            globalMinX = globalMinX,
+            globalMaxX = globalMaxX,
+            axisPosition = calorieAxisPosition
         )
     } else null
 
     val allLayers = buildList {
         // Column bars placed first so they render behind all line plots (Z-order)
         calorieLayer?.let { add(it) }
+        metabolicLayer?.let { add(it) }
         weightLayer?.let { add(it) }
         bpLayer?.let { add(it) }
     }
@@ -173,6 +216,8 @@ internal fun CompoundHealthChart(
         bpDiastolicColor = bpDiastolicColor,
         bpPulseColor = bpPulseColor,
         calorieColor = calorieColor,
+        maintenanceLineColor = if (hasMetabolicLines) maintenanceLineColor else Color.Unspecified,
+        targetLineColor = if (hasMetabolicLines) targetLineColor else Color.Unspecified,
         unitLabel = unitLabel
     )
 
@@ -206,30 +251,54 @@ internal fun CompoundHealthChart(
         }
     }
 
-    val startAxisValueFormatter = remember(hasWeight, hasBp, hasCalories, weightUnit) {
+    val startAxisItemPlacer = remember(hasWeight, hasBp, hasCalories, hasMetabolicLines) {
+        if (!hasWeight && hasAnyCalories) {
+            VerticalAxis.ItemPlacer.step(step = { 50.0 })
+        } else {
+            VerticalAxis.ItemPlacer.count()
+        }
+    }
+
+    val startAxisValueFormatter = remember(hasWeight, hasBp, hasCalories, hasMetabolicLines, weightUnit) {
         CartesianValueFormatter { _, value, _ ->
-            val rounded = round(value * 10) / 10.0
-            val num = if (rounded % 1.0 == 0.0) "${rounded.toInt()}" else "$rounded"
             if (hasWeight) {
+                val rounded = round(value * 10) / 10.0
+                val num = if (rounded % 1.0 == 0.0) "${rounded.toInt()}" else "$rounded"
                 "$num $unitLabel"
-            } else if (hasCalories) {
-                "$num kcal"
+            } else if (hasAnyCalories) {
+                val rounded = (round(value / 50.0) * 50).toInt()
+                "$rounded kcal"
             } else {
-                "$num mmHg"
+                val rounded = round(value).toInt()
+                "$rounded mmHg"
             }
         }
     }
 
-    val endAxisValueFormatter = remember {
+    val endAxisItemPlacer = remember(hasBp, hasWeight, hasCalories, hasMetabolicLines) {
+        if (!hasBp && hasWeight && hasAnyCalories) {
+            VerticalAxis.ItemPlacer.step(step = { 50.0 })
+        } else {
+            VerticalAxis.ItemPlacer.count()
+        }
+    }
+
+    val endAxisValueFormatter = remember(hasBp, hasWeight, hasCalories, hasMetabolicLines) {
         CartesianValueFormatter { _, value, _ ->
-            val rounded = round(value).toInt()
-            "$rounded mmHg"
+            if (hasBp) {
+                val rounded = round(value).toInt()
+                "$rounded mmHg"
+            } else {
+                val rounded = (round(value / 50.0) * 50).toInt()
+                "$rounded kcal"
+            }
         }
     }
 
     val startAxis = VerticalAxis.rememberStart(
         horizontalLabelPosition = VerticalAxis.HorizontalLabelPosition.Inside,
         valueFormatter = startAxisValueFormatter,
+        itemPlacer = startAxisItemPlacer,
         label = rememberAxisLabelComponent(
             style = TextStyle(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -247,10 +316,13 @@ internal fun CompoundHealthChart(
         )
     )
 
-    val endAxis = if (hasBp && (hasWeight || hasCalories)) {
+    val showEndAxis = (hasBp && (hasWeight || hasAnyCalories)) || (hasWeight && hasAnyCalories)
+
+    val endAxis = if (showEndAxis) {
         VerticalAxis.rememberEnd(
             horizontalLabelPosition = VerticalAxis.HorizontalLabelPosition.Inside,
             valueFormatter = endAxisValueFormatter,
+            itemPlacer = endAxisItemPlacer,
             label = rememberAxisLabelComponent(
                 style = TextStyle(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -288,6 +360,10 @@ internal fun CompoundHealthChart(
         ChartLegend(
             hasCalories = hasCalories,
             calorieColor = calorieColor,
+            maintenanceCalories = if (showCalories) maintenanceCalories else null,
+            maintenanceColor = maintenanceLineColor,
+            targetCalories = if (showCalories) targetCalories else null,
+            targetColor = targetLineColor,
             hasWeight = hasWeight,
             weightColor = weightLineColor,
             weightUnitLabel = unitLabel,
@@ -350,6 +426,8 @@ private fun CompoundHealthChartAllMetricsPreview() {
                 weightEntries = previewWeightEntries,
                 bpPoints = previewBpPoints,
                 caloriePoints = previewCaloriePoints,
+                maintenanceCalories = 2150.0,
+                targetCalories = 1850.0,
                 weightUnit = WeightUnit.US,
                 weightMinEpoch = null,
                 weightMaxEpoch = null,
@@ -440,6 +518,8 @@ private fun CompoundHealthChartCaloriesOnlyPreview() {
                 weightEntries = emptyList(),
                 bpPoints = emptyList(),
                 caloriePoints = previewCaloriePoints,
+                maintenanceCalories = 2150.0,
+                targetCalories = 1850.0,
                 weightUnit = WeightUnit.US,
                 weightMinEpoch = null,
                 weightMaxEpoch = null,
@@ -500,6 +580,8 @@ private fun CompoundHealthChartWeightAndCaloriesPreview() {
                 weightEntries = previewWeightEntries,
                 bpPoints = emptyList(),
                 caloriePoints = previewCaloriePoints,
+                maintenanceCalories = 2150.0,
+                targetCalories = 1850.0,
                 weightUnit = WeightUnit.US,
                 weightMinEpoch = null,
                 weightMaxEpoch = null,
@@ -530,6 +612,8 @@ private fun CompoundHealthChartBpAndCaloriesPreview() {
                 weightEntries = emptyList(),
                 bpPoints = previewBpPoints,
                 caloriePoints = previewCaloriePoints,
+                maintenanceCalories = 2150.0,
+                targetCalories = 1850.0,
                 weightUnit = WeightUnit.US,
                 weightMinEpoch = null,
                 weightMaxEpoch = null,

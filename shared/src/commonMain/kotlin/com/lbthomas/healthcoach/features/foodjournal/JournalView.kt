@@ -20,6 +20,7 @@ import com.lbthomas.healthcoach.features.foodjournal.ui.DeleteConfirmationDialog
 import com.lbthomas.healthcoach.features.foodjournal.ui.FoodSearchAndLogDialog
 import com.lbthomas.healthcoach.features.foodjournal.ui.MealTimeCardList
 import com.lbthomas.healthcoach.features.foodjournal.ui.PortionEntryDialog
+import com.lbthomas.healthcoach.features.profile.ProfileViewModel
 import org.koin.compose.KoinApplication
 import org.koin.compose.koinInject
 import org.koin.dsl.koinConfiguration
@@ -33,8 +34,12 @@ fun JournalView(
     onRequestFocus: () -> Unit = {}
 ) {
     val viewModel = koinInject<FoodJournalViewModel>()
+    val profileViewModel = koinInject<ProfileViewModel>()
     val selectedDate by viewModel.selectedDate.collectAsState()
     val dailySummary by viewModel.dailyMealSummary.collectAsState()
+    val metabolicProfile by profileViewModel.metabolicProfile.collectAsState()
+
+    val targetCalories = metabolicProfile?.let { it.targetCalories ?: it.maintenanceCalories }
 
     var showSearchAndLogDialog by remember { mutableStateOf(false) }
     var targetMealTime by remember { mutableStateOf(MealTime.BREAKFAST) }
@@ -143,6 +148,7 @@ fun JournalView(
         DailyCalorieSummaryCard(
             selectedDate = selectedDate,
             totalCalories = dailySummary.totalCalories,
+            targetCalories = targetCalories,
             onPreviousDay = { viewModel.selectPreviousDay() },
             onNextDay = { viewModel.selectNextDay() },
             onToday = { viewModel.selectToday() },

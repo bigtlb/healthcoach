@@ -130,13 +130,13 @@ class DatabaseMigrationTest {
     }
 
     @Test
-    fun testSchemaVersionIsFiveOnCreation() {
+    fun testSchemaVersionIsSixOnCreation() {
         val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
-        assertEquals(5L, Database.Schema.version)
+        assertEquals(6L, Database.Schema.version)
 
         Database.Schema.create(driver)
         setDbVersion(driver, Database.Schema.version)
-        assertEquals(5L, getDbVersion(driver))
+        assertEquals(6L, getDbVersion(driver))
     }
 
     @Test
@@ -200,5 +200,61 @@ class DatabaseMigrationTest {
 
         val mealEntries = database.mealEntryQueries.selectAll().executeAsList()
         assertEquals(0, mealEntries.size)
+    }
+
+    @Test
+    fun testMigrationFromV5ToV6CreatesProfileSettingTable() = runBlocking {
+        val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
+
+        // Initialize schema at version 4 (UUID weightEntry and bloodPressureEntry)
+        driver.execute(
+            null,
+            """
+            CREATE TABLE weightEntry (
+                id TEXT PRIMARY KEY NOT NULL,
+                date TEXT NOT NULL,
+                weight REAL NOT NULL,
+                updated_at INTEGER NOT NULL
+            );
+            """.trimIndent(),
+            0
+        )
+
+        driver.execute(
+            null,
+            """
+            CREATE TABLE bloodPressureEntry (
+                id TEXT PRIMARY KEY NOT NULL,
+                dateTime TEXT NOT NULL,
+                systolic INTEGER NOT NULL,
+                diastolic INTEGER NOT NULL,
+                pulse INTEGER,
+                updated_at INTEGER NOT NULL
+            );
+            """.trimIndent(),
+            0
+        )
+
+        setDbVersion(driver, 4L)
+
+        // Migrate 4 -> 5 (runs 4.sqm)
+        Database.Schema.migrate(driver, 4L, 5L)
+        setDbVersion(driver, 5L)
+
+        // Migrate 5 -> 6 (runs 5.sqm)
+        Database.Schema.migrate(driver, 5L, 6L)
+        setDbVersion(driver, 6L)
+
+        assertEquals(6L, getDbVersion(driver))
+
+        val database = Database(driver)
+        val initialSettings = database.profileSettingQueries.selectAll().executeAsList()
+        assertEquals(0, initialSettings.size)
+
+        database.profileSettingQueries.insertOrUpdate("user_name", "Alice", 1000L)
+        val alice = database.profileSettingQueries.selectByKey("user_name").executeAsOneOrNull()
+        assertEquals("user_name", alice?.key)
+        assertEquals("Alice", alice?.value_)
+        assertEquals(1000L, alice?.updated_at)
     }
 }

@@ -2,6 +2,7 @@ package com.lbthomas.healthcoach.ui.navigation
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -26,6 +27,7 @@ fun AppTopBar(
     isWideLayout: Boolean = false,
     syncViewModel: SyncViewModel? = null,
     onSelection: (SelectedPage) -> Unit,
+    onShowProfile: () -> Unit = {},
     onShowSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -67,9 +69,11 @@ fun AppTopBar(
                     selectedPage = selectedPage,
                     isWideLayout = true,
                     syncViewModel = syncViewModel,
+                    onShowProfile = onShowProfile,
                     onShowSettings = onShowSettings
                 )
             } else {
+                ProfileButton(onShowProfile)
                 if (syncViewModel != null) {
                     SyncActionButton(syncViewModel = syncViewModel)
                 }
@@ -85,6 +89,7 @@ internal fun AppActionButtons(
     selectedPage: SelectedPage,
     isWideLayout: Boolean = false,
     syncViewModel: SyncViewModel? = null,
+    onShowProfile: () -> Unit = {},
     onShowSettings: () -> Unit
 ) {
     val tabs = if (isWideLayout) {
@@ -102,10 +107,28 @@ internal fun AppActionButtons(
         )
     }
 
+    ProfileButton(onShowProfile)
     if (syncViewModel != null) {
         SyncActionButton(syncViewModel = syncViewModel)
     }
     SettingsButton(onShowSettings)
+}
+
+@Composable
+internal fun ProfileButton(onShowProfile: () -> Unit) {
+    Tooltip("User Profile (Ctrl + U or P)") {
+        IconButton(
+            onClick = { onShowProfile() },
+            colors = IconButtonDefaults.iconButtonColors(
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        ) {
+            Icon(
+                imageVector = Icons.Default.AccountCircle,
+                contentDescription = "User Profile"
+            )
+        }
+    }
 }
 
 @Composable
@@ -160,6 +183,22 @@ private fun AppTopBarPreview() {
             isWideLayout = false,
             syncViewModel = null,
             onSelection = {},
+            onShowProfile = {},
+            onShowSettings = {}
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun AppTopBarWidePreview() {
+    Surface {
+        AppTopBar(
+            selectedPage = SelectedPage.WeightView,
+            isWideLayout = true,
+            syncViewModel = null,
+            onSelection = {},
+            onShowProfile = {},
             onShowSettings = {}
         )
     }

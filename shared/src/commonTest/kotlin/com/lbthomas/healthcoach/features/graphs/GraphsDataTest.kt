@@ -108,6 +108,43 @@ class GraphsDataTest {
     }
 
     @Test
+    fun testBuildMetabolicLinesLayerModel() {
+        val minX = LocalDate(2026, 1, 1).toEpochDays().toDouble()
+        val maxX = LocalDate(2026, 1, 31).toEpochDays().toDouble()
+
+        // Both maintenance and target
+        val modelBoth = com.lbthomas.healthcoach.features.graphs.ui.components.buildMetabolicLinesLayerModel(
+            globalMinX = minX,
+            globalMaxX = maxX,
+            maintenanceCalories = 2150.0,
+            targetCalories = 1750.0
+        )
+        kotlin.test.assertNotNull(modelBoth)
+        assertEquals(2, modelBoth.series.size)
+        assertEquals(2, modelBoth.series[0].size)
+        assertEquals(2150.0, modelBoth.series[0][0].y)
+        assertEquals(2150.0, modelBoth.series[0][1].y)
+        assertEquals(1750.0, modelBoth.series[1][0].y)
+        assertEquals(1750.0, modelBoth.series[1][1].y)
+
+        // Only maintenance
+        val modelMaintenanceOnly = com.lbthomas.healthcoach.features.graphs.ui.components.buildMetabolicLinesLayerModel(
+            globalMinX = minX,
+            globalMaxX = maxX,
+            maintenanceCalories = 2150.0,
+            targetCalories = null
+        )
+        kotlin.test.assertNotNull(modelMaintenanceOnly)
+        assertEquals(1, modelMaintenanceOnly.series.size)
+        assertEquals(2150.0, modelMaintenanceOnly.series[0][0].y)
+
+        // Null bounds or null calories
+        assertNull(com.lbthomas.healthcoach.features.graphs.ui.components.buildMetabolicLinesLayerModel(null, maxX, 2000.0, 1800.0))
+        assertNull(com.lbthomas.healthcoach.features.graphs.ui.components.buildMetabolicLinesLayerModel(minX, null, 2000.0, 1800.0))
+        assertNull(com.lbthomas.healthcoach.features.graphs.ui.components.buildMetabolicLinesLayerModel(minX, maxX, null, null))
+    }
+
+    @Test
     fun testBuildGraphEntriesEmpty() {
         val result = buildWeightGraphEntries(emptyList(), GraphTimeFrame.YEAR_TO_DATE)
         assertTrue(result.entries.isEmpty())

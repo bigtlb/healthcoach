@@ -42,7 +42,8 @@ class SyncEngine(
         BloodPressureTableSyncHandler,
         FoodUnitTableSyncHandler,
         FoodItemTableSyncHandler,
-        MealEntryTableSyncHandler
+        MealEntryTableSyncHandler,
+        ProfileTableSyncHandler
     )
 ) {
     companion object {

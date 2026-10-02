@@ -9,6 +9,8 @@ import com.lbthomas.healthcoach.features.foodjournal.data.DailyMealSummaryData
 import com.lbthomas.healthcoach.features.foodjournal.data.FoodItemData
 import com.lbthomas.healthcoach.features.foodjournal.data.FoodUnitData
 import com.lbthomas.healthcoach.features.foodjournal.data.MealTimeGroupData
+import com.lbthomas.healthcoach.features.profile.ProfileViewModel
+import com.lbthomas.healthcoach.features.profile.data.*
 import com.lbthomas.healthcoach.features.settings.SettingsViewModel
 import com.lbthomas.healthcoach.features.settings.data.SettingsData
 import com.lbthomas.healthcoach.features.weight.WeightViewModel
@@ -151,6 +153,28 @@ fun previewAppModuleWith(settings: SettingsData = SettingsData()) = module {
                     BloodPressureEntryData("4", "2023-02-06", 142, 92, 80),
                     BloodPressureEntryData("5", "2023-02-07T09:00:00Z", 115, 75, 65)
                 )
+            )
+        )
+    }
+
+    factory {
+        ProfileViewModel(
+            previewProfile = UserProfileData(
+                name = "Alice",
+                gender = Gender.FEMALE,
+                age = 30,
+                heightMeters = 1.65,
+                profileWeightKg = 65.0,
+                activityLevel = ActivityLevel.MODERATE,
+                targetWeightKg = 60.0,
+                targetCalorieDelta = -400.0
+            ),
+            previewEffectiveWeightKg = 65.0,
+            previewMetabolicProfile = MetabolicProfile(
+                bmr = 1380.25,
+                maintenanceCalories = 2139.3875,
+                targetCalories = 1739.3875,
+                currentEffectiveWeightKg = 65.0
             )
         )
     }

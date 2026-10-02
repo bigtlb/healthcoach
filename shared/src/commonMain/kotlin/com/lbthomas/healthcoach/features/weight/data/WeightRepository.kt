@@ -37,12 +37,15 @@ class WeightRepository(private val database: Database) {
         id: String = generateUuid(),
         updatedAt: Long = currentEpochMillis()
     ): String {
-        database.weightEntryQueries.insert(
-            id = id,
-            date = date.toString(),
-            weight = weight,
-            updated_at = updatedAt
-        )
+        database.transaction {
+            database.weightEntryQueries.insert(
+                id = id,
+                date = date.toString(),
+                weight = weight,
+                updated_at = updatedAt
+            )
+            syncLatestWeightToProfile(updatedAt)
+        }
         return id
     }
 
@@ -50,16 +53,36 @@ class WeightRepository(private val database: Database) {
         entry: WeightEntryData,
         updatedAt: Long = currentEpochMillis()
     ): QueryResult<Long> {
-        return database.weightEntryQueries.update(
-            date = entry.date.toString(),
-            weight = entry.weight,
-            updated_at = updatedAt,
-            id = entry.id
-        )
+        return database.transactionWithResult {
+            val result = database.weightEntryQueries.update(
+                date = entry.date.toString(),
+                weight = entry.weight,
+                updated_at = updatedAt,
+                id = entry.id
+            )
+            syncLatestWeightToProfile(updatedAt)
+            result
+        }
     }
 
     fun deleteEntry(id: String): QueryResult<Long> {
-        return database.weightEntryQueries.delete(id)
+        return database.transactionWithResult {
+            val result = database.weightEntryQueries.delete(id)
+            syncLatestWeightToProfile(currentEpochMillis())
+            result
+        }
+    }
+
+    private fun syncLatestWeightToProfile(updatedAt: Long) {
+        val latest = database.weightEntryQueries.selectAll().executeAsList()
+            .maxWithOrNull(compareBy<WeightEntry> { it.date }.thenBy { it.updated_at })
+        if (latest != null) {
+            database.profileSettingQueries.insertOrUpdate(
+                key = "profileWeightKg",
+                value_ = latest.weight.toString(),
+                updated_at = updatedAt
+            )
+        }
     }
 }
 

@@ -18,6 +18,8 @@ import com.lbthomas.healthcoach.core.di.previewAppModule
 import com.lbthomas.healthcoach.core.enums.SelectedPage
 import com.lbthomas.healthcoach.core.theme.HealthCoachTheme
 import com.lbthomas.healthcoach.core.ui.Tooltip
+import com.lbthomas.healthcoach.features.profile.ProfileViewModel
+import com.lbthomas.healthcoach.features.profile.ProfileDialog
 import com.lbthomas.healthcoach.features.settings.SettingsDialog
 import com.lbthomas.healthcoach.features.settings.SettingsViewModel
 import com.lbthomas.healthcoach.features.sync.SyncNotificationManager
@@ -34,9 +36,11 @@ import org.koin.dsl.koinConfiguration
 fun App() {
     val settingsViewModel = koinInject<SettingsViewModel>()
     val syncViewModel = koinInject<SyncViewModel>()
+    val profileViewModel = koinInject<ProfileViewModel>()
     val settings by settingsViewModel.settings.collectAsState()
     val selectedPage = settings.ui.selectedPage
     var showSettings by remember { mutableStateOf(false) }
+    var showProfile by remember { mutableStateOf(false) }
     var showAddWeightEntry by remember { mutableStateOf(false) }
     var showAddBloodPressureEntry by remember { mutableStateOf(false) }
     var showLogFood by remember { mutableStateOf(false) }
@@ -59,7 +63,7 @@ fun App() {
             val isWideLayout = settings.appearance.adaptiveDisplay && maxWidth >= 1200.dp
             val focusRequester = remember { FocusRequester() }
 
-            LaunchedEffect(selectedPage, showSettings, showAddWeightEntry, showAddBloodPressureEntry, showLogFood) {
+            LaunchedEffect(selectedPage, showSettings, showProfile, showAddWeightEntry, showAddBloodPressureEntry, showLogFood) {
                 yield()
                 runCatching {
                     focusRequester.requestFocus()
@@ -94,6 +98,7 @@ fun App() {
                                 }
 
                                 Key.S, Key.Comma -> showSettings = true
+                                Key.U, Key.P -> showProfile = true
                                 Key.R -> syncViewModel.syncNow()
                                 Key.N, Key.Plus, Key.NumPadAdd, Key.Equals -> {
                                     if (selectedPage == SelectedPage.WeightView) {
@@ -120,6 +125,7 @@ fun App() {
                         isWideLayout = isWideLayout,
                         syncViewModel = syncViewModel,
                         onSelection = { settingsViewModel.setSelectedPage(it) },
+                        onShowProfile = { showProfile = true },
                         onShowSettings = { showSettings = true }
                     )
                 },
@@ -193,6 +199,18 @@ fun App() {
                     isWide = isWideLayout,
                     onDismiss = {
                         showSettings = false
+                        runCatching { focusRequester.requestFocus() }
+                    }
+                )
+            }
+
+            if (showProfile) {
+                ProfileDialog(
+                    profileViewModel = profileViewModel,
+                    settingsViewModel = settingsViewModel,
+                    isWide = isWideLayout,
+                    onDismiss = {
+                        showProfile = false
                         runCatching { focusRequester.requestFocus() }
                     }
                 )

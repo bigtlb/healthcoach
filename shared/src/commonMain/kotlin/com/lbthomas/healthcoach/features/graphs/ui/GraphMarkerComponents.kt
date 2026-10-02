@@ -33,6 +33,8 @@ import kotlin.math.round
 internal class TimeFrameChartRangeProvider(
     private val forcedMinX: Double?,
     private val forcedMaxX: Double?,
+    private val forcedMinY: Double? = null,
+    private val forcedMaxY: Double? = null,
     private val minPadding: Double = 5.0,
     private val maxPadding: Double = 5.0,
     private val yPaddingFraction: Double = 0.05
@@ -46,12 +48,14 @@ internal class TimeFrameChartRangeProvider(
     }
 
     override fun getMinY(minY: Double, maxY: Double, extraStore: ExtraStore): Double {
+        if (forcedMinY != null) return forcedMinY
         val diff = maxY - minY
         val padding = if (diff <= 0.0) minPadding else max(1.0, diff * yPaddingFraction)
         return (minY - padding).coerceAtLeast(0.0)
     }
 
     override fun getMaxY(minY: Double, maxY: Double, extraStore: ExtraStore): Double {
+        if (forcedMaxY != null) return forcedMaxY
         val diff = maxY - minY
         val padding = if (diff <= 0.0) maxPadding else max(1.0, diff * yPaddingFraction)
         return maxY + padding
@@ -69,6 +73,8 @@ internal fun rememberHealthChartMarker(
     bpDiastolicColor: Color,
     bpPulseColor: Color,
     calorieColor: Color = Color(0xFF2E7D32),
+    maintenanceLineColor: Color = Color.Unspecified,
+    targetLineColor: Color = Color.Unspecified,
     unitLabel: String
 ): CartesianMarker {
     val markerLabelBackground = rememberShapeComponent(
@@ -90,7 +96,7 @@ internal fun rememberHealthChartMarker(
         background = markerLabelBackground
     )
 
-    val markerValueFormatter = remember(hasWeight, hasBp, hasCalories, weightUnit) {
+    val markerValueFormatter = remember(hasWeight, hasBp, hasCalories, weightUnit, maintenanceLineColor, targetLineColor) {
         DefaultCartesianMarker.ValueFormatter { _, targets ->
             val points = targets.filterIsInstance<LineCartesianLayerMarkerTarget>().flatMap { it.points }
             val columns = targets.filterIsInstance<ColumnCartesianLayerMarkerTarget>().flatMap { it.columns }
@@ -109,6 +115,8 @@ internal fun rememberHealthChartMarker(
                         bpSystolicColor -> lines.add("Systolic: $formatted mmHg")
                         bpDiastolicColor -> lines.add("Diastolic: $formatted mmHg")
                         bpPulseColor -> lines.add("Pulse: $formatted bpm")
+                        maintenanceLineColor -> lines.add("Maintenance: $formatted kcal")
+                        targetLineColor -> lines.add("Target: $formatted kcal")
                         else -> lines.add(formatted)
                     }
                 }

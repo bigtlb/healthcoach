@@ -5,11 +5,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Today
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -17,6 +21,8 @@ import com.lbthomas.healthcoach.core.ui.Tooltip
 import com.lbthomas.healthcoach.core.utils.DOW
 import com.lbthomas.healthcoach.core.utils.displayDate
 import com.lbthomas.healthcoach.core.utils.today
+import kotlin.math.abs
+import kotlin.math.roundToInt
 import kotlin.time.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -78,7 +84,7 @@ fun DailyCalorieSummaryCard(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.elevatedCardColors(
             containerColor = if (isOverBudget) {
-                MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f)
+                MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f)
             } else {
                 MaterialTheme.colorScheme.surfaceVariant
             }
@@ -163,12 +169,13 @@ fun DailyCalorieSummaryCard(
                 thickness = 1.dp
             )
 
-            // Bottom Row: Calorie Consumption & Budget Summary
+            // Bottom Section: Calorie Consumption & Budget Summary
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Left: Consumed Calories
                 Column {
                     Text(
                         text = "Total Consumed",
@@ -196,44 +203,126 @@ fun DailyCalorieSummaryCard(
                     }
                 }
 
+                // Right: Target & Caloric Balance
                 if (targetCalories != null) {
                     val remaining = targetCalories - totalCalories
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text(
-                            text = "Target Budget: ${formatCalories(targetCalories)} kcal",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = if (remaining >= 0) {
-                                "${formatCalories(remaining)} kcal remaining"
-                            } else {
-                                "${formatCalories(-remaining)} kcal over target"
-                            },
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = if (remaining >= 0) {
-                                MaterialTheme.colorScheme.onSurface
-                            } else {
-                                MaterialTheme.colorScheme.error
+                    Column(
+                        horizontalAlignment = Alignment.End,
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "Target: ${formatCalories(targetCalories)} kcal",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Tooltip("Daily target calorie budget derived from your BMR, activity level, and weight goal.") {
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = "Target Budget Info",
+                                    modifier = Modifier.size(14.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                )
                             }
+                        }
+
+                        val balanceTooltip = if (remaining >= 0) {
+                            "Remaining daily calorie budget: ${formatCalories(remaining)} kcal."
+                        } else {
+                            "Daily intake exceeds target calorie budget by ${formatCalories(-remaining)} kcal."
+                        }
+
+                        Tooltip(balanceTooltip) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (remaining >= 0) Icons.Default.CheckCircle else Icons.Default.Warning,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = if (remaining >= 0) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.error
+                                    }
+                                )
+                                Text(
+                                    text = if (remaining >= 0) {
+                                        "${formatCalories(remaining)} kcal remaining"
+                                    } else {
+                                        "${formatCalories(-remaining)} kcal over target"
+                                    },
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (remaining >= 0) {
+                                        MaterialTheme.colorScheme.onSurface
+                                    } else {
+                                        MaterialTheme.colorScheme.error
+                                    }
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    Tooltip("Configure your profile in the top bar to set a daily target calorie budget.") {
+                        Text(
+                            text = "No Target Set",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                         )
                     }
                 }
+            }
+
+            // Calorie Budget Intake Progress Bar
+            if (targetCalories != null && targetCalories > 0.0) {
+                val progress = (totalCalories / targetCalories).toFloat().coerceIn(0f, 1f)
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp),
+                    color = if (isOverBudget) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.primary
+                    },
+                    trackColor = if (isOverBudget) {
+                        MaterialTheme.colorScheme.error.copy(alpha = 0.2f)
+                    } else {
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                    },
+                    strokeCap = StrokeCap.Round
+                )
             }
         }
     }
 }
 
 private fun formatCalories(calories: Double): String {
-    return if (calories % 1.0 == 0.0) {
-        calories.toLong().toString()
+    val rounded = calories.roundToInt()
+    val isExact = abs(calories - rounded) < 0.05
+    return if (isExact) {
+        formatThousands(rounded.toLong())
     } else {
-        ((calories * 10).toLong() / 10.0).toString()
+        val oneDecimal = ((calories * 10).roundToInt() / 10.0)
+        oneDecimal.toString()
     }
 }
 
-@Preview(name = "Daily Calorie Summary - Standard")
+private fun formatThousands(value: Long): String {
+    val str = value.toString()
+    val isNegative = str.startsWith("-")
+    val digits = if (isNegative) str.substring(1) else str
+    val formattedDigits = digits.reversed().chunked(3).joinToString(",").reversed()
+    return if (isNegative) "-$formattedDigits" else formattedDigits
+}
+
+@Preview(name = "Daily Calorie Summary - Standard (No Target)")
 @Composable
 fun DailyCalorieSummaryCardStandardPreview() {
     MaterialTheme {

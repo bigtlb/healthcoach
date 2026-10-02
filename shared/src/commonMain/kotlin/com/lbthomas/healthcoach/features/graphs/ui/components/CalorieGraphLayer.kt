@@ -10,8 +10,12 @@ import com.lbthomas.healthcoach.features.graphs.data.CalorieGraphPoint
 import com.lbthomas.healthcoach.features.graphs.ui.TimeFrameChartRangeProvider
 import com.patrykandpatrick.vico.compose.cartesian.axis.Axis
 import com.patrykandpatrick.vico.compose.cartesian.data.ColumnCartesianLayerModel
+import com.patrykandpatrick.vico.compose.cartesian.data.LineCartesianLayerModel
 import com.patrykandpatrick.vico.compose.cartesian.layer.ColumnCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 
@@ -26,6 +30,7 @@ internal fun rememberCalorieCartesianLayer(
         TimeFrameChartRangeProvider(
             forcedMinX = globalMinX,
             forcedMaxX = globalMaxX,
+            forcedMinY = 0.0,
             minPadding = 50.0,
             maxPadding = 100.0
         )
@@ -65,6 +70,69 @@ internal fun rememberCalorieCartesianLayer(
     )
 }
 
+@Composable
+internal fun rememberMetabolicLines(
+    maintenanceColor: Color,
+    targetColor: Color,
+    hasMaintenance: Boolean,
+    hasTarget: Boolean
+): List<LineCartesianLayer.Line> {
+    val lines = mutableListOf<LineCartesianLayer.Line>()
+    if (hasMaintenance) {
+        lines.add(
+            LineCartesianLayer.rememberLine(
+                fill = LineCartesianLayer.LineFill.single(Fill(maintenanceColor)),
+                stroke = LineCartesianLayer.LineStroke.Dashed(
+                    thickness = 1.5.dp,
+                    dashLength = 5.dp,
+                    gapLength = 4.dp
+                ),
+                pointProvider = null,
+                areaFill = null
+            )
+        )
+    }
+    if (hasTarget) {
+        lines.add(
+            LineCartesianLayer.rememberLine(
+                fill = LineCartesianLayer.LineFill.single(Fill(targetColor)),
+                stroke = LineCartesianLayer.LineStroke.Dashed(
+                    thickness = 2.5.dp,
+                    dashLength = 8.dp,
+                    gapLength = 4.dp
+                ),
+                pointProvider = null,
+                areaFill = null
+            )
+        )
+    }
+    return lines
+}
+
+@Composable
+internal fun rememberMetabolicCartesianLayer(
+    metabolicLines: List<LineCartesianLayer.Line>,
+    globalMinX: Double?,
+    globalMaxX: Double?,
+    axisPosition: Axis.Position.Vertical? = null
+): LineCartesianLayer {
+    val calorieRangeProvider = remember(globalMinX, globalMaxX) {
+        TimeFrameChartRangeProvider(
+            forcedMinX = globalMinX,
+            forcedMaxX = globalMaxX,
+            forcedMinY = 0.0,
+            minPadding = 50.0,
+            maxPadding = 100.0
+        )
+    }
+
+    return rememberLineCartesianLayer(
+        lineProvider = LineCartesianLayer.LineProvider.series(metabolicLines),
+        rangeProvider = calorieRangeProvider,
+        verticalAxisPosition = axisPosition
+    )
+}
+
 internal fun buildCalorieLayerModel(
     caloriePoints: List<CalorieGraphPoint>
 ): ColumnCartesianLayerModel? {
@@ -74,5 +142,36 @@ internal fun buildCalorieLayerModel(
             x = caloriePoints.map { it.x },
             y = caloriePoints.map { it.calories }
         )
+    }
+}
+
+internal fun buildMetabolicLinesLayerModel(
+    globalMinX: Double?,
+    globalMaxX: Double?,
+    maintenanceCalories: Double?,
+    targetCalories: Double?
+): LineCartesianLayerModel? {
+    if (globalMinX == null || globalMaxX == null) return null
+    if (maintenanceCalories == null && targetCalories == null) return null
+
+    val xSpan = if (globalMinX == globalMaxX) {
+        listOf(globalMinX - 0.5, globalMaxX + 0.5)
+    } else {
+        listOf(globalMinX, globalMaxX)
+    }
+
+    return LineCartesianLayerModel.build {
+        maintenanceCalories?.let { maintenance ->
+            series(
+                x = xSpan,
+                y = listOf(maintenance, maintenance)
+            )
+        }
+        targetCalories?.let { target ->
+            series(
+                x = xSpan,
+                y = listOf(target, target)
+            )
+        }
     }
 }

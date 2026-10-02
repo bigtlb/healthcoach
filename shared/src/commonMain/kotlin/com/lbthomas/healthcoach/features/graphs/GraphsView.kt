@@ -16,6 +16,7 @@ import com.lbthomas.healthcoach.features.graphs.data.buildWeightGraphEntries
 import com.lbthomas.healthcoach.features.graphs.ui.CompoundHealthChart
 import com.lbthomas.healthcoach.features.graphs.ui.EmptyGraphState
 import com.lbthomas.healthcoach.features.graphs.ui.GraphHeader
+import com.lbthomas.healthcoach.features.profile.ProfileViewModel
 import com.lbthomas.healthcoach.features.settings.SettingsViewModel
 import com.lbthomas.healthcoach.features.settings.data.BloodPressureSettings
 import com.lbthomas.healthcoach.features.settings.data.FoodJournalSettings
@@ -37,16 +38,21 @@ fun GraphsView(
     val bpViewModel = koinInject<BloodPressureViewModel>()
     val foodJournalViewModel = koinInject<FoodJournalViewModel>()
     val settingsViewModel = koinInject<SettingsViewModel>()
+    val profileViewModel = koinInject<ProfileViewModel>()
 
     val rawWeightEntries by weightViewModel.entries.collectAsState()
     val rawBpEntries by bpViewModel.entries.collectAsState()
     val rawCalorieTotals by foodJournalViewModel.dailyCalorieTotals.collectAsState()
+    val metabolicProfile by profileViewModel.metabolicProfile.collectAsState()
     val settings by settingsViewModel.settings.collectAsState()
 
     val selectedTimeFrame = settings.ui.selectedGraphTimeFrame
     val showWeight = settings.weight.showInGraph
     val showBp = settings.bloodPressure.showInGraph
     val showCalories = settings.foodJournal.showInGraph
+
+    val maintenanceCalories = metabolicProfile?.maintenanceCalories
+    val targetCalories = metabolicProfile?.targetCalories
 
     val weightGraphEntries = remember(rawWeightEntries, selectedTimeFrame) {
         buildWeightGraphEntries(
@@ -71,8 +77,8 @@ fun GraphsView(
 
     val hasWeightData = showWeight && weightGraphEntries.entries.isNotEmpty()
     val hasBpData = showBp && bpGraphEntries.points.isNotEmpty()
-    val hasCalorieData = showCalories && calorieGraphEntries.points.isNotEmpty()
-    val hasAnyData = hasWeightData || hasBpData || hasCalorieData
+    val hasCalorieData = showCalories && (calorieGraphEntries.points.isNotEmpty() || (maintenanceCalories != null && (hasWeightData || hasBpData)))
+    val hasAnyData = hasWeightData || hasBpData || hasCalorieData || (showCalories && calorieGraphEntries.points.isNotEmpty())
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -120,6 +126,8 @@ fun GraphsView(
                             weightEntries = if (showWeight) weightGraphEntries.entries else emptyList(),
                             bpPoints = if (showBp) bpGraphEntries.points else emptyList(),
                             caloriePoints = if (showCalories) calorieGraphEntries.points else emptyList(),
+                            maintenanceCalories = if (showCalories) maintenanceCalories else null,
+                            targetCalories = if (showCalories) targetCalories else null,
                             weightUnit = settings.weight.unit,
                             weightMinEpoch = weightGraphEntries.minEpochDay,
                             weightMaxEpoch = weightGraphEntries.maxEpochDay,
