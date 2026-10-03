@@ -1,5 +1,6 @@
 # HealthCoach
 
+[![Website](https://img.shields.io/badge/Website-bigtlb.github.io%2Fhealthcoach-884B6A?logo=github&logoColor=white)](https://bigtlb.github.io/healthcoach/)
 [![CI Build](https://img.shields.io/github/actions/workflow/status/bigtlb/healthcoach/pr-validation.yml?branch=main&label=Build%20Status&logo=github)](https://github.com/bigtlb/healthcoach/actions)
 [![Latest Release](https://img.shields.io/github/v/release/bigtlb/healthcoach?logo=github&label=Release)](https://github.com/bigtlb/healthcoach/releases)
 [![Kotlin Multiplatform](https://img.shields.io/badge/Kotlin_Multiplatform-Compose_Desktop_%26_Android-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org/docs/multiplatform.html)
@@ -8,6 +9,8 @@
 [![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
 
 **HealthCoach** is a modern, local-first personal health management and analytics application built with **Kotlin Multiplatform (KMP)** and **Compose Multiplatform**. Designed to maximize user empowerment, health insight, and day-to-day tracking efficiency, HealthCoach gives you total control over your health metrics—including body weight, blood pressure, pulse, daily nutrition, and metabolic targets—backed by robust analytics, AHA clinical classifications, compound multi-axis charts, and seamless cross-device synchronization.
+
+🌐 **Website & Downloads**: [https://bigtlb.github.io/healthcoach](https://bigtlb.github.io/healthcoach/)
 
 ---
 
