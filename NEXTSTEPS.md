@@ -50,19 +50,19 @@ HealthCoach is personal wellness software. To comply with app store guidelines (
 HealthCoach supports optional backup and sync via Google Drive's isolated `appDataFolder` sandbox. To enable this across all development and release channels, Google Cloud Console credentials must be configured.
 
 #### Maintainer Action Items
-- [ ] **Google Cloud Project**: Go to [Google Cloud Console](https://console.cloud.google.com/), create or open project `HealthCoach Sync`.
-- [ ] **Enable Drive API**: In **APIs & Services** → **Library**, enable **Google Drive API**.
-- [ ] **OAuth Consent Screen**:
+- [x] **Google Cloud Project**: Go to [Google Cloud Console](https://console.cloud.google.com/), create or open project `HealthCoach Sync`.
+- [x] **Enable Drive API**: In **APIs & Services** → **Library**, enable **Google Drive API**.
+- [x] **OAuth Consent Screen**:
   - Set user type to **External**, App name to `HealthCoach`, add support email.
   - Add scope: `https://www.googleapis.com/auth/drive.appdata` (isolated app storage).
   - Add personal Google account to **Test Users**.
-- [ ] **Generate Desktop OAuth Client ID**:
+- [x] **Generate Desktop OAuth Client ID**:
   - In **Credentials** → **Create Credentials** → **OAuth client ID** → **Desktop app**.
   - Save `Client ID` and `Client Secret`.
-- [ ] **Generate Android OAuth Client ID (Local Debug)**:
+- [x] **Generate Android OAuth Client ID (Local Debug)**:
   - Obtain local debug SHA-1: `keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android` (or `./gradlew :androidApp:signingReport`).
   - Create Android OAuth Client ID with package `com.lbthomas.healthcoach` and the debug SHA-1.
-- [ ] **Generate Production Release Keystore & Android OAuth Client ID (CI/CD)**:
+- [x] **Generate Production Release Keystore & Android OAuth Client ID (CI/CD)**:
   - Generate release keystore locally:
     ```bash
     keytool -genkeypair -v -keystore release.keystore -alias healthcoach -keyalg RSA -keysize 2048 -validity 10000
@@ -79,14 +79,14 @@ HealthCoach supports optional backup and sync via Google Drive's isolated `appDa
 Local development continues using standard `./gradlew` commands. Credentials and SDK configurations are kept strictly in `local.properties` (ignored by Git) without requiring Docker or remote CI secrets.
 
 #### Maintainer Action Items
-- [ ] Configure `/local.properties` on your development machine:
+- [x] Configure `/local.properties` on your development machine:
   ```properties
   sdk.dir=/path/to/your/Android/Sdk
   google.clientId.desktop=YOUR_DESKTOP_CLIENT_ID.apps.googleusercontent.com
   google.clientSecret.desktop=YOUR_DESKTOP_CLIENT_SECRET
   google.clientId.android=YOUR_ANDROID_CLIENT_ID.apps.googleusercontent.com
   ```
-- [ ] Verify local build and test suite:
+- [x] Verify local build and test suite:
   ```bash
   ./gradlew check
   ```
@@ -120,14 +120,14 @@ GitHub Actions workflows require permissions to publish release tags, create rel
 #### Maintainer Action Items
 - [ ] **Workflow Permissions**: On GitHub, navigate to **Settings** → **Actions** → **General** → set **Workflow permissions** to **Read and write permissions**.
 - [ ] **Configure GitHub Secrets** (**Settings** → **Secrets and variables** → **Actions** → **Secrets**):
-  - `RELEASE_KEYSTORE_BASE64`: Base64 string of `release.keystore` (`base64 -w 0 release.keystore`).
-  - `RELEASE_KEYSTORE_PASSWORD`: Keystore password.
-  - `RELEASE_KEY_ALIAS`: Key alias (`healthcoach`).
-  - `RELEASE_KEY_PASSWORD`: Key password.
+  - `RELEASE_KEYSTORE_BASE64`: Base64-encoded string of your `release.keystore` generated in Phase 1. Generate it in your terminal via `base64 -w 0 release.keystore` (Linux) or `base64 -i release.keystore` (macOS) and paste the resulting string.
+  - `RELEASE_KEYSTORE_PASSWORD`: Keystore password you entered during `keytool -genkeypair` in Phase 1 (at the `Enter keystore password:` prompt).
+  - `RELEASE_KEY_ALIAS`: Key alias defined by the `-alias` flag in Phase 1 (`healthcoach`).
+  - `RELEASE_KEY_PASSWORD`: Key password (identical to your `RELEASE_KEYSTORE_PASSWORD` for modern PKCS12 keystores created in Phase 1).
 - [ ] **Configure GitHub Variables** (**Settings** → **Secrets and variables** → **Actions** → **Variables**):
-  - `GOOGLE_CLIENT_ID_DESKTOP`: Desktop Client ID string.
-  - `GOOGLE_CLIENT_SECRET_DESKTOP`: Desktop Client Secret string.
-  - `GOOGLE_CLIENT_ID_ANDROID`: Android Client ID string.
+  - `GOOGLE_CLIENT_ID_DESKTOP`: Desktop OAuth Client ID from Google Cloud Console (created in Phase 1 / saved in `local.properties`).
+  - `GOOGLE_CLIENT_SECRET_DESKTOP`: Desktop OAuth Client Secret from Google Cloud Console (created in Phase 1 / saved in `local.properties`).
+  - `GOOGLE_CLIENT_ID_ANDROID`: Android OAuth Client ID from Google Cloud Console (created in Phase 1 / saved in `local.properties`).
 - [ ] **Enable GitHub Pages**: In repository **Settings** → **Pages**, select **Deploy from a branch** (`main` / `/docs` folder).
 
 ---
@@ -212,7 +212,7 @@ Use this quick checklist to track all manual setup tasks across platforms:
 - [x] Configure OAuth Consent screen (`drive.appdata` scope, add personal test user).
 - [x] Create Desktop OAuth Client ID in Google Cloud.
 - [x] Create Android OAuth Client ID for local debug keystore SHA-1.
-- [ ] Generate production `release.keystore` and create Android OAuth Client ID for release SHA-1.
+- [x] Generate production `release.keystore` and create Android OAuth Client ID for release SHA-1.
 - [x] Fill in `/local.properties` for local builds.
 - [ ] Enable GitHub Actions read/write permissions in repository settings.
 - [ ] Add GitHub Secrets (`RELEASE_KEYSTORE_BASE64`, passwords) and Variables (`GOOGLE_CLIENT_ID_*`).

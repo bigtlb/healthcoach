@@ -1,13 +1,10 @@
 package com.lbthomas.healthcoach.core.sync.auth
 
-import android.accounts.Account
 import android.content.Context
 import android.content.Intent
 import co.touchlab.kermit.Logger
-import com.google.android.gms.auth.GoogleAuthUtil
-import com.google.android.gms.auth.UserRecoverableAuthException
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.auth.api.identity.AuthorizationRequest
+import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.gms.common.api.Scope
 import com.google.android.gms.tasks.Tasks
 import kotlinx.coroutines.CompletableDeferred
@@ -28,7 +25,12 @@ actual object GoogleOAuthManager {
     private var appContext: Context? = null
     private var pendingDeferred: CompletableDeferred<Result<GoogleAuthSession>>? = null
     private val authMutex = Mutex()
-    private const val SCOPE_STRING = "oauth2:https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.email openid"
+
+    private val driveScopes = listOf(
+        Scope("https://www.googleapis.com/auth/drive.appdata"),
+        Scope("https://www.googleapis.com/auth/userinfo.email"),
+        Scope("openid")
+    )
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -63,28 +65,33 @@ actual object GoogleOAuthManager {
         val context = appContext
             ?: return@withContext Result.failure(IllegalStateException("Android Application Context not initialized in GoogleOAuthManager"))
 
-        // First attempt silent token retrieval if user is already signed in with permissions
-        val driveScope = Scope("https://www.googleapis.com/auth/drive.appdata")
-        val lastAccount = GoogleSignIn.getLastSignedInAccount(context)
-        if (lastAccount != null && GoogleSignIn.hasPermissions(lastAccount, driveScope)) {
-            val account = lastAccount.account ?: Account(lastAccount.email ?: "", "com.google")
-            try {
-                Logger.i("GoogleOAuthManager: Attempting silent token fetch for existing account ${account.name}")
-                val token = GoogleAuthUtil.getToken(context, account, SCOPE_STRING)
-                Logger.i("GoogleOAuthManager: Silent token fetch successful")
+        // Attempt silent authorization via Google Identity Services
+        try {
+            val authRequest = AuthorizationRequest.builder()
+                .setRequestedScopes(driveScopes)
+                .build()
+
+            val authorizationClient = Identity.getAuthorizationClient(context)
+            val authResultTask = authorizationClient.authorize(authRequest)
+            val authResult = Tasks.await(authResultTask, 3, TimeUnit.SECONDS)
+
+            if (!authResult.hasResolution() && !authResult.accessToken.isNullOrBlank()) {
+                val token = authResult.accessToken!!
+                Logger.i("GoogleOAuthManager: Silent authorization succeeded via Identity Services")
+                val validation = validateToken(token, "", "")
+                val email = validation.getOrNull()?.email ?: ""
+                val expiresIn = validation.getOrNull()?.expiresInSeconds ?: 3600L
                 return@withContext Result.success(
                     GoogleAuthSession(
                         accessToken = token,
                         refreshToken = "",
-                        email = lastAccount.email ?: "",
-                        expiresInSeconds = 3600
+                        email = email,
+                        expiresInSeconds = expiresIn
                     )
                 )
-            } catch (e: UserRecoverableAuthException) {
-                Logger.i("GoogleOAuthManager: Silent token fetch requires user consent, proceeding to interactive dialog")
-            } catch (e: Exception) {
-                Logger.w("GoogleOAuthManager: Silent token fetch failed, proceeding to interactive dialog: ${e.message}")
             }
+        } catch (e: Exception) {
+            Logger.d("GoogleOAuthManager: Silent authorization not available, opening interactive consent: ${e.message}")
         }
 
         val deferred = CompletableDeferred<Result<GoogleAuthSession>>()
@@ -148,7 +155,7 @@ actual object GoogleOAuthManager {
                 )
             } else {
                 Logger.w("GoogleOAuthManager: Tokeninfo reported invalid/expired token (HTTP $statusCode): $responseBody")
-                // Attempt refresh via Google Play Services
+                // Attempt refresh via Google Identity Services
                 val refreshResult = refreshAccessToken(clientId, accessToken)
                 if (refreshResult.isSuccess) {
                     val session = refreshResult.getOrThrow()
@@ -183,28 +190,33 @@ actual object GoogleOAuthManager {
         val context = appContext
             ?: return@withContext Result.failure(IllegalStateException("Android Application Context not initialized"))
 
-        val lastAccount = GoogleSignIn.getLastSignedInAccount(context)
-            ?: return@withContext Result.failure(IllegalStateException("No signed-in Google account found to refresh token"))
-
-        val account = lastAccount.account ?: Account(lastAccount.email ?: "", "com.google")
         try {
-            if (refreshToken.isNotBlank()) {
-                try {
-                    GoogleAuthUtil.clearToken(context, refreshToken)
-                } catch (_: Exception) {}
-            }
-            val newToken = GoogleAuthUtil.getToken(context, account, SCOPE_STRING)
-            Logger.i("GoogleOAuthManager: Successfully refreshed Google OAuth token")
-            Result.success(
-                GoogleAuthSession(
-                    accessToken = newToken,
-                    refreshToken = "",
-                    email = lastAccount.email ?: "",
-                    expiresInSeconds = 3600
+            val authRequest = AuthorizationRequest.builder()
+                .setRequestedScopes(driveScopes)
+                .build()
+
+            val authorizationClient = Identity.getAuthorizationClient(context)
+            val authResult = Tasks.await(authorizationClient.authorize(authRequest), 5, TimeUnit.SECONDS)
+
+            if (!authResult.hasResolution() && !authResult.accessToken.isNullOrBlank()) {
+                val token = authResult.accessToken!!
+                Logger.i("GoogleOAuthManager: Successfully refreshed Google OAuth token via Identity Services")
+                val validation = validateToken(token, "", "")
+                val email = validation.getOrNull()?.email ?: ""
+                val expiresIn = validation.getOrNull()?.expiresInSeconds ?: 3600L
+                Result.success(
+                    GoogleAuthSession(
+                        accessToken = token,
+                        refreshToken = "",
+                        email = email,
+                        expiresInSeconds = expiresIn
+                    )
                 )
-            )
+            } else {
+                Result.failure(IllegalStateException("Token refresh requires user interaction"))
+            }
         } catch (e: Exception) {
-            Logger.e("GoogleOAuthManager: Failed to refresh token: ${e.message}", e)
+            Logger.e("GoogleOAuthManager: Failed to refresh token via Identity Services: ${e.message}", e)
             Result.failure(e)
         }
     }
@@ -214,25 +226,13 @@ actual object GoogleOAuthManager {
             ?: return@withContext Result.failure(IllegalStateException("Android Application Context not initialized"))
 
         try {
-            if (token.isNotBlank()) {
-                try {
-                    GoogleAuthUtil.clearToken(context, token)
-                } catch (e: Exception) {
-                    Logger.w("GoogleOAuthManager: Could not clear token from GoogleAuthUtil: ${e.message}")
-                }
-            }
-            val client = GoogleSignIn.getClient(context, GoogleSignInOptions.DEFAULT_SIGN_IN)
+            val signInClient = Identity.getSignInClient(context)
             try {
-                Tasks.await(client.revokeAccess(), 5, TimeUnit.SECONDS)
+                Tasks.await(signInClient.signOut(), 5, TimeUnit.SECONDS)
             } catch (e: Exception) {
-                Logger.w("GoogleOAuthManager: client.revokeAccess failed or timed out: ${e.message}")
+                Logger.w("GoogleOAuthManager: signInClient.signOut failed or timed out: ${e.message}")
             }
-            try {
-                Tasks.await(client.signOut(), 5, TimeUnit.SECONDS)
-            } catch (e: Exception) {
-                Logger.w("GoogleOAuthManager: client.signOut failed or timed out: ${e.message}")
-            }
-            Logger.i("GoogleOAuthManager: Successfully revoked and signed out Google account")
+            Logger.i("GoogleOAuthManager: Successfully signed out Google account via Identity Services")
             Result.success(Unit)
         } catch (e: Exception) {
             Logger.w("GoogleOAuthManager: Error during revoke/sign-out: ${e.message}")
