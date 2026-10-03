@@ -1,6 +1,7 @@
 package com.lbthomas.healthcoach.features.settings
 
 import co.touchlab.kermit.Severity
+import com.lbthomas.healthcoach.core.enums.FontSizePreference
 import com.lbthomas.healthcoach.core.enums.GraphTimeFrame
 import com.lbthomas.healthcoach.core.enums.SelectedPage
 import com.lbthomas.healthcoach.core.enums.ThemeMode
@@ -35,6 +36,8 @@ class SettingsDataTest {
         assertEquals(true, settings.appearance.adaptiveDisplay)
         assertEquals(AppTheme.DEFAULT, settings.appearance.appTheme)
         assertEquals(ThemeMode.SYSTEM, settings.appearance.themeMode)
+        assertEquals(FontSizePreference.MEDIUM, settings.appearance.bodyTextSize)
+        assertEquals(FontSizePreference.MEDIUM, settings.appearance.labelTextSize)
 
         // Blood Pressure
         assertEquals(true, settings.bloodPressure.showDailyAverages)
@@ -111,7 +114,9 @@ class SettingsDataTest {
             appearance = AppearanceSettings(
                 adaptiveDisplay = false,
                 appTheme = AppTheme.TEAL,
-                themeMode = ThemeMode.DARK
+                themeMode = ThemeMode.DARK,
+                bodyTextSize = FontSizePreference.LARGE,
+                labelTextSize = FontSizePreference.SMALL
             ),
             bloodPressure = BloodPressureSettings(
                 showDailyAverages = false,
@@ -181,6 +186,8 @@ class SettingsDataTest {
         assertEquals(false, deserialized.appearance.adaptiveDisplay)
         assertEquals(AppTheme.TEAL, deserialized.appearance.appTheme)
         assertEquals(ThemeMode.DARK, deserialized.appearance.themeMode)
+        assertEquals(FontSizePreference.LARGE, deserialized.appearance.bodyTextSize)
+        assertEquals(FontSizePreference.SMALL, deserialized.appearance.labelTextSize)
 
         // Blood Pressure
         assertEquals(false, deserialized.bloodPressure.showDailyAverages)
@@ -282,6 +289,12 @@ class SettingsDataTest {
 
         viewModel.setAppTheme(AppTheme.BLUE)
         assertEquals(AppTheme.BLUE, viewModel.settings.value.appearance.appTheme)
+
+        viewModel.setBodyTextSize(FontSizePreference.LARGE)
+        assertEquals(FontSizePreference.LARGE, viewModel.settings.value.appearance.bodyTextSize)
+
+        viewModel.setLabelTextSize(FontSizePreference.SMALL)
+        assertEquals(FontSizePreference.SMALL, viewModel.settings.value.appearance.labelTextSize)
 
         viewModel.setAdaptiveDisplay(false)
         assertEquals(false, viewModel.settings.value.appearance.adaptiveDisplay)

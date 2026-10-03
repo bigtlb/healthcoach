@@ -2,8 +2,11 @@ package com.lbthomas.healthcoach.core.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.isSpecified
+import androidx.compose.ui.unit.sp
 import healthcoach.shared.generated.resources.Res
 import healthcoach.shared.generated.resources.inter_bold
 import healthcoach.shared.generated.resources.inter_medium
@@ -31,12 +34,36 @@ fun defaultBodyFontFamily(): FontFamily = FontFamily(
     Font(Res.font.inter_bold, FontWeight.Bold),
 )
 
+private fun scaleStyle(style: TextStyle, deltaSp: Int): TextStyle {
+    if (deltaSp == 0) return style
+    val newFontSize = if (style.fontSize.isSpecified && style.fontSize.value > 0) {
+        (style.fontSize.value + deltaSp).coerceAtLeast(6f).sp
+    } else {
+        style.fontSize
+    }
+    val newLineHeight = if (style.lineHeight.isSpecified && style.lineHeight.value > 0) {
+        (style.lineHeight.value + deltaSp).coerceAtLeast(8f).sp
+    } else {
+        style.lineHeight
+    }
+    return style.copy(fontSize = newFontSize, lineHeight = newLineHeight)
+}
+
 @Composable
 fun createTypography(
     displayFontFamily: FontFamily? = defaultDisplayFontFamily(),
     bodyFontFamily: FontFamily? = defaultBodyFontFamily(),
+    bodyDeltaSp: Int = 0,
+    labelDeltaSp: Int = 0,
     baseline: Typography = Typography()
 ): Typography {
+    val bodyLargeBase = baseline.bodyLarge.let { if (bodyFontFamily != null) it.copy(fontFamily = bodyFontFamily) else it }
+    val bodyMediumBase = baseline.bodyMedium.let { if (bodyFontFamily != null) it.copy(fontFamily = bodyFontFamily) else it }
+    val bodySmallBase = baseline.bodySmall.let { if (bodyFontFamily != null) it.copy(fontFamily = bodyFontFamily) else it }
+    val labelLargeBase = baseline.labelLarge.let { if (bodyFontFamily != null) it.copy(fontFamily = bodyFontFamily) else it }
+    val labelMediumBase = baseline.labelMedium.let { if (bodyFontFamily != null) it.copy(fontFamily = bodyFontFamily) else it }
+    val labelSmallBase = baseline.labelSmall.let { if (bodyFontFamily != null) it.copy(fontFamily = bodyFontFamily) else it }
+
     return Typography(
         displayLarge = baseline.displayLarge.let { if (displayFontFamily != null) it.copy(fontFamily = displayFontFamily) else it },
         displayMedium = baseline.displayMedium.let { if (displayFontFamily != null) it.copy(fontFamily = displayFontFamily) else it },
@@ -47,17 +74,23 @@ fun createTypography(
         titleLarge = baseline.titleLarge.let { if (displayFontFamily != null) it.copy(fontFamily = displayFontFamily) else it },
         titleMedium = baseline.titleMedium.let { if (displayFontFamily != null) it.copy(fontFamily = displayFontFamily) else it },
         titleSmall = baseline.titleSmall.let { if (displayFontFamily != null) it.copy(fontFamily = displayFontFamily) else it },
-        bodyLarge = baseline.bodyLarge.let { if (bodyFontFamily != null) it.copy(fontFamily = bodyFontFamily) else it },
-        bodyMedium = baseline.bodyMedium.let { if (bodyFontFamily != null) it.copy(fontFamily = bodyFontFamily) else it },
-        bodySmall = baseline.bodySmall.let { if (bodyFontFamily != null) it.copy(fontFamily = bodyFontFamily) else it },
-        labelLarge = baseline.labelLarge.let { if (bodyFontFamily != null) it.copy(fontFamily = bodyFontFamily) else it },
-        labelMedium = baseline.labelMedium.let { if (bodyFontFamily != null) it.copy(fontFamily = bodyFontFamily) else it },
-        labelSmall = baseline.labelSmall.let { if (bodyFontFamily != null) it.copy(fontFamily = bodyFontFamily) else it },
+        bodyLarge = scaleStyle(bodyLargeBase, bodyDeltaSp),
+        bodyMedium = scaleStyle(bodyMediumBase, bodyDeltaSp),
+        bodySmall = scaleStyle(bodySmallBase, bodyDeltaSp),
+        labelLarge = scaleStyle(labelLargeBase, labelDeltaSp),
+        labelMedium = scaleStyle(labelMediumBase, labelDeltaSp),
+        labelSmall = scaleStyle(labelSmallBase, labelDeltaSp),
     )
 }
 
 @Composable
-fun appTypography(): Typography = createTypography()
+fun appTypography(
+    bodyDeltaSp: Int = 0,
+    labelDeltaSp: Int = 0
+): Typography = createTypography(
+    bodyDeltaSp = bodyDeltaSp,
+    labelDeltaSp = labelDeltaSp
+)
 
 val AppTypography: Typography
     @Composable

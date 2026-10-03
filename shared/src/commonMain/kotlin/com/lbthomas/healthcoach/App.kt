@@ -57,7 +57,9 @@ fun App() {
 
     HealthCoachTheme(
         theme = settings.appearance.appTheme,
-        themeMode = settings.appearance.themeMode
+        themeMode = settings.appearance.themeMode,
+        bodyTextSize = settings.appearance.bodyTextSize,
+        labelTextSize = settings.appearance.labelTextSize
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             val isWideLayout = settings.appearance.adaptiveDisplay && maxWidth >= 1200.dp

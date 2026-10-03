@@ -1,5 +1,6 @@
 package com.lbthomas.healthcoach.features.settings
 
+import com.lbthomas.healthcoach.core.enums.FontSizePreference
 import com.lbthomas.healthcoach.core.enums.GraphTimeFrame
 import com.lbthomas.healthcoach.core.enums.SelectedPage
 import com.lbthomas.healthcoach.core.enums.ThemeMode
@@ -84,6 +85,14 @@ class SettingsViewModel {
 
     fun setAppTheme(theme: AppTheme) {
         updateSettings { it.copy(appearance = it.appearance.copy(appTheme = theme)) }
+    }
+
+    fun setBodyTextSize(size: FontSizePreference) {
+        updateSettings { it.copy(appearance = it.appearance.copy(bodyTextSize = size)) }
+    }
+
+    fun setLabelTextSize(size: FontSizePreference) {
+        updateSettings { it.copy(appearance = it.appearance.copy(labelTextSize = size)) }
     }
 
     fun setWeightUnit(unit: WeightUnit) {

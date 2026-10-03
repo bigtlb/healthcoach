@@ -95,6 +95,17 @@ The following capabilities have been designed, implemented, and verified in the 
 * **Microsoft OneDrive Adapter**: Direct Microsoft Graph API integration using personal OneDrive application storage.
 * **Direct WebDAV / SMB Network Shares**: Native network share storage adapter for NAS devices and self-hosted storage.
 
+### 4. 📊 Multi-Format Data Export & Reporting Engine
+* **Overview**: Implement comprehensive data export and archival capabilities (accessible via Settings / About) to provide complete data portability, external analysis, and clinical reporting for healthcare providers.
+* **Supported Export Formats**:
+  * **Microsoft Excel (`.xlsx`)**: Single structured workbook containing dedicated worksheets/tabs for each exported dataset.
+  * **OpenDocument Spreadsheet (`.ods`)**: Multi-tab open spreadsheet format with dedicated sheets for each dataset.
+  * **CSV Archive (`.zip`)**: Compressed archive containing individual, cleanly formatted CSV files for each selected metric dataset.
+  * **PDF Clinical Report (`.pdf`)**: Formatted summary documents with tabular logs and metric visualizations designed for printing or sharing with physicians.
+* **Granular Export Customization**:
+  * **Flexible Timeframe Filtering**: Export data by custom date ranges or standard intervals (e.g., All Time, Past 30 Days, Past 90 Days, Year-to-Date).
+  * **Metric & Dataset Selection**: Selective checkboxes allowing users to customize which data series to include (Weight logs, Blood Pressure & Pulse records, Daily Calorie summaries, and detailed Food Journal entries).
+
 ---
 
 *Note: For implementation details, setup instructions, and credential configuration guides, refer to [`NEXTSTEPS.md`](NEXTSTEPS.md) and [`docs/roadmap/`](docs/roadmap/).*

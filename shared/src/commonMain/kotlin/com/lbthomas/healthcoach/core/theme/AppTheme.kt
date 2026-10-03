@@ -4,6 +4,7 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import com.lbthomas.healthcoach.core.enums.FontSizePreference
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -42,5 +43,11 @@ enum class AppTheme(
     abstract fun darkExtendedColors(): ExtendedColorScheme
 
     @Composable
-    open fun typography(): Typography = AppTypography
+    open fun typography(
+        bodyTextSize: FontSizePreference = FontSizePreference.MEDIUM,
+        labelTextSize: FontSizePreference = FontSizePreference.MEDIUM
+    ): Typography = appTypography(
+        bodyDeltaSp = bodyTextSize.deltaSp,
+        labelDeltaSp = labelTextSize.deltaSp
+    )
 }

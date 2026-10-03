@@ -16,6 +16,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.lbthomas.healthcoach.core.di.previewAppModule
+import com.lbthomas.healthcoach.core.enums.FontSizePreference
 import com.lbthomas.healthcoach.core.enums.ThemeMode
 import com.lbthomas.healthcoach.core.theme.AppTheme
 import com.lbthomas.healthcoach.features.settings.SettingsViewModel
@@ -37,6 +38,8 @@ internal fun AppearanceTabContent(
     ) {
         ThemePaletteOptions(settings, settingsViewModel)
         ThemeModeOptions(settings, settingsViewModel)
+        BodyTextSizeOptions(settings, settingsViewModel)
+        LabelTextSizeOptions(settings, settingsViewModel)
         AdaptiveDisplayOptions(settings, settingsViewModel)
     }
 }
@@ -92,6 +95,40 @@ private fun ThemeModeOptions(
                 text = mode.displayName,
                 selected = isSelected,
                 onClick = { settingsViewModel.setThemeMode(mode) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun BodyTextSizeOptions(
+    settings: SettingsData,
+    settingsViewModel: SettingsViewModel
+) {
+    SettingsSection(title = "Body Text Size") {
+        FontSizePreference.entries.forEach { size ->
+            val isSelected = settings.appearance.bodyTextSize == size
+            SettingRadioRow(
+                text = size.displayName,
+                selected = isSelected,
+                onClick = { settingsViewModel.setBodyTextSize(size) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun LabelTextSizeOptions(
+    settings: SettingsData,
+    settingsViewModel: SettingsViewModel
+) {
+    SettingsSection(title = "Label Text Size") {
+        FontSizePreference.entries.forEach { size ->
+            val isSelected = settings.appearance.labelTextSize == size
+            SettingRadioRow(
+                text = size.displayName,
+                selected = isSelected,
+                onClick = { settingsViewModel.setLabelTextSize(size) }
             )
         }
     }

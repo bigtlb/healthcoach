@@ -1,5 +1,6 @@
 package com.lbthomas.healthcoach.features.settings.data
 
+import com.lbthomas.healthcoach.core.enums.FontSizePreference
 import com.lbthomas.healthcoach.core.enums.GraphTimeFrame
 import com.lbthomas.healthcoach.core.enums.SelectedPage
 import com.lbthomas.healthcoach.core.enums.ThemeMode
@@ -15,7 +16,9 @@ import kotlinx.serialization.Transient
 data class AppearanceSettings(
     val adaptiveDisplay: Boolean = true,
     val appTheme: AppTheme = AppTheme.DEFAULT,
-    val themeMode: ThemeMode = ThemeMode.SYSTEM
+    val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val bodyTextSize: FontSizePreference = FontSizePreference.MEDIUM,
+    val labelTextSize: FontSizePreference = FontSizePreference.MEDIUM
 )
 
 @Serializable

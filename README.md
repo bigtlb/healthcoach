@@ -1,11 +1,23 @@
 # HealthCoach
 
+[![CI Build](https://img.shields.io/github/actions/workflow/status/bigtlb/healthcoach/pr-validation.yml?branch=main&label=Build%20Status&logo=github)](https://github.com/bigtlb/healthcoach/actions)
+[![Latest Release](https://img.shields.io/github/v/release/bigtlb/healthcoach?logo=github&label=Release)](https://github.com/bigtlb/healthcoach/releases)
 [![Kotlin Multiplatform](https://img.shields.io/badge/Kotlin_Multiplatform-Compose_Desktop_%26_Android-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org/docs/multiplatform.html)
 [![Material 3](https://img.shields.io/badge/UI-Material_3-blue)](https://m3.material.io/)
 [![SQLite](https://img.shields.io/badge/Database-SqlDelight_SQLite-003B57?logo=sqlite&logoColor=white)](https://cashapp.github.io/sqldelight/)
 [![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
 
 **HealthCoach** is a modern, local-first personal health management and analytics application built with **Kotlin Multiplatform (KMP)** and **Compose Multiplatform**. Designed to maximize user empowerment, health insight, and day-to-day tracking efficiency, HealthCoach gives you total control over your health metrics—including body weight, blood pressure, pulse, daily nutrition, and metabolic targets—backed by robust analytics, AHA clinical classifications, compound multi-axis charts, and seamless cross-device synchronization.
+
+---
+
+## ⚕️ Medical & Health Disclaimer
+
+HealthCoach is designed and provided solely for personal health tracking, wellness organization, and informational purposes. HealthCoach is **not a certified medical device** and does not provide clinical diagnoses, medical advice, treatment plans, or emergency health intervention.
+
+The clinical classifications (such as American Heart Association blood pressure categories) and metabolic calculations (such as Mifflin-St Jeor BMR and TDEE estimates) provided in this application are general educational references only. Always consult a qualified physician or licensed healthcare professional before making health, dietary, exercise, or medical decisions, or if you have concerns regarding your blood pressure readings, heart rate, or body weight.
+
+For full terms and conditions, see [DISCLAIMER.md](DISCLAIMER.md).
 
 ---
 
