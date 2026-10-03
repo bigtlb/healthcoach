@@ -287,6 +287,7 @@
                             if (asset.name.endsWith('.msi')) { icon = '🪟 Windows Setup'; isPrimary = true; }
                             else if (asset.name.endsWith('.apk')) { icon = '🤖 Android APK'; isPrimary = true; }
                             else if (asset.name.endsWith('.deb')) { icon = '🐧 Linux DEB'; isPrimary = true; }
+                            else if (asset.name.endsWith('.rpm')) { icon = '🐧 Linux RPM'; isPrimary = true; }
                             else if (asset.name.endsWith('.aab')) { icon = '📦 Google Play Bundle'; }
                             
                             const btnClass = isPrimary ? 'btn-asset btn-primary-asset' : 'btn-asset';
@@ -333,6 +334,7 @@
                     <div class="download-assets">
                         <a href="https://github.com/bigtlb/healthcoach/releases/latest" class="btn-asset btn-primary-asset">🪟 Windows MSI</a>
                         <a href="https://github.com/bigtlb/healthcoach/releases/latest" class="btn-asset btn-primary-asset">🐧 Linux DEB</a>
+                        <a href="https://github.com/bigtlb/healthcoach/releases/latest" class="btn-asset btn-primary-asset">🐧 Linux RPM</a>
                         <a href="https://github.com/bigtlb/healthcoach/releases/latest" class="btn-asset btn-primary-asset">🤖 Android APK</a>
                     </div>
                     <div class="release-body">

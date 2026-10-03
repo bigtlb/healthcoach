@@ -34,7 +34,7 @@ compose.desktop {
         }
 
         nativeDistributions {
-            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb, TargetFormat.Rpm)
             packageName = "HealthCoach"
             packageVersion = appPackageVersion
             description = "Health and wellness tracking application"

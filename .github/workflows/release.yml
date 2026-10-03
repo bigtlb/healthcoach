@@ -5,6 +5,11 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release Tag (leave blank to auto-detect nearest Git tag, e.g. v0.9.1)'
+        required: false
+        default: ''
 
 concurrency:
   group: release-${{ github.ref }}
@@ -51,7 +56,7 @@ jobs:
           retention-days: 5
 
   build-linux-and-android:
-    name: Build Linux DEB, Android APK & AAB Packages
+    name: Build Linux DEB & RPM, Android APK & AAB Packages
     runs-on: ubuntu-latest
 
     steps:
@@ -72,6 +77,9 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Install RPM Packaging Tools
+        run: sudo apt-get update && sudo apt-get install -y rpm
+
       - name: Decode Release Keystore
         if: env.RELEASE_KEYSTORE_BASE64 != ''
         env:
@@ -80,7 +88,7 @@ jobs:
           echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > release.keystore
           echo "Keystore decoded successfully."
 
-      - name: Build Linux DEB and Android Packages
+      - name: Build Linux DEB & RPM and Android Packages
         env:
           GOOGLE_CLIENT_ID_DESKTOP: ${{ vars.GOOGLE_CLIENT_ID_DESKTOP }}
           GOOGLE_CLIENT_SECRET_DESKTOP: ${{ vars.GOOGLE_CLIENT_SECRET_DESKTOP }}
@@ -89,12 +97,13 @@ jobs:
           RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: |
-          ./gradlew :desktopApp:packageReleaseDeb :androidApp:assembleRelease :androidApp:bundleRelease --no-daemon
+          ./gradlew :desktopApp:packageReleaseDeb :desktopApp:packageReleaseRpm :androidApp:assembleRelease :androidApp:bundleRelease --no-daemon
 
       - name: Stage Linux and Android Artifacts
         run: |
           mkdir -p staging
           cp desktopApp/build/compose/binaries/main-release/deb/*.deb staging/ || true
+          cp desktopApp/build/compose/binaries/main-release/rpm/*.rpm staging/ || true
           
           # Stage Android APK
           if compgen -G "androidApp/build/outputs/apk/release/*-signed.apk" > /dev/null; then
@@ -137,9 +146,23 @@ jobs:
       - name: List downloaded release assets
         run: ls -la release-assets/
 
+      - name: Determine Release Tag
+        id: release_tag
+        run: |
+          if [ -n "${{ github.event.inputs.tag_name }}" ]; then
+            echo "tag=${{ github.event.inputs.tag_name }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            TAG=$(git describe --tags --match "v*" --abbrev=0 2>/dev/null || git describe --tags --match "v*" --always 2>/dev/null || echo "v0.9.1")
+            echo "tag=$TAG" >> $GITHUB_OUTPUT
+          fi
+
       - name: Generate Release Notes & Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.release_tag.outputs.tag }}
+          name: Release ${{ steps.release_tag.outputs.tag }}
           files: release-assets/*
           generate_release_notes: true
           draft: false
