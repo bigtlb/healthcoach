@@ -7,6 +7,7 @@ import com.lbthomas.healthcoach.core.database.DriverFactory
 import com.lbthomas.healthcoach.core.logging.LoggingConfig
 import com.lbthomas.healthcoach.core.sync.p2p.PeerDiscoveryAdvertiser
 import com.lbthomas.healthcoach.core.sync.p2p.PeerDiscoveryBrowser
+import com.lbthomas.healthcoach.core.sync.auth.GoogleOAuthManager
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.KoinApplication
 import org.koin.core.module.Module
@@ -24,6 +25,7 @@ actual val platformModule: Module = module {
 actual fun KoinApplication.configurePlatformContext(context: Any?) {
     if (context is Context) {
         androidContext(context)
+        GoogleOAuthManager.setContext(context.applicationContext)
     }
     Logger.setLogWriters(LogcatWriter())
     Logger.setMinSeverity(LoggingConfig.minSeverity)

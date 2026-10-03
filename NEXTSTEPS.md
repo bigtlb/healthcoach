@@ -208,12 +208,12 @@ Use this quick checklist to track all manual setup tasks across platforms:
 
 ### 📋 Initial Setup & Credentials
 - [x] Approve sample Medical & Health Disclaimer text.
-- [ ] Create Google Cloud project `HealthCoach Sync` and enable Google Drive API.
-- [ ] Configure OAuth Consent screen (`drive.appdata` scope, add personal test user).
-- [ ] Create Desktop OAuth Client ID in Google Cloud.
-- [ ] Create Android OAuth Client ID for local debug keystore SHA-1.
+- [x] Create Google Cloud project `HealthCoach Sync` and enable Google Drive API.
+- [x] Configure OAuth Consent screen (`drive.appdata` scope, add personal test user).
+- [x] Create Desktop OAuth Client ID in Google Cloud.
+- [x] Create Android OAuth Client ID for local debug keystore SHA-1.
 - [ ] Generate production `release.keystore` and create Android OAuth Client ID for release SHA-1.
-- [ ] Fill in `/local.properties` for local builds.
+- [x] Fill in `/local.properties` for local builds.
 - [ ] Enable GitHub Actions read/write permissions in repository settings.
 - [ ] Add GitHub Secrets (`RELEASE_KEYSTORE_BASE64`, passwords) and Variables (`GOOGLE_CLIENT_ID_*`).
 - [ ] Enable GitHub Pages in repository settings.

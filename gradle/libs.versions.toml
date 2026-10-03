@@ -25,6 +25,7 @@ koinAnnotationsVersion = "4.2.2"
 koinVersion = "4.2.2"
 kotlinxDatetimeVersion = "0.8.0"
 kotlinxSerializationVersion = "1.11.0"
+playServicesAuthVersion = "21.3.0"
 slf4jVersion = "2.0.18"
 sqlDelightVersion = "2.3.2"
 vicoVersion = "3.3.1"
@@ -60,6 +61,7 @@ koin-test = { group = "io.insert-koin", name = "koin-test", version.ref = "koinV
 koin-test-junit5 = { group = "io.insert-koin", name = "koin-test-junit5", version.ref = "koinVersion" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetimeVersion" }
 kotlinx-serialization = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerializationVersion" }
+play-services-auth = { module = "com.google.android.gms:play-services-auth", version.ref = "playServicesAuthVersion" }
 slf4j = { group = "org.slf4j", name = "slf4j-simple", version.ref = "slf4jVersion" }
 jmdns = { group = "org.jmdns", name = "jmdns", version.ref = "jmdnsVersion" }
 ktor-server-core = { group = "io.ktor", name = "ktor-server-core", version.ref = "ktorVersion" }

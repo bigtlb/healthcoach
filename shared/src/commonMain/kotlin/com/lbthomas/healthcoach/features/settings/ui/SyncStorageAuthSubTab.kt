@@ -273,6 +273,9 @@ internal fun SyncStorageAuthSubTab(
                     }
 
                     // Token Status & User Information Panel
+                    val isOk = hasToken && !tokenStatus.contains("Invalid", ignoreCase = true) && !tokenStatus.contains("Failed", ignoreCase = true) && !tokenStatus.contains("Revoked", ignoreCase = true) && !tokenStatus.contains("Not", ignoreCase = true) && !tokenStatus.contains("Error", ignoreCase = true)
+                    val isErr = tokenStatus.contains("Invalid", ignoreCase = true) || tokenStatus.contains("Failed", ignoreCase = true) || tokenStatus.contains("Error", ignoreCase = true)
+
                     Surface(
                         shape = MaterialTheme.shapes.small,
                         color = if (hasToken && !tokenStatus.contains("Revoked", ignoreCase = true) && !tokenStatus.contains("Failed", ignoreCase = true) && !tokenStatus.contains("Invalid", ignoreCase = true)) {
@@ -303,19 +306,31 @@ internal fun SyncStorageAuthSubTab(
                                     text = "OAuth Tokens & Session",
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.weight(1f, fill = false)
                                 )
-                                SuggestionChip(
-                                    onClick = {},
-                                    label = {
-                                        Text(
-                                            text = tokenStatus,
-                                            style = MaterialTheme.typography.labelSmall
-                                        )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Surface(
+                                    shape = MaterialTheme.shapes.extraSmall,
+                                    color = when {
+                                        isOk -> MaterialTheme.colorScheme.primaryContainer
+                                        isErr -> MaterialTheme.colorScheme.errorContainer
+                                        else -> MaterialTheme.colorScheme.surfaceVariant
                                     },
-                                    icon = {
-                                        val isOk = hasToken && !tokenStatus.contains("Invalid", ignoreCase = true) && !tokenStatus.contains("Failed", ignoreCase = true) && !tokenStatus.contains("Revoked", ignoreCase = true) && !tokenStatus.contains("Not", ignoreCase = true) && !tokenStatus.contains("Error", ignoreCase = true)
-                                        val isErr = tokenStatus.contains("Invalid", ignoreCase = true) || tokenStatus.contains("Failed", ignoreCase = true) || tokenStatus.contains("Error", ignoreCase = true)
+                                    border = BorderStroke(
+                                        1.dp,
+                                        when {
+                                            isOk -> MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                                            isErr -> MaterialTheme.colorScheme.error.copy(alpha = 0.5f)
+                                            else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                                        }
+                                    )
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
                                         Icon(
                                             imageVector = when {
                                                 isOk -> Icons.Default.CheckCircle
@@ -323,15 +338,26 @@ internal fun SyncStorageAuthSubTab(
                                                 else -> Icons.Default.Info
                                             },
                                             contentDescription = null,
-                                            modifier = Modifier.size(16.dp),
+                                            modifier = Modifier.size(14.dp),
                                             tint = when {
-                                                isOk -> MaterialTheme.colorScheme.primary
-                                                isErr -> MaterialTheme.colorScheme.error
+                                                isOk -> MaterialTheme.colorScheme.onPrimaryContainer
+                                                isErr -> MaterialTheme.colorScheme.onErrorContainer
+                                                else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                            }
+                                        )
+                                        Text(
+                                            text = tokenStatus,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Medium,
+                                            maxLines = 1,
+                                            color = when {
+                                                isOk -> MaterialTheme.colorScheme.onPrimaryContainer
+                                                isErr -> MaterialTheme.colorScheme.onErrorContainer
                                                 else -> MaterialTheme.colorScheme.onSurfaceVariant
                                             }
                                         )
                                     }
-                                )
+                                }
                             }
 
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -432,10 +458,11 @@ internal fun SyncStorageAuthSubTab(
                         }
                     }
 
-                    // OAuth Actions Row: Authorize, Revoke, Validate
-                    Row(
+                    // OAuth Actions: Authorize, Revoke, Validate
+                    FlowRow(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         // Authorize Button
                         Button(
@@ -470,18 +497,19 @@ internal fun SyncStorageAuthSubTab(
                                 }
                             },
                             enabled = !isAuthorizing && !isValidatingToken && !isRevoking,
-                            modifier = Modifier.weight(1f)
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                            modifier = Modifier.weight(1f).defaultMinSize(minWidth = 100.dp)
                         ) {
                             if (isAuthorizing) {
                                 CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
+                                    modifier = Modifier.size(14.dp),
                                     strokeWidth = 2.dp,
                                     color = MaterialTheme.colorScheme.onPrimary
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Authorizing...")
+                                Text("Authorizing...", maxLines = 1, style = MaterialTheme.typography.labelMedium)
                             } else {
-                                Text(if (hasToken) "Re-authorize" else "Authorize")
+                                Text(if (hasToken) "Re-authorize" else "Authorize", maxLines = 1, style = MaterialTheme.typography.labelMedium)
                             }
                         }
 
@@ -499,18 +527,19 @@ internal fun SyncStorageAuthSubTab(
                                 }
                             },
                             enabled = !isAuthorizing && !isValidatingToken && !isRevoking && (hasToken || settings.sync.googleAccountEmail.isNotBlank()),
-                            modifier = Modifier.weight(1f)
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                            modifier = Modifier.weight(1f).defaultMinSize(minWidth = 80.dp)
                         ) {
                             if (isRevoking) {
                                 CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
+                                    modifier = Modifier.size(14.dp),
                                     strokeWidth = 2.dp,
                                     color = MaterialTheme.colorScheme.primary
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Revoking...")
+                                Text("Revoking...", maxLines = 1, style = MaterialTheme.typography.labelMedium)
                             } else {
-                                Text("Revoke")
+                                Text("Revoke", maxLines = 1, style = MaterialTheme.typography.labelMedium)
                             }
                         }
 
@@ -557,18 +586,19 @@ internal fun SyncStorageAuthSubTab(
                                 }
                             },
                             enabled = !isAuthorizing && !isValidatingToken && !isRevoking && settings.sync.googleAccessToken.isNotBlank(),
-                            modifier = Modifier.weight(1f)
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                            modifier = Modifier.weight(1f).defaultMinSize(minWidth = 80.dp)
                         ) {
                             if (isValidatingToken) {
                                 CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
+                                    modifier = Modifier.size(14.dp),
                                     strokeWidth = 2.dp,
                                     color = MaterialTheme.colorScheme.onPrimary
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Validating...")
+                                Text("Validating...", maxLines = 1, style = MaterialTheme.typography.labelMedium)
                             } else {
-                                Text("Validate")
+                                Text("Validate", maxLines = 1, style = MaterialTheme.typography.labelMedium)
                             }
                         }
                     }
