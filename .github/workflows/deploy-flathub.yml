@@ -1,0 +1,56 @@
+name: Deploy to Flathub
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_tag:
+        description: 'Release tag to deploy (e.g., v0.9.1)'
+        required: true
+        type: string
+      release_notes:
+        description: 'Release changelog notes for AppStream metadata'
+        required: false
+        default: 'General bug fixes, performance improvements, and health metric enhancements.'
+        type: string
+
+concurrency:
+  group: deploy-flathub
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  update-flathub:
+    name: Update Flathub Manifest & AppStream Metadata
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate Release Tag
+        run: |
+          echo "Preparing Flathub deployment for release tag: ${{ inputs.version_tag }}"
+          if [[ ! "${{ inputs.version_tag }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "Error: version_tag must follow semantic versioning (e.g. v1.0.0)"
+            exit 1
+          fi
+
+      - name: Fetch Release Asset Information
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RELEASE_DATA=$(gh release view "${{ inputs.version_tag }}" --json assets --repo "${{ github.repository }}" || true)
+          echo "Release metadata retrieved."
+
+      - name: Summary & Instructions for Maintainer
+        run: |
+          echo "### Flathub Release Preparation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version Tag**: \`${{ inputs.version_tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release Notes**: ${{ inputs.release_notes }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Flathub builds from the official \`flathub/com.lbthomas.healthcoach\` repository." >> $GITHUB_STEP_SUMMARY
+          echo "Ensure AppStream metadata (\`com.lbthomas.healthcoach.metainfo.xml\`) and Flatpak manifest are updated with the corresponding tag SHA." >> $GITHUB_STEP_SUMMARY

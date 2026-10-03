@@ -12,10 +12,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.lbthomas.healthcoach.core.AppInfo
 import com.lbthomas.healthcoach.core.di.previewAppModule
 import com.lbthomas.healthcoach.core.sync.StorageAdapterFactory
 import com.lbthomas.healthcoach.core.sync.SyncProviderType
@@ -634,7 +636,48 @@ internal fun SyncStorageAuthSubTab(
             }
         }
     } else {
+        val uriHandler = LocalUriHandler.current
         val isServerMode = settings.peerSync.isServerMode
+
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            ),
+            shape = MaterialTheme.shapes.small
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Need HealthCoach on your other device?",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = "Download desktop and mobile companion apps from our download hub.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                TextButton(
+                    onClick = { uriHandler.openUri(AppInfo.WEBSITE_URL) }
+                ) {
+                    Text("Get Apps")
+                }
+            }
+        }
 
         SingleChoiceSegmentedButtonRow(
             modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)

@@ -103,12 +103,12 @@ To automate changelog generation and semantic version tagging, commit messages f
 * `chore:`, `docs:`, `test:`, `refactor:`, `ci:` $\rightarrow$ Excluded from version bumps
 
 #### Maintainer Action Items
-- [ ] Adopt Conventional Commit formatting for personal Git commit messages (e.g. `feat(sync): add companion client discovery`).
+- [x] Adopt Conventional Commit formatting for personal Git commit messages (e.g. `feat(sync): add companion client discovery`).
 - [ ] Configure IDE Git commit message templates or plugins if desired.
 
 #### Implementation Deliverables
-- [ ] Configure AI coding agent guidelines (`.junie/guidelines.md`) for Conventional Commit enforcement.
-- [ ] Add Git tag SemVer derivation logic in `build.gradle.kts` and code-generate `AppBuildConfig.APP_VERSION`.
+- [x] Configure AI coding agent guidelines (`.junie/guidelines.md`) for Conventional Commit enforcement.
+- [x] Add Git tag SemVer derivation logic in `build.gradle.kts` and code-generate `AppBuildConfig.APP_VERSION`.
 
 ---
 
@@ -118,17 +118,17 @@ To automate changelog generation and semantic version tagging, commit messages f
 GitHub Actions workflows require permissions to publish release tags, create release assets, and deploy to GitHub Pages. Private signing keys and API secrets are securely stored in GitHub Secrets, while non-sensitive IDs are kept in GitHub Variables.
 
 #### Maintainer Action Items
-- [ ] **Workflow Permissions**: On GitHub, navigate to **Settings** → **Actions** → **General** → set **Workflow permissions** to **Read and write permissions**.
-- [ ] **Configure GitHub Secrets** (**Settings** → **Secrets and variables** → **Actions** → **Secrets**):
+- [x] **Workflow Permissions**: On GitHub, navigate to **Settings** → **Actions** → **General** → set **Workflow permissions** to **Read and write permissions**.
+- [x] **Configure GitHub Secrets** (**Settings** → **Secrets and variables** → **Actions** → **Secrets**):
   - `RELEASE_KEYSTORE_BASE64`: Base64-encoded string of your `release.keystore` generated in Phase 1. Generate it in your terminal via `base64 -w 0 release.keystore` (Linux) or `base64 -i release.keystore` (macOS) and paste the resulting string.
   - `RELEASE_KEYSTORE_PASSWORD`: Keystore password you entered during `keytool -genkeypair` in Phase 1 (at the `Enter keystore password:` prompt).
   - `RELEASE_KEY_ALIAS`: Key alias defined by the `-alias` flag in Phase 1 (`healthcoach`).
   - `RELEASE_KEY_PASSWORD`: Key password (identical to your `RELEASE_KEYSTORE_PASSWORD` for modern PKCS12 keystores created in Phase 1).
-- [ ] **Configure GitHub Variables** (**Settings** → **Secrets and variables** → **Actions** → **Variables**):
+- [x] **Configure GitHub Variables** (**Settings** → **Secrets and variables** → **Actions** → **Variables**):
   - `GOOGLE_CLIENT_ID_DESKTOP`: Desktop OAuth Client ID from Google Cloud Console (created in Phase 1 / saved in `local.properties`).
   - `GOOGLE_CLIENT_SECRET_DESKTOP`: Desktop OAuth Client Secret from Google Cloud Console (created in Phase 1 / saved in `local.properties`).
   - `GOOGLE_CLIENT_ID_ANDROID`: Android OAuth Client ID from Google Cloud Console (created in Phase 1 / saved in `local.properties`).
-- [ ] **Enable GitHub Pages**: In repository **Settings** → **Pages**, select **Deploy from a branch** (`main` / `/docs` folder).
+- [x] **Enable GitHub Pages**: In repository **Settings** → **Pages**, select **Deploy from a branch** (`main` / `/docs` folder).
 
 ---
 
@@ -155,9 +155,9 @@ As soon as the initial release artifacts are published, the public GitHub Pages 
 - [ ] Review the published Privacy Policy (`docs/privacy-policy.html`) and Medical Disclaimer (`docs/terms.html`).
 
 #### Implementation Deliverables
-- [ ] Create static landing page (`docs/index.html`) with direct download buttons for latest MSI, APK, and Flatpak/DEB binaries.
-- [ ] Create release history view (`docs/releases.html`) with Conventional Commit changelog categories.
-- [ ] Add `AppInfo.WEBSITE_URL` and add website links in `AboutTab.kt` and `SyncTab.kt` (companion client discovery banner for peer-to-peer sync).
+- [x] Create static landing page (`docs/index.html`) with direct download buttons for latest MSI, APK, and Flatpak/DEB binaries.
+- [x] Create release history view (`docs/releases.html`) with Conventional Commit changelog categories.
+- [x] Add `AppInfo.WEBSITE_URL` and add website links in `AboutTab.kt` and `SyncTab.kt` (companion client discovery banner for peer-to-peer sync).
 
 ---
 
@@ -214,9 +214,9 @@ Use this quick checklist to track all manual setup tasks across platforms:
 - [x] Create Android OAuth Client ID for local debug keystore SHA-1.
 - [x] Generate production `release.keystore` and create Android OAuth Client ID for release SHA-1.
 - [x] Fill in `/local.properties` for local builds.
-- [ ] Enable GitHub Actions read/write permissions in repository settings.
-- [ ] Add GitHub Secrets (`RELEASE_KEYSTORE_BASE64`, passwords) and Variables (`GOOGLE_CLIENT_ID_*`).
-- [ ] Enable GitHub Pages in repository settings.
+- [x] Enable GitHub Actions read/write permissions in repository settings.
+- [x] Add GitHub Secrets (`RELEASE_KEYSTORE_BASE64`, passwords) and Variables (`GOOGLE_CLIENT_ID_*`).
+- [x] Enable GitHub Pages in repository settings.
 
 ### 📋 App Store Onboarding (Post Initial Release)
 - [ ] Register Google Play Developer account ($25 fee) and fill in store listing details.

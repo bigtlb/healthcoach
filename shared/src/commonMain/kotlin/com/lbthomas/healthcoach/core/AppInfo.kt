@@ -13,6 +13,7 @@ object AppInfo {
     const val APP_NAME = "Health Coach"
     val APP_VERSION = AppBuildConfig.APP_VERSION
     const val GITHUB_URL = "https://github.com/bigtlb/healthcoach"
+    const val WEBSITE_URL = "https://bigtlb.github.io/healthcoach/"
     const val AUTHOR = "Thomas Baker"
     const val LICENSE_NAME = "Apache License 2.0"
     const val LICENSE_URL = "https://www.apache.org/licenses/LICENSE-2.0"

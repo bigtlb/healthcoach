@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Disclaimer & Terms | HealthCoach</title>
+    <link rel="icon" type="image/svg+xml" href="images/scales.svg">
+    <link rel="alternate icon" type="image/png" href="images/scales.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #884B6A;
+            --primary-dark: #6D3352;
+            --primary-light: #FFD8E8;
+            --secondary: #725763;
+            --secondary-container: #FDD9E7;
+            --surface: #FFF8F8;
+            --surface-card: #FFFFFF;
+            --text-main: #21191D;
+            --text-muted: #504348;
+            --border: #EEDFE3;
+            --warning-bg: #FFF8E1;
+            --warning-border: #FFE082;
+            --warning-text: #795548;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--surface);
+            color: var(--text-main);
+            line-height: 1.6;
+            padding: 0;
+        }
+
+        header {
+            background-color: #ffffff;
+            border-bottom: 1px solid var(--border);
+            padding: 1.25rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+        }
+
+        .logo-icon {
+            width: 28px;
+            height: 28px;
+            object-fit: contain;
+            display: inline-block;
+        }
+
+        nav a {
+            text-decoration: none;
+            color: var(--text-muted);
+            font-weight: 500;
+            margin-left: 1.5rem;
+            transition: color 0.2s;
+        }
+
+        nav a:hover {
+            color: var(--primary);
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 3rem auto;
+            padding: 0 1.5rem;
+        }
+
+        .policy-card {
+            background: var(--surface-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2.5rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+        }
+
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.2rem;
+            color: var(--primary-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .updated-date {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+        }
+
+        h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.35rem;
+            color: var(--primary-dark);
+            margin-top: 1.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        p, ul {
+            margin-bottom: 1rem;
+            color: var(--text-muted);
+        }
+
+        ul {
+            padding-left: 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        .disclaimer-banner {
+            background-color: var(--warning-bg);
+            border: 1px solid var(--warning-border);
+            border-left: 4px solid #FFA000;
+            padding: 1.25rem;
+            border-radius: 0 8px 8px 0;
+            margin: 1.5rem 0;
+            color: var(--warning-text);
+        }
+
+        .disclaimer-banner p {
+            color: var(--warning-text);
+            margin-bottom: 0.5rem;
+        }
+
+        .disclaimer-banner p:last-child {
+            margin-bottom: 0;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2.5rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            border-top: 1px solid var(--border);
+            margin-top: 4rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="index.html" class="logo">
+            <img src="images/scales.svg" alt="HealthCoach" class="logo-icon" width="28" height="28">
+            <span>HealthCoach</span>
+        </a>
+        <nav>
+            <a href="index.html">Home</a>
+            <a href="releases.html">Releases</a>
+            <a href="privacy-policy.html">Privacy Policy</a>
+            <a href="https://github.com/bigtlb/healthcoach" target="_blank" rel="noopener">GitHub</a>
+        </nav>
+    </header>
+
+    <div class="container">
+        <div class="policy-card">
+            <h1>Medical Disclaimer & Terms</h1>
+            <p class="updated-date">Last updated: October 2026</p>
+
+            <div class="disclaimer-banner">
+                <p><strong>IMPORTANT MEDICAL NOTICE:</strong> HealthCoach is designed and provided solely for personal health tracking, wellness organization, and informational purposes. HealthCoach is NOT a certified medical device and does NOT provide clinical diagnoses, medical advice, treatment plans, or emergency health intervention.</p>
+                <p>Always consult a qualified physician or licensed healthcare provider before making any dietary, medical, or exercise decisions.</p>
+            </div>
+
+            <h2>1. Not Medical Advice</h2>
+            <p>The information, calculations, and visualizations presented in HealthCoach (including BMI calculations, Mifflin-St Jeor Basal Metabolic Rate estimates, Total Daily Energy Expenditure projections, and American Heart Association blood pressure classifications) are general educational references only.</p>
+            <p>None of the content generated by HealthCoach should be construed as medical diagnosis, prescriptive guidance, or medical advice. Never disregard professional medical advice or delay seeking medical care because of information recorded in or displayed by HealthCoach.</p>
+
+            <h2>2. Emergency Situations</h2>
+            <p>If you believe you are experiencing a medical emergency (including symptoms of hypertensive crisis, stroke, cardiac distress, or acute illness), call your local emergency services (such as 911 or 112) or seek immediate emergency room care.</p>
+
+            <h2>3. User Responsibility & Data Accuracy</h2>
+            <p>You are solely responsible for verifying the accuracy of measurements and nutrition items entered into the application. Nutritional data sourced from USDA FoodData Central is provided on an "as-is" educational basis and may differ from manufacturer packaging or individual recipe formulations.</p>
+
+            <h2>4. Open Source Terms & Limitation of Liability</h2>
+            <p>HealthCoach is provided under the <strong>Apache License 2.0</strong>:</p>
+            <p><em>"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied, including, without limitation, any warranties or conditions of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A PARTICULAR PURPOSE. In no event and under no legal theory shall any author or contributor be liable for any direct, indirect, special, incidental, or consequential damages resulting from the use or inability to use this software.</em></p>
+
+            <h2>5. Trademarks & Brand Attributions</h2>
+            <p>Third-party names, trademarks, and logos displayed on this website and within the software belong to their respective owners and are used strictly for identification and compatibility references:</p>
+            <ul>
+                <li><strong>Android</strong>: The Android robot is reproduced or modified from work created and shared by Google and used according to terms described in the Creative Commons 3.0 Attribution License. Android and Google Play are trademarks of Google LLC.</li>
+                <li><strong>Linux</strong>: Linux® is the registered trademark of Linus Torvalds in the U.S. and other countries. The Tux penguin mascot was created by Larry Ewing with GIMP.</li>
+                <li><strong>Windows</strong>: Windows is a registered trademark of Microsoft Corporation in the United States and other countries.</li>
+            </ul>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 Thomas Baker. Licensed under Apache License 2.0. HealthCoach is personal wellness software.</p>
+        <p style="font-size: 0.75rem; margin-top: 0.5rem; line-height: 1.4;">The Android robot is reproduced or modified from work created and shared by Google and used according to terms described in the Creative Commons 3.0 Attribution License. Linux® is the registered trademark of Linus Torvalds. Tux penguin created by Larry Ewing. Windows is a trademark of Microsoft Corporation.</p>
+    </footer>
+</body>
+</html>

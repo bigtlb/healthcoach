@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy | HealthCoach</title>
+    <link rel="icon" type="image/svg+xml" href="images/scales.svg">
+    <link rel="alternate icon" type="image/png" href="images/scales.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #884B6A;
+            --primary-dark: #6D3352;
+            --primary-light: #FFD8E8;
+            --secondary: #725763;
+            --secondary-container: #FDD9E7;
+            --surface: #FFF8F8;
+            --surface-card: #FFFFFF;
+            --text-main: #21191D;
+            --text-muted: #504348;
+            --border: #EEDFE3;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--surface);
+            color: var(--text-main);
+            line-height: 1.6;
+            padding: 0;
+        }
+
+        header {
+            background-color: #ffffff;
+            border-bottom: 1px solid var(--border);
+            padding: 1.25rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+        }
+
+        .logo-icon {
+            width: 28px;
+            height: 28px;
+            object-fit: contain;
+            display: inline-block;
+        }
+
+        nav a {
+            text-decoration: none;
+            color: var(--text-muted);
+            font-weight: 500;
+            margin-left: 1.5rem;
+            transition: color 0.2s;
+        }
+
+        nav a:hover {
+            color: var(--primary);
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 3rem auto;
+            padding: 0 1.5rem;
+        }
+
+        .policy-card {
+            background: var(--surface-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2.5rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+        }
+
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.2rem;
+            color: var(--primary-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .updated-date {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+        }
+
+        h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.35rem;
+            color: var(--primary-dark);
+            margin-top: 1.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        p, ul {
+            margin-bottom: 1rem;
+            color: var(--text-muted);
+        }
+
+        ul {
+            padding-left: 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        .highlight-box {
+            background-color: rgba(136, 75, 106, 0.08);
+            border-left: 4px solid var(--primary);
+            padding: 1rem 1.25rem;
+            border-radius: 0 8px 8px 0;
+            margin: 1.5rem 0;
+        }
+
+        .highlight-box p {
+            color: var(--primary-dark);
+            font-weight: 500;
+            margin-bottom: 0;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2.5rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            border-top: 1px solid var(--border);
+            margin-top: 4rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="index.html" class="logo">
+            <img src="images/scales.svg" alt="HealthCoach" class="logo-icon" width="28" height="28">
+            <span>HealthCoach</span>
+        </a>
+        <nav>
+            <a href="index.html">Home</a>
+            <a href="releases.html">Releases</a>
+            <a href="terms.html">Medical Disclaimer</a>
+            <a href="https://github.com/bigtlb/healthcoach" target="_blank" rel="noopener">GitHub</a>
+        </nav>
+    </header>
+
+    <div class="container">
+        <div class="policy-card">
+            <h1>Privacy Policy</h1>
+            <p class="updated-date">Last updated: October 2026</p>
+
+            <div class="highlight-box">
+                <p><strong>Core Privacy Guarantee:</strong> HealthCoach is local-first software. Your personal health records, weight entries, blood pressure measurements, and nutrition logs never leave your device unless you explicitly enable synchronization.</p>
+            </div>
+
+            <h2>1. Zero Telemetry & Zero Data Collection</h2>
+            <p>HealthCoach does not collect, track, transmit, or monetize your personal health information. The application operates with:</p>
+            <ul>
+                <li><strong>No Analytics SDKs:</strong> No third-party tracking, profiling, or analytical beacons.</li>
+                <li><strong>No Advertising:</strong> No advertising libraries or tracking cookies.</li>
+                <li><strong>No Centralized Accounts:</strong> No mandatory account creation or central remote databases.</li>
+            </ul>
+
+            <h2>2. Local SQLite Storage & Sovereignty</h2>
+            <p>All application data is stored in an embedded SQLite database located solely on your physical device. You retain 100% data sovereignty and ownership. You can inspect, back up, export, or permanently delete your local database at any time.</p>
+
+            <h2>3. Optional Synchronization Channels</h2>
+            <p>If you choose to enable synchronization across devices, HealthCoach provides three strictly user-controlled transport mechanisms:</p>
+            <ul>
+                <li><strong>Local Folder / Mounted Drive Sync:</strong> Saves encrypted SQLite database snapshots directly to a directory on your machine or private local network storage.</li>
+                <li><strong>Peer-to-Peer Wi-Fi LAN Sync:</strong> Transfers data directly between your companion devices over your local area network without passing through remote third-party servers.</li>
+                <li><strong>Google Drive Sandbox (appDataFolder):</strong> If you authenticate with Google Drive, HealthCoach requests isolated access exclusively to the <code>https://www.googleapis.com/auth/drive.appdata</code> scope. HealthCoach cannot access, read, or modify any other files in your Google Drive, and your health data is stored strictly in your private application storage sandbox.</li>
+            </ul>
+
+            <h2>4. Third-Party Services & Links</h2>
+            <p>The application links to official open-source licenses and reference sources (such as USDA FoodData Central and AHA Blood Pressure guidelines). Accessing external links opens your default web browser and is subject to the privacy policies of those external domains.</p>
+
+            <h2>5. Contact & Open Source Verification</h2>
+            <p>HealthCoach is open source under the Apache License 2.0. The complete source code and build pipelines are publicly verifiable at <a href="https://github.com/bigtlb/healthcoach" target="_blank" rel="noopener">github.com/bigtlb/healthcoach</a>.</p>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 Thomas Baker. Licensed under Apache License 2.0. HealthCoach is personal wellness software.</p>
+    </footer>
+</body>
+</html>

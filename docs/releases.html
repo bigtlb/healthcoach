@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Release Archive & Changelogs | HealthCoach</title>
+    <link rel="icon" type="image/svg+xml" href="images/scales.svg">
+    <link rel="alternate icon" type="image/png" href="images/scales.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #884B6A;
+            --primary-dark: #6D3352;
+            --primary-light: #FFD8E8;
+            --secondary: #725763;
+            --secondary-container: #FDD9E7;
+            --surface: #FFF8F8;
+            --surface-card: #FFFFFF;
+            --text-main: #21191D;
+            --text-muted: #504348;
+            --border: #EEDFE3;
+            --tag-feat: #FDD9E7;
+            --tag-feat-text: #6D3352;
+            --tag-fix: #E2E8F0;
+            --tag-fix-text: #334155;
+            --tag-chore: #F3E4E9;
+            --tag-chore-text: #504348;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--surface);
+            color: var(--text-main);
+            line-height: 1.6;
+            padding: 0;
+        }
+
+        header {
+            background-color: #ffffff;
+            border-bottom: 1px solid var(--border);
+            padding: 1.25rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+        }
+
+        .logo-icon {
+            width: 28px;
+            height: 28px;
+            object-fit: contain;
+            display: inline-block;
+        }
+
+        nav a {
+            text-decoration: none;
+            color: var(--text-muted);
+            font-weight: 500;
+            margin-left: 1.5rem;
+            transition: color 0.2s;
+        }
+
+        nav a:hover {
+            color: var(--primary);
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 3rem auto;
+            padding: 0 1.5rem;
+        }
+
+        .header-section {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.4rem;
+            color: var(--primary-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .release-card {
+            background: var(--surface-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.03);
+        }
+
+        .release-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .release-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.6rem;
+            color: var(--primary-dark);
+            font-weight: 700;
+        }
+
+        .release-date {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .release-badge {
+            display: inline-block;
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            margin-left: 0.5rem;
+        }
+
+        .download-assets {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin: 1.5rem 0;
+        }
+
+        .btn-asset {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #ffffff;
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn-asset:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: rgba(0, 108, 80, 0.04);
+        }
+
+        .btn-primary-asset {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #ffffff;
+        }
+
+        .btn-primary-asset:hover {
+            background: var(--primary-dark);
+            color: #ffffff;
+        }
+
+        .release-body {
+            font-size: 0.95rem;
+            color: var(--text-main);
+            line-height: 1.7;
+        }
+
+        .release-body h3 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.15rem;
+            margin-top: 1.25rem;
+            margin-bottom: 0.5rem;
+            color: var(--primary-dark);
+        }
+
+        .release-body ul {
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .loading-state, .error-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-muted);
+        }
+
+        footer {
+            text-align: center;
+            padding: 2.5rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            border-top: 1px solid var(--border);
+            margin-top: 4rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="index.html" class="logo">
+            <img src="images/scales.svg" alt="HealthCoach" class="logo-icon" width="28" height="28">
+            <span>HealthCoach</span>
+        </a>
+        <nav>
+            <a href="index.html">Home</a>
+            <a href="privacy-policy.html">Privacy</a>
+            <a href="terms.html">Disclaimer</a>
+            <a href="https://github.com/bigtlb/healthcoach" target="_blank" rel="noopener">GitHub</a>
+        </nav>
+    </header>
+
+    <div class="container">
+        <div class="header-section">
+            <h1>Release Archive</h1>
+            <p class="subtitle">Explore version history, multi-platform downloads, and Conventional Commit changelogs.</p>
+        </div>
+
+        <div id="releases-container">
+            <div class="loading-state">
+                <p>Loading latest releases from GitHub...</p>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 Thomas Baker. Licensed under Apache License 2.0. HealthCoach is personal wellness software.</p>
+    </footer>
+
+    <script>
+        const REPO = 'bigtlb/healthcoach';
+        const container = document.getElementById('releases-container');
+
+        async function fetchReleases() {
+            try {
+                const response = await fetch(`https://api.github.com/repos/${REPO}/releases`);
+                if (!response.ok) throw new Error('Failed to fetch releases');
+                const releases = await response.json();
+                
+                if (releases.length === 0) {
+                    renderFallback();
+                    return;
+                }
+
+                container.innerHTML = '';
+                releases.forEach((release, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'release-card';
+
+                    const dateStr = new Date(release.published_at || release.created_at).toLocaleDateString(undefined, {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    });
+
+                    let assetButtons = '';
+                    if (release.assets && release.assets.length > 0) {
+                        release.assets.forEach(asset => {
+                            let icon = '📦';
+                            let isPrimary = false;
+                            if (asset.name.endsWith('.msi')) { icon = '🪟 Windows Setup'; isPrimary = true; }
+                            else if (asset.name.endsWith('.apk')) { icon = '🤖 Android APK'; isPrimary = true; }
+                            else if (asset.name.endsWith('.deb')) { icon = '🐧 Linux DEB'; isPrimary = true; }
+                            else if (asset.name.endsWith('.aab')) { icon = '📦 Google Play Bundle'; }
+                            
+                            const btnClass = isPrimary ? 'btn-asset btn-primary-asset' : 'btn-asset';
+                            assetButtons += `<a href="${asset.browser_download_url}" class="${btnClass}">${icon} (${asset.name})</a>`;
+                        });
+                    }
+
+                    const bodyHtml = release.body 
+                        ? release.body.replace(/\n/g, '<br>') 
+                        : '<p>Standard release package.</p>';
+
+                    card.innerHTML = `
+                        <div class="release-header">
+                            <div>
+                                <span class="release-title">${release.name || release.tag_name}</span>
+                                ${index === 0 ? '<span class="release-badge">Latest</span>' : ''}
+                            </div>
+                            <span class="release-date">${dateStr}</span>
+                        </div>
+                        <div class="download-assets">
+                            ${assetButtons}
+                        </div>
+                        <div class="release-body">
+                            ${bodyHtml}
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (err) {
+                renderFallback();
+            }
+        }
+
+        function renderFallback() {
+            container.innerHTML = `
+                <div class="release-card">
+                    <div class="release-header">
+                        <div>
+                            <span class="release-title">Release v0.9.1</span>
+                            <span class="release-badge">Latest</span>
+                        </div>
+                        <span class="release-date">October 2026</span>
+                    </div>
+                    <div class="download-assets">
+                        <a href="https://github.com/bigtlb/healthcoach/releases/latest" class="btn-asset btn-primary-asset">🪟 Windows MSI</a>
+                        <a href="https://github.com/bigtlb/healthcoach/releases/latest" class="btn-asset btn-primary-asset">🐧 Linux DEB</a>
+                        <a href="https://github.com/bigtlb/healthcoach/releases/latest" class="btn-asset btn-primary-asset">🤖 Android APK</a>
+                    </div>
+                    <div class="release-body">
+                        <h3>Highlights</h3>
+                        <ul>
+                            <li><strong>Dynamic SemVer & Conventional Commits</strong>: Integrated automated Git tag resolution.</li>
+                            <li><strong>Multiplatform Packaging</strong>: Standalone Windows MSI with bundled JRE, Linux DEB, and Android APK/AAB builds.</li>
+                            <li><strong>Data Sovereignty</strong>: Local-first SQLite database and zero analytics tracking.</li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+        }
+
+        fetchReleases();
+    </script>
+</body>
+</html>

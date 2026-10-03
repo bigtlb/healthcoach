@@ -21,6 +21,9 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
 }
 
+val appVersionName = (rootProject.extra["appVersionName"] as? String) ?: "0.0.1"
+val appPackageVersion = appVersionName.substringBefore('-')
+
 compose.desktop {
     application {
         mainClass = "com.lbthomas.healthcoach.MainKt"
@@ -33,7 +36,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "HealthCoach"
-            packageVersion = libs.versions.app.version.get()
+            packageVersion = appPackageVersion
             description = "Health and wellness tracking application"
             vendor = "LBThomas"
 
