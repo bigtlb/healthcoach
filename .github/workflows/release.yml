@@ -39,7 +39,41 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Build Windows MSI Installer
+        env:
+          GOOGLE_CLIENT_ID_DESKTOP: ${{ vars.GOOGLE_CLIENT_ID_DESKTOP }}
+          GOOGLE_CLIENT_SECRET_DESKTOP: ${{ vars.GOOGLE_CLIENT_SECRET_DESKTOP }}
+        shell: bash
         run: ./gradlew :desktopApp:packageReleaseMsi --no-daemon
+
+      - name: Code Sign Windows MSI Package
+        if: env.WINDOWS_SIGNING_CERT_BASE64 != ''
+        env:
+          WINDOWS_SIGNING_CERT_BASE64: ${{ secrets.WINDOWS_SIGNING_CERT_BASE64 }}
+          WINDOWS_SIGNING_CERT_PASSWORD: ${{ secrets.WINDOWS_SIGNING_CERT_PASSWORD }}
+        shell: pwsh
+        run: |
+          Write-Host "Decoding code signing certificate..."
+          $certBytes = [Convert]::FromBase64String($env:WINDOWS_SIGNING_CERT_BASE64)
+          $certPath = Join-Path $PWD "windows-cert.pfx"
+          [IO.File]::WriteAllBytes($certPath, $certBytes)
+
+          # Locate signtool.exe from Windows SDK
+          $signtool = (Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter signtool.exe | Select-Object -First 1).FullName
+          if (-not $signtool) {
+            Write-Warning "signtool.exe not found in standard Windows Kits path; falling back to PATH lookup."
+            $signtool = "signtool"
+          }
+          Write-Host "Using SignTool at: $signtool"
+
+          $msiFiles = Get-ChildItem -Path "desktopApp/build/compose/binaries/main-release/msi" -Filter "*.msi"
+          foreach ($file in $msiFiles) {
+            Write-Host "Signing $($file.FullName)..."
+            & $signtool sign /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 /f $certPath /p $env:WINDOWS_SIGNING_CERT_PASSWORD $file.FullName
+            & $signtool verify /pa /v $file.FullName
+          }
+
+          Remove-Item -Path $certPath -Force
+          Write-Host "Code signing completed successfully."
 
       - name: Stage Windows Artifacts
         shell: bash

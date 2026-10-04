@@ -18,6 +18,8 @@ import com.lbthomas.healthcoach.features.bloodpressure.ui.AhaGuideLinkFooter
 import com.lbthomas.healthcoach.features.bloodpressure.ui.BloodPressureEntryEditDialog
 import com.lbthomas.healthcoach.features.bloodpressure.ui.BloodPressureEntryList
 import com.lbthomas.healthcoach.features.bloodpressure.ui.BloodPressureViewModel
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
 import org.koin.compose.KoinApplication
 import org.koin.compose.koinInject
 import org.koin.dsl.koinConfiguration
@@ -34,17 +36,11 @@ fun BloodPressureView(
     val entries by viewModel.entries.collectAsState()
 
     var entryToDelete by remember { mutableStateOf<BloodPressureEntryData?>(null) }
-    var entryToEdit by remember { mutableStateOf<BloodPressureEntryData?>(null) }
+    var targetToEdit by remember { mutableStateOf<Pair<LocalDate, LocalTime?>?>(null) }
 
     LaunchedEffect(showAddBloodPressureEntry) {
         if (showAddBloodPressureEntry) {
-            entryToEdit = BloodPressureEntryData(
-                id = "",
-                dateTime = today.toString(),
-                systolic = 0,
-                diastolic = 0,
-                pulse = null
-            )
+            targetToEdit = Pair(today, null)
         }
     }
 
@@ -67,9 +63,35 @@ fun BloodPressureView(
         )
     }
 
-    entryToEdit?.let { entry ->
+    targetToEdit?.let { (date, time) ->
         BloodPressureEntryEditDialog(
-            entry = entry,
+            initialDate = date,
+            initialTime = time,
+            getEntriesForDateTime = { targetDate, targetTime ->
+                val current = if (targetTime != null) {
+                    entries.find { it.date == targetDate && it.hasTime && it.time?.hour == targetTime.hour && it.time?.minute == targetTime.minute }
+                } else {
+                    entries.find { it.date == targetDate && !it.hasTime }
+                }
+
+                val prior = if (targetTime != null) {
+                    val targetTimeStr = targetTime.toString()
+                    entries
+                        .filter { it.date < targetDate || (it.date == targetDate && it.hasTime && (it.time?.toString() ?: "") < targetTimeStr) }
+                        .maxWithOrNull(
+                            compareBy<BloodPressureEntryData> { it.date }
+                                .thenBy { it.time?.toString() ?: "" }
+                        )
+                } else {
+                    entries
+                        .filter { it.date < targetDate }
+                        .maxWithOrNull(
+                            compareBy<BloodPressureEntryData> { it.date }
+                                .thenBy { it.time?.toString() ?: "" }
+                        )
+                }
+                Pair(current, prior)
+            },
             onConfirm = { updatedEntry ->
                 if (updatedEntry.id.isEmpty() || updatedEntry.id == "0") {
                     viewModel.addEntry(
@@ -81,12 +103,12 @@ fun BloodPressureView(
                 } else {
                     viewModel.updateEntry(updatedEntry)
                 }
-                entryToEdit = null
+                targetToEdit = null
                 if (showAddBloodPressureEntry) onAddDismiss()
                 onRequestFocus()
             },
             onDismiss = {
-                entryToEdit = null
+                targetToEdit = null
                 if (showAddBloodPressureEntry) onAddDismiss()
                 onRequestFocus()
             }
@@ -113,13 +135,7 @@ fun BloodPressureView(
                 )
                 AddBloodPressureEntryButton(
                     onClick = {
-                        entryToEdit = BloodPressureEntryData(
-                            id = "",
-                            dateTime = today.toString(),
-                            systolic = 0,
-                            diastolic = 0,
-                            pulse = null
-                        )
+                        targetToEdit = Pair(today, null)
                     }
                 )
             }
@@ -130,7 +146,7 @@ fun BloodPressureView(
                 entries = entries,
                 isWideLayout = isWideLayout,
                 onClickEntry = { entry ->
-                    entryToEdit = entry
+                    targetToEdit = Pair(entry.date, entry.time)
                 },
                 onDeleteEntry = { entry ->
                     entryToDelete = entry

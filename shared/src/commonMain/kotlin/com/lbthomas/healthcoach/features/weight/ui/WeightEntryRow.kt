@@ -88,10 +88,6 @@ internal fun RowData(
         else -> Triple(Icons.Outlined.Stop, extColors.weightNoChange.color, "No change")
     }
 
-    val rowIconWidth = 28.dp
-    val rowChangeWidth = 75.dp
-    val rowWeightWidth = 75.dp
-
     Row(
         modifier = modifier,
         horizontalArrangement = Arrangement.End,
@@ -101,23 +97,23 @@ internal fun RowData(
             imageVector = changeIcon,
             contentDescription = changeDescription,
             tint = iconColor,
-            modifier = Modifier.size(24.dp).width(rowIconWidth)
+            modifier = Modifier.size(24.dp)
         )
-        Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = String.format("%+.1f $units", change),
             maxLines = 1,
             fontWeight = FontWeight.Bold,
             color = if (change > 0) extColors.weightIncrease.color else if (change < 0) extColors.weightDecrease.color else extColors.weightNoChange.color,
             textAlign = TextAlign.End,
-            modifier = Modifier.width(rowChangeWidth)
+            modifier = Modifier.padding(horizontal = 4.dp)
         )
-        Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = String.format("%.1f $units", entry.getWeightInCurrentUnits(settings.weight.unit)),
             maxLines = 1,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 4.dp).width(rowWeightWidth),
+            modifier = Modifier.padding(horizontal = 4.dp),
             textAlign = TextAlign.End
         )
     }

@@ -31,6 +31,8 @@ import com.lbthomas.healthcoach.core.ui.Tooltip
 import com.lbthomas.healthcoach.core.ui.onDialogKeyEvents
 import com.lbthomas.healthcoach.core.utils.*
 import com.lbthomas.healthcoach.features.bloodpressure.data.BloodPressureEntryData
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.yield
 import kotlinx.datetime.*
 import org.koin.compose.KoinApplication
@@ -39,50 +41,95 @@ import org.koin.dsl.koinConfiguration
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BloodPressureEntryEditDialog(
-    entry: BloodPressureEntryData,
+    initialDate: LocalDate = today,
+    initialTime: LocalTime? = null,
+    getEntriesForDateTime: (LocalDate, LocalTime?) -> Pair<BloodPressureEntryData?, BloodPressureEntryData?>,
     onConfirm: (BloodPressureEntryData) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val isNew = entry.id.isEmpty() || entry.id == "0"
-    val title = if (isNew) "New Blood Pressure" else "Edit Blood Pressure"
-
-    var selectedDate by remember { mutableStateOf(if (isNew) today else entry.date) }
-    var includeTime by remember { mutableStateOf(if (isNew) false else entry.hasTime) }
-    var selectedTime by remember { mutableStateOf(entry.time ?: nowLocal.time) }
-
-    val initialSystolic = if (entry.systolic > 0) entry.systolic.toString() else ""
-    var systolicFieldValue by remember {
-        mutableStateOf(
-            TextFieldValue(
-                text = initialSystolic,
-                selection = TextRange(initialSystolic.length)
-            )
-        )
-    }
-
-    val initialDiastolic = if (entry.diastolic > 0) entry.diastolic.toString() else ""
-    var diastolicFieldValue by remember {
-        mutableStateOf(
-            TextFieldValue(
-                text = initialDiastolic,
-                selection = TextRange(initialDiastolic.length)
-            )
-        )
-    }
-
-    val initialPulse = entry.pulse?.toString() ?: ""
-    var pulseFieldValue by remember {
-        mutableStateOf(
-            TextFieldValue(
-                text = initialPulse,
-                selection = TextRange(initialPulse.length)
-            )
-        )
-    }
-
+    var selectedDate by remember { mutableStateOf(initialDate) }
+    var includeTime by remember { mutableStateOf(initialTime != null) }
+    var selectedTime by remember { mutableStateOf(initialTime ?: nowLocal.time) }
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+
+    val effectiveTime = if (includeTime) selectedTime else null
+
+    val (currentEntry, priorEntry) = remember(selectedDate, effectiveTime) {
+        getEntriesForDateTime(selectedDate, effectiveTime)
+    }
+
+    val currentEntryId = currentEntry?.id ?: ""
+    val isEditMode = currentEntry != null && currentEntryId.isNotEmpty() && currentEntryId != "0"
+    val title = if (isEditMode) "Edit Blood Pressure" else "New Blood Pressure"
+
+    var systolicFieldValue by remember(selectedDate, effectiveTime) {
+        val initialText = if (currentEntry != null && currentEntry.systolic > 0) {
+            currentEntry.systolic.toString()
+        } else {
+            ""
+        }
+        mutableStateOf(
+            TextFieldValue(
+                text = initialText,
+                selection = TextRange(0, initialText.length)
+            )
+        )
+    }
+
+    var diastolicFieldValue by remember(selectedDate, effectiveTime) {
+        val initialText = if (currentEntry != null && currentEntry.diastolic > 0) {
+            currentEntry.diastolic.toString()
+        } else {
+            ""
+        }
+        mutableStateOf(
+            TextFieldValue(
+                text = initialText,
+                selection = TextRange(0, initialText.length)
+            )
+        )
+    }
+
+    var pulseFieldValue by remember(selectedDate, effectiveTime) {
+        val initialText = if (currentEntry != null && currentEntry.pulse != null && currentEntry.pulse > 0) {
+            currentEntry.pulse.toString()
+        } else {
+            ""
+        }
+        mutableStateOf(
+            TextFieldValue(
+                text = initialText,
+                selection = TextRange(0, initialText.length)
+            )
+        )
+    }
+
+    val systolicPlaceholder = remember(priorEntry) {
+        if (priorEntry != null && priorEntry.systolic > 0) {
+            priorEntry.systolic.toString()
+        } else {
+            "120"
+        }
+    }
+
+    val diastolicPlaceholder = remember(priorEntry) {
+        if (priorEntry != null && priorEntry.diastolic > 0) {
+            priorEntry.diastolic.toString()
+        } else {
+            "80"
+        }
+    }
+
+    val pulsePlaceholder = remember(priorEntry) {
+        if (priorEntry != null && priorEntry.pulse != null && priorEntry.pulse > 0) {
+            priorEntry.pulse.toString()
+        } else {
+            "70"
+        }
+    }
 
     val digitsPattern = remember { Regex("""^\d{0,3}$""") }
 
@@ -96,15 +143,16 @@ fun BloodPressureEntryEditDialog(
     val isValid = isSystolicValid && isDiastolicValid && isPulseValid
 
     fun confirmIfValid() {
+        val systolic = parsedSystolic ?: return
+        val diastolic = parsedDiastolic ?: return
         if (isValid) {
-            val finalTime = if (includeTime) selectedTime else null
-            val storageDateTime = formatBpStorageString(selectedDate, finalTime)
+            val storageDateTime = formatBpStorageString(selectedDate, effectiveTime)
             onConfirm(
-                entry.copy(
-                    id = entry.id,
+                BloodPressureEntryData(
+                    id = currentEntryId,
                     dateTime = storageDateTime,
-                    systolic = parsedSystolic,
-                    diastolic = parsedDiastolic,
+                    systolic = systolic,
+                    diastolic = diastolic,
                     pulse = parsedPulse
                 )
             )
@@ -115,9 +163,11 @@ fun BloodPressureEntryEditDialog(
     val diastolicInputFocusRequester = remember { FocusRequester() }
     val pulseInputFocusRequester = remember { FocusRequester() }
 
-    LaunchedEffect(entry) {
+    LaunchedEffect(Unit) {
         yield()
-        systolicInputFocusRequester.requestFocus()
+        runCatching {
+            systolicInputFocusRequester.requestFocus()
+        }
     }
 
     AlertDialog(
@@ -174,6 +224,7 @@ fun BloodPressureEntryEditDialog(
                         }
                     },
                     label = { Text("Systolic (mmHg)") },
+                    placeholder = { Text(systolicPlaceholder) },
                     singleLine = true,
                     isError = systolicFieldValue.text.isNotEmpty() && !isSystolicValid,
                     keyboardOptions = KeyboardOptions(
@@ -197,6 +248,7 @@ fun BloodPressureEntryEditDialog(
                         }
                     },
                     label = { Text("Diastolic (mmHg)") },
+                    placeholder = { Text(diastolicPlaceholder) },
                     singleLine = true,
                     isError = diastolicFieldValue.text.isNotEmpty() && !isDiastolicValid,
                     keyboardOptions = KeyboardOptions(
@@ -220,6 +272,7 @@ fun BloodPressureEntryEditDialog(
                         }
                     },
                     label = { Text("Pulse bpm (optional)") },
+                    placeholder = { Text(pulsePlaceholder) },
                     singleLine = true,
                     isError = pulseFieldValue.text.isNotEmpty() && !isPulseValid,
                     keyboardOptions = KeyboardOptions(
@@ -287,9 +340,23 @@ fun BloodPressureEntryEditDialog(
             onDateSelected = { newDate ->
                 selectedDate = newDate
                 showDatePicker = false
+                coroutineScope.launch {
+                    yield()
+                    delay(50)
+                    runCatching {
+                        systolicInputFocusRequester.requestFocus()
+                    }
+                }
             },
             onDismiss = {
                 showDatePicker = false
+                coroutineScope.launch {
+                    yield()
+                    delay(50)
+                    runCatching {
+                        systolicInputFocusRequester.requestFocus()
+                    }
+                }
             }
         )
     }
@@ -300,9 +367,23 @@ fun BloodPressureEntryEditDialog(
             onTimeSelected = { newTime ->
                 selectedTime = newTime
                 showTimePicker = false
+                coroutineScope.launch {
+                    yield()
+                    delay(50)
+                    runCatching {
+                        systolicInputFocusRequester.requestFocus()
+                    }
+                }
             },
             onDismiss = {
                 showTimePicker = false
+                coroutineScope.launch {
+                    yield()
+                    delay(50)
+                    runCatching {
+                        systolicInputFocusRequester.requestFocus()
+                    }
+                }
             }
         )
     }
@@ -315,7 +396,14 @@ fun BloodPressureEntryEditDialogPreview() {
         configuration = koinConfiguration(declaration = { modules(previewAppModule) }),
         content = {
             BloodPressureEntryEditDialog(
-                entry = BloodPressureEntryData(id = "0", dateTime = "2026-09-23T15:00:00Z", systolic = 120, diastolic = 80, pulse = 70),
+                initialDate = today,
+                initialTime = LocalTime(15, 0),
+                getEntriesForDateTime = { date, time ->
+                    Pair(
+                        BloodPressureEntryData(id = "1", dateTime = "2026-09-23T15:00:00Z", systolic = 120, diastolic = 80, pulse = 70),
+                        BloodPressureEntryData(id = "2", dateTime = "2026-09-22T15:00:00Z", systolic = 125, diastolic = 82, pulse = 72)
+                    )
+                },
                 onConfirm = {},
                 onDismiss = {}
             )
@@ -323,15 +411,16 @@ fun BloodPressureEntryEditDialogPreview() {
     )
 }
 
-
-@Preview(name = "Blood Pressure Entry With Time")
+@Preview(name = "Add Blood Pressure Dialog")
 @Composable
-fun BloodPressureEntryWTimeEditDialogPreview() {
+fun BloodPressureAddDialogPreview() {
     KoinApplication(
         configuration = koinConfiguration(declaration = { modules(previewAppModule) }),
         content = {
             BloodPressureEntryEditDialog(
-                entry = BloodPressureEntryData(id = "1", dateTime = "2026-09-23T15:00:00Z", systolic = 120, diastolic = 80, pulse = 70),
+                initialDate = today,
+                initialTime = null,
+                getEntriesForDateTime = { _, _ -> Pair(null, null) },
                 onConfirm = {},
                 onDismiss = {}
             )

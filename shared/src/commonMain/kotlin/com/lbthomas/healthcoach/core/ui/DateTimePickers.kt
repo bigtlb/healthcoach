@@ -2,6 +2,7 @@ package com.lbthomas.healthcoach.core.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -131,7 +132,39 @@ fun AppDatePickerDialog(
             }
         }
     ) {
-        DatePicker(state = datePickerState)
+        DatePicker(
+            state = datePickerState,
+            title = {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 24.dp, end = 12.dp, top = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Select date",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    TextButton(
+                        onClick = {
+                            val todayMillis = today.atTime(0, 0)
+                                .toInstant(TimeZone.UTC)
+                                .toEpochMilliseconds()
+                            datePickerState.displayedMonthMillis = todayMillis
+                            datePickerState.selectedDateMillis = todayMillis
+                        },
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "Today",
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    }
+                }
+            }
+        )
     }
 }
 

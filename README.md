@@ -1,12 +1,9 @@
 # HealthCoach
 
-[![Website](https://img.shields.io/badge/Website-bigtlb.github.io%2Fhealthcoach-884B6A?logo=github&logoColor=white)](https://bigtlb.github.io/healthcoach/)
-[![CI Build](https://img.shields.io/github/actions/workflow/status/bigtlb/healthcoach/pr-validation.yml?branch=main&label=Build%20Status&logo=github)](https://github.com/bigtlb/healthcoach/actions)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/bigtlb/healthcoach/release.yml?event=push&label=Build%20Status&logo=github)](https://github.com/bigtlb/healthcoach/actions/workflows/release.yml)
 [![Latest Release](https://img.shields.io/github/v/release/bigtlb/healthcoach?logo=github&label=Release)](https://github.com/bigtlb/healthcoach/releases)
-[![Kotlin Multiplatform](https://img.shields.io/badge/Kotlin_Multiplatform-Compose_Desktop_%26_Android-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org/docs/multiplatform.html)
-[![Material 3](https://img.shields.io/badge/UI-Material_3-blue)](https://m3.material.io/)
-[![SQLite](https://img.shields.io/badge/Database-SqlDelight_SQLite-003B57?logo=sqlite&logoColor=white)](https://cashapp.github.io/sqldelight/)
 [![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
+[![Website](https://img.shields.io/badge/Website-bigtlb.github.io%2Fhealthcoach-884B6A?logo=github&logoColor=white)](https://bigtlb.github.io/healthcoach/)
 
 **HealthCoach** is a modern, local-first personal health management and analytics application built with **Kotlin Multiplatform (KMP)** and **Compose Multiplatform**. Designed to maximize user empowerment, health insight, and day-to-day tracking efficiency, HealthCoach gives you total control over your health metrics—including body weight, blood pressure, pulse, daily nutrition, and metabolic targets—backed by robust analytics, AHA clinical classifications, compound multi-axis charts, and seamless cross-device synchronization.
 

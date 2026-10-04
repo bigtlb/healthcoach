@@ -49,6 +49,15 @@ compose.desktop {
                 appCategory = "Utility;MedicalSoftware;"
                 menuGroup = "Utility"
             }
+
+            windows {
+                packageName = "HealthCoach"
+                iconFile.set(project.file("src/main/resources/scales.ico"))
+                menuGroup = "HealthCoach"
+                shortcut = true
+                dirChooser = true
+                perUserInstall = true
+            }
         }
     }
 }

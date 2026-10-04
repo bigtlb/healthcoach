@@ -16,6 +16,7 @@ import com.lbthomas.healthcoach.features.weight.data.WeightEntryData
 import com.lbthomas.healthcoach.features.weight.ui.AddWeightEntryButton
 import com.lbthomas.healthcoach.features.weight.ui.WeightEntryEditDialog
 import com.lbthomas.healthcoach.features.weight.ui.WeightEntryList
+import kotlinx.datetime.LocalDate
 import org.koin.compose.KoinApplication
 import org.koin.compose.koinInject
 import org.koin.dsl.koinConfiguration
@@ -33,11 +34,11 @@ fun WeightView(
     val entries by viewModel.entries.collectAsState()
 
     var entryToDelete by remember { mutableStateOf<WeightEntryData?>(null) }
-    var entryToEdit by remember { mutableStateOf<WeightEntryData?>(null) }
+    var dateToEdit by remember { mutableStateOf<LocalDate?>(null) }
 
     LaunchedEffect(showAddWeightEntry) {
         if (showAddWeightEntry) {
-            entryToEdit = WeightEntryData(id = "", date = today, weight = 0.0)
+            dateToEdit = today
         }
     }
 
@@ -58,24 +59,29 @@ fun WeightView(
         )
     }
 
-    entryToEdit?.let { entry ->
+    dateToEdit?.let { date ->
         WeightEntryEditDialog(
-            entry = entry,
+            initialDate = date,
+            getEntriesForDate = { targetDate ->
+                val current = entries.find { it.date == targetDate }
+                val prior = entries.filter { it.date < targetDate }.maxByOrNull { it.date }
+                Pair(current, prior)
+            },
             onConfirm = { updatedEntry ->
                 if (updatedEntry.id.isEmpty() || updatedEntry.id == "0")
                     viewModel.addEntry(updatedEntry.date, updatedEntry.weight)
                 else
                     viewModel.updateEntry(updatedEntry)
-                entryToEdit = null
+                dateToEdit = null
                 if (showAddWeightEntry) onAddDismiss()
                 onRequestFocus()
             },
             onDismiss = {
-                entryToEdit = null
+                dateToEdit = null
                 if (showAddWeightEntry) onAddDismiss()
                 onRequestFocus()
             },
-            settings
+            settings = settings
         )
     }
 
@@ -99,7 +105,7 @@ fun WeightView(
                 )
                 AddWeightEntryButton(
                     onClick = {
-                        entryToEdit = WeightEntryData(id = "", date = today, weight = 0.0)
+                        dateToEdit = today
                     }
                 )
             }
@@ -110,7 +116,7 @@ fun WeightView(
                 settings = settings,
                 isWideLayout = isWideLayout,
                 onClickEntry = { entry ->
-                    entryToEdit = entry
+                    dateToEdit = entry.date
                 },
                 onDeleteEntry = { entry ->
                     entryToDelete = entry

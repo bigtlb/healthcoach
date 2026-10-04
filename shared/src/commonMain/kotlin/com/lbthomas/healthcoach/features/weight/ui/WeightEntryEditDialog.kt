@@ -18,6 +18,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -39,6 +40,8 @@ import com.lbthomas.healthcoach.core.utils.today
 import com.lbthomas.healthcoach.features.settings.SettingsViewModel
 import com.lbthomas.healthcoach.features.settings.data.SettingsData
 import com.lbthomas.healthcoach.features.weight.data.WeightEntryData
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.yield
 import kotlinx.datetime.LocalDate
 import org.koin.compose.KoinApplication
@@ -49,18 +52,32 @@ import org.koin.dsl.koinConfiguration
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WeightEntryEditDialog(
-    entry: WeightEntryData,
+    initialDate: LocalDate = today,
+    getEntriesForDate: (LocalDate) -> Pair<WeightEntryData?, WeightEntryData?>,
     onConfirm: (WeightEntryData) -> Unit,
     onDismiss: () -> Unit,
     settings: SettingsData,
     modifier: Modifier = Modifier
 ) {
-    val title = if (entry.id.isEmpty() || entry.id == "0") "New Weight" else "Edit Weight"
+    var selectedDate by remember { mutableStateOf(initialDate) }
+    var showDatePicker by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+
+    val (currentEntry, priorEntry) = remember(selectedDate) {
+        getEntriesForDate(selectedDate)
+    }
+
+    val currentEntryId = currentEntry?.id ?: ""
+    val isEditMode = currentEntry != null && currentEntryId.isNotEmpty() && currentEntryId != "0"
+    val title = if (isEditMode) "Edit Weight" else "New Weight"
     val units = if (settings.weight.unit == WeightUnit.METRIC) "kgs" else "lbs"
 
-    var selectedDate by remember { mutableStateOf(entry.date) }
-    val initialText = if (entry.weight > 0.0) String.format("%.1f",entry.getWeightInCurrentUnits(settings.weight.unit)) else ""
-    var weightFieldValue by remember {
+    var weightFieldValue by remember(selectedDate) {
+        val initialText = if (currentEntry != null && currentEntry.weight > 0.0) {
+            String.format("%.1f", currentEntry.getWeightInCurrentUnits(settings.weight.unit))
+        } else {
+            ""
+        }
         mutableStateOf(
             TextFieldValue(
                 text = initialText,
@@ -68,7 +85,14 @@ fun WeightEntryEditDialog(
             )
         )
     }
-    var showDatePicker by remember { mutableStateOf(false) }
+
+    val placeholderText = remember(priorEntry, settings.weight.unit) {
+        if (priorEntry != null && priorEntry.weight > 0.0) {
+            String.format("%.1f", priorEntry.getWeightInCurrentUnits(settings.weight.unit))
+        } else {
+            "000.0"
+        }
+    }
 
     // Matches up to 3 digits before decimal, optional decimal point and up to 1 digit after: nnn or nnn.n
     val weightPattern = remember { Regex("""^\d{0,3}(\.\d{0,1})?$""") }
@@ -77,16 +101,24 @@ fun WeightEntryEditDialog(
     val isWeightValid = parsedWeight != null && parsedWeight > 0.0
 
     fun confirmIfValid() {
-        if (isWeightValid) {
-            onConfirm(entry.copy(id = entry.id, date = selectedDate, weight = entry.convertToKilograms(parsedWeight, settings.weight.unit)))
+        if (parsedWeight != null && parsedWeight > 0.0) {
+            onConfirm(
+                WeightEntryData(
+                    id = currentEntryId,
+                    date = selectedDate,
+                    weight = WeightEntryData.convertToKilograms(parsedWeight, settings.weight.unit)
+                )
+            )
         }
     }
 
     val weightInputFocusRequester = remember { FocusRequester() }
 
-    LaunchedEffect(entry) {
+    LaunchedEffect(Unit) {
         yield()
-        weightInputFocusRequester.requestFocus()
+        runCatching {
+            weightInputFocusRequester.requestFocus()
+        }
     }
 
     AlertDialog(
@@ -105,15 +137,11 @@ fun WeightEntryEditDialog(
                     .padding(8.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                if (entry.id.isEmpty() || entry.id == "0") {
-                    // Date Selection
-                    DatePickerField(
-                        selectedDate = selectedDate,
-                        onClick = { showDatePicker = true }
-                    )
-                } else {
-                    Text(text = entry.date.toString())
-                }
+                // Date Selection
+                DatePickerField(
+                    selectedDate = selectedDate,
+                    onClick = { showDatePicker = true }
+                )
 
                 // Weight Input Field (nnn.n)
                 EnterWeightValue(
@@ -121,6 +149,7 @@ fun WeightEntryEditDialog(
                     onValueChanged = { weightFieldValue = it },
                     weightPattern = weightPattern,
                     units = units,
+                    placeholder = placeholderText,
                     isWeightValid = isWeightValid,
                     weightInputFocusRequester = weightInputFocusRequester,
                     onConfirm = { confirmIfValid() }
@@ -148,9 +177,23 @@ fun WeightEntryEditDialog(
             onDateSelected = { newDate ->
                 selectedDate = newDate
                 showDatePicker = false
+                coroutineScope.launch {
+                    yield()
+                    delay(50)
+                    runCatching {
+                        weightInputFocusRequester.requestFocus()
+                    }
+                }
             },
             onDismiss = {
                 showDatePicker = false
+                coroutineScope.launch {
+                    yield()
+                    delay(50)
+                    runCatching {
+                        weightInputFocusRequester.requestFocus()
+                    }
+                }
             }
         )
     }
@@ -162,6 +205,7 @@ private fun EnterWeightValue(
     onValueChanged: (TextFieldValue) -> Unit,
     weightPattern: Regex,
     units: String,
+    placeholder: String,
     isWeightValid: Boolean,
     weightInputFocusRequester: FocusRequester,
     onConfirm: () -> Unit
@@ -174,7 +218,7 @@ private fun EnterWeightValue(
             }
         },
         label = { Text("Weight ($units)") },
-        placeholder = { Text("000.0") },
+        placeholder = { Text(placeholder) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(
             keyboardType = KeyboardType.Decimal,
@@ -202,10 +246,16 @@ fun WeightEntryEditDialogPreview() {
         configuration = koinConfiguration(declaration = { modules(previewAppModule) }),
         content = {
             WeightEntryEditDialog(
-                entry = WeightEntryData(id = "1", date = today, weight = 75.0),
+                initialDate = today,
+                getEntriesForDate = { date ->
+                    Pair(
+                        WeightEntryData(id = "1", date = date, weight = 75.0),
+                        WeightEntryData(id = "2", date = date, weight = 76.0)
+                    )
+                },
                 onConfirm = {},
                 onDismiss = {},
-                koinInject<SettingsViewModel>().settings.collectAsState().value
+                settings = koinInject<SettingsViewModel>().settings.collectAsState().value
             )
         }
     )
@@ -218,10 +268,11 @@ fun WeightEntryAddDialogPreview() {
         configuration = koinConfiguration(declaration = { modules(previewAppModule) }),
         content = {
             WeightEntryEditDialog(
-                entry = WeightEntryData(id = "0", date = today, weight = 75.0),
+                initialDate = today,
+                getEntriesForDate = { Pair(null, null) },
                 onConfirm = {},
                 onDismiss = {},
-                koinInject<SettingsViewModel>().settings.collectAsState().value
+                settings = koinInject<SettingsViewModel>().settings.collectAsState().value
             )
         }
     )
