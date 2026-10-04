@@ -17,7 +17,7 @@ Follow these sequential steps to apply for SignPath, obtain approval, and enable
 
 ### Step 1: Submit Open Source Application to SignPath
 
-1. Navigate to the [SignPath Open Source Program Application](https://about.signpath.io/open-source).
+1. Navigate to the [SignPath Open Source Program Application](https://signpath.org/apply.html) (or explore [SignPath Foundation](https://signpath.org)).
 2. Complete the application form with HealthCoach project details:
    - **Project Name**: HealthCoach
    - **Repository URL**: `https://github.com/bigtlb/healthcoach`

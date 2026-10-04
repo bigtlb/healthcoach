@@ -209,6 +209,14 @@ HealthCoach/
 
 ---
 
+## 🔏 Code Signing Policy
+
+Windows installer (`.msi`) packages are signed with Authenticode certificates:
+* Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org).
+* Privacy: HealthCoach runs locally and will not transfer health data to external networked systems unless explicitly initiated by the user (e.g. Google Drive sync).
+
+---
+
 ## 👤 Author & Attribution
 
 * **Application**: HealthCoach
