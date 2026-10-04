@@ -22,6 +22,10 @@ jobs:
   validate:
     name: Build, Test & Lint
     runs-on: ubuntu-latest
+    env:
+      GOOGLE_CLIENT_ID_DESKTOP: ${{ vars.GOOGLE_CLIENT_ID_DESKTOP }}
+      GOOGLE_CLIENT_SECRET_DESKTOP: ${{ vars.GOOGLE_CLIENT_SECRET_DESKTOP }}
+      GOOGLE_CLIENT_ID_ANDROID: ${{ vars.GOOGLE_CLIENT_ID_ANDROID }}
 
     steps:
       - name: Checkout repository
