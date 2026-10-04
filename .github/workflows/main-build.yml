@@ -20,8 +20,8 @@ permissions:
   contents: read
 
 jobs:
-  build-and-verify:
-    name: Verify & Package Linux Distribution
+  verify-linux-and-android:
+    name: Verify Tests & Package Linux/Android Release
     runs-on: ubuntu-latest
 
     steps:
@@ -42,25 +42,61 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Install RPM Packaging Tools
-        run: sudo apt-get update && sudo apt-get install -y rpm
+      - name: Install Linux Packaging Tools
+        run: sudo apt-get update && sudo apt-get install -y rpm fakeroot
 
       - name: Run verification checks (Unit Tests, Android Lint, SqlDelight Migrations)
         run: ./gradlew check test --no-daemon
 
-      - name: Build Linux Release Distribution (DEB & RPM)
+      - name: Build Linux (DEB & RPM) and Android (APK & AAB) Release Packages
         env:
           GOOGLE_CLIENT_ID_DESKTOP: ${{ vars.GOOGLE_CLIENT_ID_DESKTOP }}
           GOOGLE_CLIENT_SECRET_DESKTOP: ${{ vars.GOOGLE_CLIENT_SECRET_DESKTOP }}
-        run: ./gradlew :desktopApp:packageReleaseDistributionForCurrentOS --no-daemon
+          GOOGLE_CLIENT_ID_ANDROID: ${{ vars.GOOGLE_CLIENT_ID_ANDROID }}
+        run: ./gradlew :desktopApp:packageReleaseDeb :desktopApp:packageReleaseRpm :androidApp:assembleRelease :androidApp:bundleRelease --no-daemon
 
       - name: Upload Test & Lint Reports
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: main-build-verification-reports
+          name: linux-android-verification-reports
           path: |
             **/build/reports/
             **/build/outputs/lint-results*
+            desktopApp/build/compose/logs/
+          retention-days: 7
+
+  verify-windows:
+    name: Package Windows Release (MSI)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build Windows MSI Package
+        env:
+          GOOGLE_CLIENT_ID_DESKTOP: ${{ vars.GOOGLE_CLIENT_ID_DESKTOP }}
+          GOOGLE_CLIENT_SECRET_DESKTOP: ${{ vars.GOOGLE_CLIENT_SECRET_DESKTOP }}
+        shell: bash
+        run: ./gradlew :desktopApp:packageReleaseMsi --no-daemon
+
+      - name: Upload Windows Build Logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-verification-reports
+          path: |
             desktopApp/build/compose/logs/
           retention-days: 7

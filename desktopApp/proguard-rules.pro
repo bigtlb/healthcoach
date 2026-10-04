@@ -1,5 +1,6 @@
 # Disable bytecode optimization to prevent corruption of Kotlin inline LocalVariableTable attributes
 -dontoptimize
+-dontnote
 
 # SQLite JDBC Driver
 -keep class org.sqlite.** { *; }
