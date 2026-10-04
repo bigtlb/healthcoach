@@ -1,8 +1,9 @@
-name: PR Validation
+name: Main Branch Build & Verification
 
 on:
-  pull_request:
-    branches: [ main ]
+  push:
+    branches:
+      - main
     paths-ignore:
       - 'docs/**'
       - '**.md'
@@ -12,15 +13,15 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: main-build-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  validate:
-    name: Build, Test & Lint
+  build-and-verify:
+    name: Verify & Package Linux Distribution
     runs-on: ubuntu-latest
 
     steps:
@@ -41,15 +42,25 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Install RPM Packaging Tools
+        run: sudo apt-get update && sudo apt-get install -y rpm
+
       - name: Run verification checks (Unit Tests, Android Lint, SqlDelight Migrations)
         run: ./gradlew check test --no-daemon
+
+      - name: Build Linux Release Distribution (DEB & RPM)
+        env:
+          GOOGLE_CLIENT_ID_DESKTOP: ${{ vars.GOOGLE_CLIENT_ID_DESKTOP }}
+          GOOGLE_CLIENT_SECRET_DESKTOP: ${{ vars.GOOGLE_CLIENT_SECRET_DESKTOP }}
+        run: ./gradlew :desktopApp:packageReleaseDistributionForCurrentOS --no-daemon
 
       - name: Upload Test & Lint Reports
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: pr-verification-reports
+          name: main-build-verification-reports
           path: |
             **/build/reports/
             **/build/outputs/lint-results*
+            desktopApp/build/compose/logs/
           retention-days: 7

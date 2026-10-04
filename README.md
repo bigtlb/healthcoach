@@ -1,6 +1,6 @@
 # HealthCoach
 
-[![Build Status](https://img.shields.io/github/actions/workflow/status/bigtlb/healthcoach/release.yml?event=push&label=Build%20Status&logo=github)](https://github.com/bigtlb/healthcoach/actions/workflows/release.yml)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/bigtlb/healthcoach/main-build.yml?branch=main&label=Build%20Status&logo=github)](https://github.com/bigtlb/healthcoach/actions/workflows/main-build.yml)
 [![Latest Release](https://img.shields.io/github/v/release/bigtlb/healthcoach?logo=github&label=Release)](https://github.com/bigtlb/healthcoach/releases)
 [![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
 [![Website](https://img.shields.io/badge/Website-bigtlb.github.io%2Fhealthcoach-884B6A?logo=github&logoColor=white)](https://bigtlb.github.io/healthcoach/)
