@@ -5,7 +5,11 @@ import com.lbthomas.healthcoach.Database
 import com.lbthomas.healthcoach.core.database.DriverFactory
 import com.lbthomas.healthcoach.core.database.createDatabaseForDriver
 import com.lbthomas.healthcoach.core.sync.FileUtils
+import com.lbthomas.healthcoach.features.settings.SettingsViewModel
+import com.lbthomas.healthcoach.features.settings.data.PeerSyncSettings
+import com.lbthomas.healthcoach.features.settings.data.SettingsData
 import com.lbthomas.healthcoach.features.settings.data.SettingsStore
+import com.lbthomas.healthcoach.features.settings.data.SyncSettings
 import com.lbthomas.healthcoach.features.sync.SyncNotificationManager
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -15,11 +19,14 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.nio.file.Files
 import kotlin.test.*
+import kotlin.time.Duration.Companion.milliseconds
 
 class PeerServerManagerTest {
 
@@ -427,6 +434,50 @@ class PeerServerManagerTest {
             } finally {
                 newServerManager.stop()
             }
+        }
+    }
+
+    @Test
+    fun testSettingsViewModel_ServerLifecycleWithServerMode() {
+        runBlocking {
+            settingsStore.updateSettings {
+                it.copy(
+                    sync = it.sync.copy(syncEnabled = true),
+                    peerSync = it.peerSync.copy(isServerMode = false, localServerEnabled = true, localServerPort = 0)
+                )
+            }
+            val viewModel = SettingsViewModel(
+                persistence = settingsStore,
+                peerServerManager = serverManager
+            )
+
+            // 1. Initial state: isServerMode is false, server is not running even if localServerEnabled is true
+            assertFalse(serverManager.serverStatus.value.isRunning)
+
+            // 2. Switch to server mode: both isServerMode and localServerEnabled are true, server starts
+            viewModel.setPeerIsServerMode(true)
+            delay(200.milliseconds)
+            assertTrue(serverManager.serverStatus.value.isRunning)
+            assertTrue(viewModel.settings.value.peerSync.isServerMode)
+            assertTrue(viewModel.settings.value.peerSync.localServerEnabled)
+
+            // 3. Momentarily toggle localServerEnabled to false while in server mode: server stops
+            viewModel.setPeerServerEnabled(false)
+            delay(200.milliseconds)
+            assertFalse(serverManager.serverStatus.value.isRunning)
+            assertTrue(viewModel.settings.value.peerSync.isServerMode)
+            assertFalse(viewModel.settings.value.peerSync.localServerEnabled)
+
+            // 4. Toggle localServerEnabled back to true: server restarts
+            viewModel.setPeerServerEnabled(true)
+            delay(200.milliseconds)
+            assertTrue(serverManager.serverStatus.value.isRunning)
+
+            // 5. Switch back to client mode: server stops
+            viewModel.setPeerIsServerMode(false)
+            delay(200.milliseconds)
+            assertFalse(serverManager.serverStatus.value.isRunning)
+            assertFalse(viewModel.settings.value.peerSync.isServerMode)
         }
     }
 }

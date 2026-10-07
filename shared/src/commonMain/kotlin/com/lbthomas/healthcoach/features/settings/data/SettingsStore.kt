@@ -52,10 +52,6 @@ open class SettingsStore(private val settingsFile: File) {
             peerSync = peerSync.copy(deviceName = getDefaultDeviceName())
             updated = true
         }
-        if (peerSync.localServerEnabled && !peerSync.isServerMode) {
-            peerSync = peerSync.copy(isServerMode = true)
-            updated = true
-        }
         return if (updated) settings.copy(peerSync = peerSync) else settings
     }
 
@@ -73,14 +69,7 @@ open class SettingsStore(private val settingsFile: File) {
     }
 
     fun setPeerServerEnabled(enabled: Boolean) {
-        updateSettings {
-            it.copy(
-                peerSync = it.peerSync.copy(
-                    localServerEnabled = enabled,
-                    isServerMode = if (enabled) true else it.peerSync.isServerMode
-                )
-            )
-        }
+        updateSettings { it.copy(peerSync = it.peerSync.copy(localServerEnabled = enabled)) }
     }
 
     fun setPeerIsServerMode(isServer: Boolean) {

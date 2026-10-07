@@ -19,6 +19,7 @@ object StorageAdapterFactory {
             }
             SyncProviderType.GOOGLE_DRIVE -> {
                 GoogleDriveStorageAdapter(
+                    customBasePath = config.localFolderPath.ifBlank { null },
                     appSubFolder = SyncConfig.GOOGLE_APP_SUBFOLDER,
                     clientId = GoogleOAuthManager.getResolvedClientId(),
                     accountEmail = config.googleAccountEmail,

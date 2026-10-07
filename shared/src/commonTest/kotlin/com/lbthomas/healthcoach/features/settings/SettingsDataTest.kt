@@ -52,7 +52,6 @@ class SettingsDataTest {
         assertEquals("", settings.peerSync.instanceId)
         assertEquals(false, settings.peerSync.isServerMode)
         assertEquals(null, settings.peerSync.lastConnectedTimestamp)
-        assertEquals(false, settings.peerSync.localServerEnabled)
         assertEquals(emptyList(), settings.peerSync.localServerHistory)
         assertEquals("", settings.peerSync.localServerPin)
         assertEquals(SyncConfig.DEFAULT_P2P_PORT, settings.peerSync.localServerPort)
@@ -134,7 +133,6 @@ class SettingsDataTest {
                 instanceId = "test-uuid-1234",
                 isServerMode = true,
                 lastConnectedTimestamp = 1710000000000L,
-                localServerEnabled = true,
                 localServerHistory = listOf(
                     PeerClientRecord(
                         authToken = "client_auth_token_123",
@@ -202,7 +200,6 @@ class SettingsDataTest {
         assertEquals("test-uuid-1234", deserialized.peerSync.instanceId)
         assertEquals(true, deserialized.peerSync.isServerMode)
         assertEquals(1710000000000L, deserialized.peerSync.lastConnectedTimestamp)
-        assertEquals(true, deserialized.peerSync.localServerEnabled)
         assertEquals("123456", deserialized.peerSync.localServerPin)
         assertEquals(9000, deserialized.peerSync.localServerPort)
         assertEquals(1, deserialized.peerSync.localServerHistory.size)
@@ -213,8 +210,7 @@ class SettingsDataTest {
         assertEquals("192.168.1.50", deserialized.peerSync.serverHost)
         assertEquals("server-uuid-9999", deserialized.peerSync.serverInstanceId)
         assertEquals("Home Server", deserialized.peerSync.serverName)
-        // serverPort is @Transient so it restores to default
-        assertEquals(SyncConfig.DEFAULT_P2P_PORT, deserialized.peerSync.serverPort)
+        assertEquals(9000, deserialized.peerSync.serverPort)
         assertEquals("p2p_token_xyz", deserialized.peerSync.serverToken)
 
         // Sync
@@ -245,7 +241,7 @@ class SettingsDataTest {
         val syncConfig = deserialized.toSyncConfig()
         assertEquals(SyncProviderType.PEER_TO_PEER, syncConfig.providerType)
         assertEquals("192.168.1.50", syncConfig.peerServerHost)
-        assertEquals(SyncConfig.DEFAULT_P2P_PORT, syncConfig.peerServerPort)
+        assertEquals(9000, syncConfig.peerServerPort)
         assertEquals("p2p_token_xyz", syncConfig.peerServerToken)
         assertEquals("Home Server", syncConfig.peerServerName)
     }
@@ -379,9 +375,14 @@ class SettingsDataTest {
         viewModel.setPeerIsServerMode(true)
         assertEquals(true, viewModel.settings.value.peerSync.isServerMode)
 
+        viewModel.setPeerIsServerMode(false)
+        assertEquals(false, viewModel.settings.value.peerSync.isServerMode)
+
         viewModel.setPeerServerEnabled(true)
         assertEquals(true, viewModel.settings.value.peerSync.localServerEnabled)
-        assertEquals(true, viewModel.settings.value.peerSync.isServerMode)
+
+        viewModel.setPeerServerEnabled(false)
+        assertEquals(false, viewModel.settings.value.peerSync.localServerEnabled)
 
         viewModel.setPeerServerPort(9000)
         assertEquals(9000, viewModel.settings.value.peerSync.localServerPort)
@@ -430,5 +431,19 @@ class SettingsDataTest {
         val stoppingStatus = defaultStatus.copy(isStopping = true)
         assertEquals(true, stoppingStatus.isStopping)
         assertEquals(false, stoppingStatus.isStarting)
+    }
+
+    @Test
+    fun testSettingsStore_DoesNotResurrectServerModeWhenDisabled() {
+        val json = """
+            {
+                "peerSync": {
+                    "isServerMode": false,
+                    "localServerPort": 8080
+                }
+            }
+        """.trimIndent()
+        val deserialized = Json.decodeFromString(SettingsData.serializer(), json)
+        assertEquals(false, deserialized.peerSync.isServerMode)
     }
 }

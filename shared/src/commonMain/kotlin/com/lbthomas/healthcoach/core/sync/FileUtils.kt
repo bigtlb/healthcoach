@@ -6,6 +6,7 @@ package com.lbthomas.healthcoach.core.sync
 expect object FileUtils {
     fun calculateFileSha256(filePath: String): String?
     fun calculateSha256(data: ByteArray): String
+    fun calculateUncompressedSha256(filePath: String): String?
     fun copyFile(sourcePath: String, destinationPath: String): Boolean
     fun moveFile(sourcePath: String, destinationPath: String): Boolean
     fun deleteFile(filePath: String): Boolean
@@ -15,4 +16,8 @@ expect object FileUtils {
     fun getFileSize(filePath: String): Long
     fun getFileLastModified(filePath: String): Long
     fun joinPath(base: String, vararg parts: String): String
+    fun isGzipFile(filePath: String): Boolean
+    fun compressGzip(sourcePath: String, destinationPath: String): Boolean
+    fun decompressGzip(sourcePath: String, destinationPath: String): Boolean
+    fun decompressGzipIfNeeded(sourcePath: String, destinationPath: String): Boolean
 }

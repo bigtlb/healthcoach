@@ -96,7 +96,7 @@ class SyncViewModel {
         if (!settings.value.sync.syncEnabled) return
 
         val isServerHost = settings.value.sync.syncProvider == SyncProviderType.PEER_TO_PEER &&
-            (settings.value.peerSync.isServerMode || settings.value.peerSync.localServerEnabled)
+            settings.value.peerSync.isServerMode
         if (isServerHost) return
 
         syncJob = scope.launch {

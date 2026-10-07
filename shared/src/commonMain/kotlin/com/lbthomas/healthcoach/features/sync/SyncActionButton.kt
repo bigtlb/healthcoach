@@ -35,7 +35,7 @@ fun SyncActionButton(
     }
 
     val isServerHost = settings.sync.syncProvider == SyncProviderType.PEER_TO_PEER &&
-        (settings.peerSync.isServerMode || settings.peerSync.localServerEnabled)
+        settings.peerSync.isServerMode
     val isSyncing = syncState is SyncState.Syncing
     val hasError = !isServerHost && (syncState is SyncState.Error || settings.sync.lastSyncFailed)
     val hostDeviceName = settings.peerSync.deviceName.ifBlank { "HealthCoach Host" }

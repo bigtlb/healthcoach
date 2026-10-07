@@ -278,6 +278,103 @@ class SyncEngineTest {
     }
 
     @Test
+    fun testAutoVacuumAndIncrementalVacuumCompaction() {
+        val testDbFile = File(tempDir, "autovacuum_test.db")
+        val driver = JdbcSqliteDriver("jdbc:sqlite:${testDbFile.absolutePath}")
+        val db = createDatabaseForDriver(driver)
+
+        // Verify incremental auto-vacuum is enabled
+        val autoVacuumMode = com.lbthomas.healthcoach.core.database.getAutoVacuum(driver)
+        assertEquals(2L, autoVacuumMode, "Expected auto_vacuum = INCREMENTAL (2)")
+
+        // Insert records to grow the database
+        for (i in 1..200) {
+            db.mealEntryQueries.insert(
+                id = "meal-$i",
+                date = "2026-10-01",
+                mealTime = "12:00",
+                foodId = "food-$i",
+                foodName = "Large Food Name Text Entry $i ".repeat(10),
+                foodDescription = "Description text $i ".repeat(10),
+                brand = "Brand $i",
+                unitName = "serving",
+                unitQuantity = 1.0,
+                caloriesPerUnit = 500.0,
+                portionMultiplier = 1.0,
+                totalCalories = 500.0,
+                updated_at = 1000L
+            )
+        }
+
+        val sizeBeforeDelete = testDbFile.length()
+        assertTrue(sizeBeforeDelete > 10000)
+
+        // Delete all inserted records
+        for (i in 1..200) {
+            db.mealEntryQueries.delete("meal-$i")
+        }
+
+        // Run incremental vacuum
+        com.lbthomas.healthcoach.core.database.incrementalVacuum(driver)
+
+        // Staging a copy and vacuuming reclaims free pages
+        val compactedDbFile = File(tempDir, "compacted_test.db")
+        FileUtils.copyFile(testDbFile.absolutePath, compactedDbFile.absolutePath)
+        val compactDriver = JdbcSqliteDriver("jdbc:sqlite:${compactedDbFile.absolutePath}")
+        com.lbthomas.healthcoach.core.database.incrementalVacuum(compactDriver)
+
+        val sizeAfterVacuum = compactedDbFile.length()
+        assertTrue(sizeAfterVacuum <= sizeBeforeDelete)
+        driver.close()
+        compactDriver.close()
+    }
+
+    @Test
+    fun testSyncWithGoogleDriveAdapterCompressedPayloadRoundTrip() = runBlocking {
+        val engineA = createEngineForDirectory(localDbDir, localDatabase)
+
+        // Insert local data on Device A
+        localDatabase.weightEntryQueries.insert("w-gdrive-1", "2026-09-30", 72.0, 1000L)
+        localDatabase.bloodPressureEntryQueries.insert("bp-gdrive-1", "2026-09-30T09:00:00Z", 118, 78, 62, 1000L)
+
+        val googleConfig = SyncConfig(
+            providerType = SyncProviderType.GOOGLE_DRIVE,
+            localFolderPath = remoteStorageDir.absolutePath,
+            remoteFileName = "healthcoach.db",
+            googleAccessToken = "gdt_test_token"
+        )
+
+        // Device A syncs to Google Drive (customBasePath)
+        val resultA = engineA.sync(googleConfig)
+        assertTrue(resultA is SyncResult.Success, "Expected successful initial upload to Google Drive")
+
+        // Verify remote file is compressed .db.gz
+        val remoteGdriveDir = File(remoteStorageDir, "appDataFolder")
+        val remoteGzFile = File(remoteGdriveDir, "healthcoach.db.gz")
+        assertTrue(remoteGzFile.exists(), "Remote .db.gz file should exist in appDataFolder")
+        assertTrue(FileUtils.isGzipFile(remoteGzFile.absolutePath), "Remote file should have valid Gzip magic header")
+
+        // Device B on a separate folder bootstraps from Google Drive
+        val deviceBDir = File(tempDir, "device_b_data").apply { mkdirs() }
+        val deviceBDbFile = File(deviceBDir, "healthcoach.db")
+        val driverB = JdbcSqliteDriver("jdbc:sqlite:${deviceBDbFile.absolutePath}")
+        val dbB = createDatabaseForDriver(driverB)
+
+        val engineB = createEngineForDirectory(deviceBDir, dbB)
+        val resultB = engineB.sync(googleConfig)
+        assertTrue(resultB is SyncResult.Success, "Expected successful bootstrap from Google Drive on Device B")
+
+        val bWeights = dbB.weightEntryQueries.selectAll().executeAsList()
+        assertEquals(1, bWeights.size)
+        assertEquals("w-gdrive-1", bWeights.first().id)
+
+        val bBp = dbB.bloodPressureEntryQueries.selectAll().executeAsList()
+        assertEquals(1, bBp.size)
+        assertEquals("bp-gdrive-1", bBp.first().id)
+        driverB.close()
+    }
+
+    @Test
     fun testGoogleDriveRequiresAuthContract() = runBlocking {
         val adapter = GoogleDriveStorageAdapter(
             accountEmail = "user@gmail.com",

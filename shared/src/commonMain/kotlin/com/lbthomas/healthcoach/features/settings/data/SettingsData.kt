@@ -10,7 +10,6 @@ import com.lbthomas.healthcoach.core.sync.SyncProviderType
 import com.lbthomas.healthcoach.core.sync.p2p.PeerClientRecord
 import com.lbthomas.healthcoach.core.theme.AppTheme
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
 
 @Serializable
 data class AppearanceSettings(
@@ -49,7 +48,6 @@ data class PeerSyncSettings(
     val serverHost: String = "",
     val serverInstanceId: String? = null,
     val serverName: String = "",
-    @Transient
     val serverPort: Int = SyncConfig.DEFAULT_P2P_PORT,
     val serverToken: String = ""
 )

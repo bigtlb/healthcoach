@@ -52,7 +52,7 @@ internal fun SyncDiagnosticsSubTab(
                             style = MaterialTheme.typography.bodySmall
                         )
                         Text(
-                            text = "Embedded Server: ${if (settings.peerSync.localServerEnabled) "Enabled (Port ${settings.peerSync.localServerPort})" else "Disabled"}",
+                            text = "Embedded Server: ${if (settings.peerSync.isServerMode && settings.peerSync.localServerEnabled) "Enabled (Port ${settings.peerSync.localServerPort})" else "Disabled"}",
                             style = MaterialTheme.typography.bodySmall
                         )
                         Text(

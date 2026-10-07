@@ -61,7 +61,7 @@ fun main() {
                 saveWindowState(windowState, settingsViewModel)
                 val currentSettings = settingsViewModel.settings.value
                 val needsSync = currentSettings.sync.syncEnabled && currentSettings.sync.autoSyncOnClose
-                val needsServerStop = currentSettings.sync.syncEnabled && currentSettings.peerSync.localServerEnabled
+                val needsServerStop = currentSettings.sync.syncEnabled && currentSettings.peerSync.isServerMode && currentSettings.peerSync.localServerEnabled
 
                 if (needsSync || needsServerStop) {
                     isShuttingDown = true

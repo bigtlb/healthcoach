@@ -6,6 +6,7 @@ import com.lbthomas.healthcoach.Database
 import com.lbthomas.healthcoach.core.database.DriverFactory
 import com.lbthomas.healthcoach.core.database.createDatabaseForPath
 import com.lbthomas.healthcoach.core.database.getDbVersion
+import com.lbthomas.healthcoach.core.database.incrementalVacuum
 import com.lbthomas.healthcoach.core.database.setDbVersion
 import com.lbthomas.healthcoach.core.sync.handlers.*
 import com.lbthomas.healthcoach.core.utils.currentEpochMillis
@@ -164,6 +165,12 @@ class SyncEngine(
                 // Remote does not exist: Initial Upload
                 Logger.i("Remote database does not exist. Performing initial upload of local database.")
                 FileUtils.copyFile(liveDbPath, stagingPath)
+                val initStagingDriver = driverFactory.createDriverForPath(stagingPath)
+                try {
+                    incrementalVacuum(initStagingDriver)
+                } catch (e: Exception) {
+                    Logger.w("Failed to vacuum staging database prior to initial upload: ${e.message}")
+                }
                 val uploadSuccess = adapter.uploadFile(stagingPath, remoteFileName, null)
                 if (!uploadSuccess) {
                     val err = "Failed to upload local database to remote storage"
@@ -205,6 +212,16 @@ class SyncEngine(
                 )
                 saveSyncMetadata(metadata)
                 return SyncResult.Error(IllegalStateException(err), err)
+            }
+
+            // Ensure staging file is uncompressed SQLite database
+            if (FileUtils.isGzipFile(stagingPath)) {
+                val tempDecompressed = "$stagingPath.decompressed_${currentEpochMillis()}"
+                if (FileUtils.decompressGzip(stagingPath, tempDecompressed)) {
+                    FileUtils.moveFile(tempDecompressed, stagingPath)
+                } else {
+                    FileUtils.deleteFile(tempDecompressed)
+                }
             }
 
             // Check schema compatibility
@@ -271,7 +288,14 @@ class SyncEngine(
 
             currentCoroutineContext().ensureActive()
 
-            // 4. Atomic upload with optimistic concurrency check
+            // 4. Compact and atomic upload with optimistic concurrency check
+            val stagingCompactDriver = driverFactory.createDriverForPath(stagingPath)
+            try {
+                incrementalVacuum(stagingCompactDriver)
+            } catch (e: Exception) {
+                Logger.w("Failed to vacuum staging database prior to upload: ${e.message}")
+            }
+
             val uploadSuccess = adapter.uploadFile(stagingPath, remoteFileName, expectedHash)
             if (!uploadSuccess) {
                 Logger.w("Remote file was modified concurrently during sync merge.")

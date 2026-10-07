@@ -164,7 +164,7 @@ class RemoteStorageAdapterTest {
         assertEquals(expectedTargetDir, adapter.targetDirectory)
 
         val testFile = File(testBaseDir, "source_gdrive.db")
-        testFile.writeText("Google Drive encrypted appData db content")
+        testFile.writeText("Google Drive encrypted appData db content with repeated text to verify compression ".repeat(20))
 
         val fileName = "healthcoach.db"
 
@@ -172,18 +172,98 @@ class RemoteStorageAdapterTest {
         val uploadRes = adapter.uploadFile(testFile.absolutePath, fileName)
         assertTrue(uploadRes)
 
+        // Verify remote file is stored compressed (.db.gz)
+        val remoteGzFile = File(adapter.targetDirectory, "$fileName.gz")
+        assertTrue(remoteGzFile.exists())
+        assertTrue(FileUtils.isGzipFile(remoteGzFile.absolutePath))
+        assertTrue(remoteGzFile.length() < testFile.length())
+
         // Metadata
         val metadata = adapter.getFileMetadata(fileName)
         assertNotNull(metadata)
-        assertEquals(fileName, metadata.name)
+        assertEquals("$fileName.gz", metadata.name)
         assertTrue(metadata.size > 0)
-        assertTrue(metadata.sha256Hash.isNotEmpty())
+        assertEquals(FileUtils.calculateFileSha256(testFile.absolutePath), metadata.sha256Hash)
 
         // Download
         val destFile = File(testBaseDir, "downloaded_gdrive.db")
         val downloadRes = adapter.downloadFile(fileName, destFile.absolutePath)
         assertTrue(downloadRes)
         assertEquals(testFile.readText(), destFile.readText())
+    }
+
+    @Test
+    fun testGoogleDriveStorageAdapterBackwardCompatibilityWithUncompressedSnapshot() = runBlocking {
+        val adapter = GoogleDriveStorageAdapter(
+            customBasePath = testBaseDir.absolutePath,
+            accessToken = "gdt_mock_token_123"
+        )
+
+        val fileName = "healthcoach.db"
+        val appDataDir = File(testBaseDir, "appDataFolder")
+        appDataDir.mkdirs()
+
+        // Place legacy uncompressed .db file
+        val legacyRemoteFile = File(appDataDir, fileName)
+        val legacyContent = "Legacy uncompressed SQLite database snapshot payload content"
+        legacyRemoteFile.writeText(legacyContent)
+
+        // Verify getFileMetadata detects the legacy uncompressed file
+        val metadata = adapter.getFileMetadata(fileName)
+        assertNotNull(metadata)
+        assertEquals(fileName, metadata.name)
+        assertEquals(FileUtils.calculateFileSha256(legacyRemoteFile.absolutePath), metadata.sha256Hash)
+
+        // Verify download transparently reads uncompressed file
+        val destFile = File(testBaseDir, "downloaded_legacy.db")
+        val downloadRes = adapter.downloadFile(fileName, destFile.absolutePath)
+        assertTrue(downloadRes)
+        assertEquals(legacyContent, destFile.readText())
+
+        // Upload a new version, verifying it transitions to .db.gz and cleans up legacy file
+        val updatedFile = File(testBaseDir, "updated.db")
+        val updatedContent = "Updated database version content"
+        updatedFile.writeText(updatedContent)
+
+        val uploadRes = adapter.uploadFile(
+            sourcePath = updatedFile.absolutePath,
+            fileName = fileName,
+            expectedHash = metadata.sha256Hash
+        )
+        assertTrue(uploadRes)
+
+        val newGzFile = File(appDataDir, "$fileName.gz")
+        assertTrue(newGzFile.exists())
+        assertTrue(FileUtils.isGzipFile(newGzFile.absolutePath))
+        assertFalse(legacyRemoteFile.exists()) // Legacy uncompressed file cleaned up
+
+        val finalDestFile = File(testBaseDir, "downloaded_new.db")
+        assertTrue(adapter.downloadFile(fileName, finalDestFile.absolutePath))
+        assertEquals(updatedContent, finalDestFile.readText())
+    }
+
+    @Test
+    fun testFileUtilsGzipCompressionAndSha256() {
+        val sourceFile = File(testBaseDir, "test_plain.txt")
+        val testContent = "SQLite database text payload repeated to test compression efficiency ".repeat(50)
+        sourceFile.writeText(testContent)
+
+        val rawSha256 = FileUtils.calculateFileSha256(sourceFile.absolutePath)
+        assertNotNull(rawSha256)
+
+        val gzFile = File(testBaseDir, "test_compressed.gz")
+        assertTrue(FileUtils.compressGzip(sourceFile.absolutePath, gzFile.absolutePath))
+        assertTrue(FileUtils.isGzipFile(gzFile.absolutePath))
+        assertTrue(gzFile.length() < sourceFile.length())
+
+        // Uncompressed SHA-256 on gzipped file matches raw file SHA-256
+        val decompressedHash = FileUtils.calculateUncompressedSha256(gzFile.absolutePath)
+        assertEquals(rawSha256, decompressedHash)
+
+        // Decompress and verify content
+        val restoredFile = File(testBaseDir, "test_restored.txt")
+        assertTrue(FileUtils.decompressGzip(gzFile.absolutePath, restoredFile.absolutePath))
+        assertEquals(testContent, restoredFile.readText())
     }
 
     @Test

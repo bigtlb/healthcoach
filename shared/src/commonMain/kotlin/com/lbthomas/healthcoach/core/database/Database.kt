@@ -21,6 +21,8 @@ fun createDatabaseForPath(driverFactory: DriverFactory, dbFilePath: String): Dat
 fun createDatabaseForDriver(driver: SqlDriver): Database {
     val database = Database(driver)
 
+    configureAutoVacuum(driver)
+
     database.transaction {
         val dbVersion = getDbVersion(driver)
         val schemaVersion = Schema.version
@@ -42,6 +44,46 @@ fun createDatabaseForDriver(driver: SqlDriver): Database {
     DefaultFoodData.ensureDefaultFoodData(database)
 
     return database
+}
+
+fun configureAutoVacuum(driver: SqlDriver) {
+    try {
+        val currentAutoVacuum = getAutoVacuum(driver)
+        if (currentAutoVacuum != 2L) { // 2 = INCREMENTAL
+            driver.execute(null, "PRAGMA auto_vacuum = INCREMENTAL", 0, null)
+            val dbVersion = getDbVersion(driver)
+            if (dbVersion > 0L) {
+                // If tables already exist, run VACUUM to migrate database to incremental auto_vacuum mode
+                driver.execute(null, "VACUUM", 0, null)
+            }
+            Logger.i("dbinit: auto_vacuum configured to INCREMENTAL")
+        }
+    } catch (e: Exception) {
+        Logger.w("Failed to configure auto_vacuum: ${e.message}")
+    }
+}
+
+fun getAutoVacuum(driver: SqlDriver): Long {
+    val mapper = { cursor: SqlCursor ->
+        QueryResult.Value(if (cursor.next().value) cursor.getLong(0) else null)
+    }
+    return try {
+        driver.executeQuery(null, "PRAGMA auto_vacuum", mapper, 0, null).value ?: 0L
+    } catch (_: Exception) {
+        0L
+    }
+}
+
+fun incrementalVacuum(driver: SqlDriver, pages: Int = 0) {
+    try {
+        if (pages > 0) {
+            driver.execute(null, "PRAGMA incremental_vacuum($pages)", 0, null)
+        } else {
+            driver.execute(null, "PRAGMA incremental_vacuum", 0, null)
+        }
+    } catch (e: Exception) {
+        Logger.w("Failed to execute incremental_vacuum: ${e.message}")
+    }
 }
 
 fun getDbVersion(driver: SqlDriver): Long {

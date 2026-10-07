@@ -163,7 +163,7 @@ class SettingsViewModel {
                 discoveryAdvertiser?.stopAdvertising()
                 peerServerManager?.stop()
             }
-        } else if (current.peerSync.localServerEnabled) {
+        } else if (current.peerSync.isServerMode && current.peerSync.localServerEnabled) {
             viewModelScope.launch {
                 val res = peerServerManager?.start(current.peerSync.localServerPort)
                 val boundPort = res?.getOrNull() ?: current.peerSync.localServerPort
@@ -255,15 +255,10 @@ class SettingsViewModel {
 
     fun setPeerServerEnabled(enabled: Boolean) {
         persistence?.setPeerServerEnabled(enabled) ?: updateSettings {
-            it.copy(
-                peerSync = it.peerSync.copy(
-                    localServerEnabled = enabled,
-                    isServerMode = if (enabled) true else it.peerSync.isServerMode
-                )
-            )
+            it.copy(peerSync = it.peerSync.copy(localServerEnabled = enabled))
         }
         val current = settings.value
-        if (enabled && current.sync.syncEnabled) {
+        if (enabled && current.sync.syncEnabled && current.peerSync.isServerMode) {
             viewModelScope.launch {
                 val res = peerServerManager?.start(current.peerSync.localServerPort)
                 val boundPort = res?.getOrNull() ?: current.peerSync.localServerPort
@@ -285,12 +280,29 @@ class SettingsViewModel {
         persistence?.setPeerIsServerMode(isServer) ?: updateSettings {
             it.copy(peerSync = it.peerSync.copy(isServerMode = isServer))
         }
+        val current = settings.value
+        if (isServer && current.sync.syncEnabled && current.peerSync.localServerEnabled) {
+            viewModelScope.launch {
+                val res = peerServerManager?.start(current.peerSync.localServerPort)
+                val boundPort = res?.getOrNull() ?: current.peerSync.localServerPort
+                discoveryAdvertiser?.startAdvertising(
+                    instanceId = current.peerSync.instanceId,
+                    deviceName = current.peerSync.deviceName,
+                    port = boundPort
+                )
+            }
+        } else {
+            viewModelScope.launch {
+                discoveryAdvertiser?.stopAdvertising()
+                peerServerManager?.stop()
+            }
+        }
     }
 
     fun setPeerServerPort(port: Int) {
         updateSettings { it.copy(peerSync = it.peerSync.copy(localServerPort = port)) }
         val current = settings.value
-        if (current.sync.syncEnabled && current.peerSync.localServerEnabled) {
+        if (current.sync.syncEnabled && current.peerSync.isServerMode && current.peerSync.localServerEnabled) {
             viewModelScope.launch {
                 val res = peerServerManager?.restart(port)
                 val boundPort = res?.getOrNull() ?: port
@@ -310,7 +322,7 @@ class SettingsViewModel {
     fun setDeviceName(deviceName: String) {
         updateSettings { it.copy(peerSync = it.peerSync.copy(deviceName = deviceName)) }
         val current = settings.value
-        if (current.sync.syncEnabled && current.peerSync.localServerEnabled) {
+        if (current.sync.syncEnabled && current.peerSync.isServerMode && current.peerSync.localServerEnabled) {
             val port = peerServerManager?.serverStatus?.value?.port ?: current.peerSync.localServerPort
             discoveryAdvertiser?.startAdvertising(
                 instanceId = current.peerSync.instanceId,
@@ -493,7 +505,7 @@ class SettingsViewModel {
 
     fun initializeServerIfEnabled() {
         val current = settings.value
-        if (current.sync.syncEnabled && current.peerSync.localServerEnabled) {
+        if (current.sync.syncEnabled && current.peerSync.isServerMode && current.peerSync.localServerEnabled) {
             viewModelScope.launch {
                 val res = peerServerManager?.start(current.peerSync.localServerPort)
                 val boundPort = res?.getOrNull() ?: current.peerSync.localServerPort

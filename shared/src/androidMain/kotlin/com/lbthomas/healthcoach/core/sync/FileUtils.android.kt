@@ -4,6 +4,8 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.security.MessageDigest
+import java.util.zip.GZIPInputStream
+import java.util.zip.GZIPOutputStream
 
 actual object FileUtils {
     actual fun calculateFileSha256(filePath: String): String? {
@@ -27,6 +29,27 @@ actual object FileUtils {
     actual fun calculateSha256(data: ByteArray): String {
         val digest = MessageDigest.getInstance("SHA-256")
         return digest.digest(data).joinToString("") { "%02x".format(it) }
+    }
+
+    actual fun calculateUncompressedSha256(filePath: String): String? {
+        val file = File(filePath)
+        if (!file.exists() || !file.isFile) return null
+        return try {
+            val digest = MessageDigest.getInstance("SHA-256")
+            val buffer = ByteArray(8192)
+            val isGz = isGzipFile(filePath)
+            val rawInput = FileInputStream(file)
+            val stream = if (isGz) GZIPInputStream(rawInput) else rawInput
+            stream.use { input ->
+                var bytesRead: Int
+                while (input.read(buffer).also { bytesRead = it } != -1) {
+                    digest.update(buffer, 0, bytesRead)
+                }
+            }
+            digest.digest().joinToString("") { "%02x".format(it) }
+        } catch (_: Exception) {
+            null
+        }
     }
 
     actual fun copyFile(sourcePath: String, destinationPath: String): Boolean {
@@ -99,5 +122,61 @@ actual object FileUtils {
             }
         }
         return result.path
+    }
+
+    actual fun isGzipFile(filePath: String): Boolean {
+        val file = File(filePath)
+        if (!file.exists() || !file.isFile || file.length() < 2) return false
+        return try {
+            FileInputStream(file).use { input ->
+                val b1 = input.read()
+                val b2 = input.read()
+                b1 == 0x1F && b2 == 0x8B
+            }
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    actual fun compressGzip(sourcePath: String, destinationPath: String): Boolean {
+        val src = File(sourcePath)
+        val dst = File(destinationPath)
+        if (!src.exists() || !src.isFile) return false
+        return try {
+            dst.parentFile?.mkdirs()
+            FileInputStream(src).use { input ->
+                GZIPOutputStream(FileOutputStream(dst)).use { output ->
+                    input.copyTo(output)
+                }
+            }
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    actual fun decompressGzip(sourcePath: String, destinationPath: String): Boolean {
+        val src = File(sourcePath)
+        val dst = File(destinationPath)
+        if (!src.exists() || !src.isFile) return false
+        return try {
+            dst.parentFile?.mkdirs()
+            GZIPInputStream(FileInputStream(src)).use { input ->
+                FileOutputStream(dst).use { output ->
+                    input.copyTo(output)
+                }
+            }
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    actual fun decompressGzipIfNeeded(sourcePath: String, destinationPath: String): Boolean {
+        return if (isGzipFile(sourcePath)) {
+            decompressGzip(sourcePath, destinationPath)
+        } else {
+            copyFile(sourcePath, destinationPath)
+        }
     }
 }

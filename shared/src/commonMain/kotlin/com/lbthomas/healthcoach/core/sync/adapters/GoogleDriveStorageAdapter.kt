@@ -54,6 +54,7 @@ private data class GoogleDriveCreateFileRequest(
 
 @Serializable
 private data class GoogleDriveUpdateMetadataRequest(
+    val name: String? = null,
     val appProperties: Map<String, String>? = null
 )
 
@@ -208,16 +209,24 @@ class GoogleDriveStorageAdapter(
     override suspend fun getFileMetadata(fileName: String): FileMetadata? {
         if (!isAuthenticated()) return null
 
-        if (!customBasePath.isNullOrBlank()) {
-            val filePath = FileUtils.joinPath(targetDirectory, fileName)
-            if (!FileUtils.fileExists(filePath)) return null
+        val gzFileName = if (fileName.endsWith(".gz")) fileName else "$fileName.gz"
 
-            val hash = FileUtils.calculateFileSha256(filePath) ?: return null
+        if (!customBasePath.isNullOrBlank()) {
+            val gzPath = FileUtils.joinPath(targetDirectory, gzFileName)
+            val legacyPath = FileUtils.joinPath(targetDirectory, fileName)
+
+            val (filePath, resolvedName) = when {
+                FileUtils.fileExists(gzPath) -> gzPath to gzFileName
+                FileUtils.fileExists(legacyPath) -> legacyPath to fileName
+                else -> return null
+            }
+
+            val hash = FileUtils.calculateUncompressedSha256(filePath) ?: return null
             val size = FileUtils.getFileSize(filePath)
             val lastModified = FileUtils.getFileLastModified(filePath)
 
             return FileMetadata(
-                name = fileName,
+                name = resolvedName,
                 size = size,
                 lastModified = lastModified,
                 sha256Hash = hash,
@@ -226,37 +235,51 @@ class GoogleDriveStorageAdapter(
         }
 
         return try {
-            val encodedQuery = "name = '$fileName' and trashed = false"
+            val gzQuery = "name = '$gzFileName' and trashed = false"
             val response = executeWithAuthRetry { token ->
                 client.get(API_BASE_URL) {
                     header(HttpHeaders.Authorization, "Bearer $token")
                     parameter("spaces", "appDataFolder")
-                    parameter("q", encodedQuery)
+                    parameter("q", gzQuery)
                     parameter("fields", "files(id,name,size,modifiedTime,md5Checksum,appProperties)")
                 }
             }
 
+            var fileItem: GoogleDriveFileItem? = null
             if (response.status == HttpStatusCode.OK) {
-                val list = response.body<GoogleDriveFileListResponse>()
-                val file = list.files.firstOrNull() ?: return null
-                val sizeBytes = file.size?.toLongOrNull() ?: 0L
-                val sha256 = file.appProperties?.get("sha256") ?: file.md5Checksum ?: ""
-                val lastModified = try {
-                    file.modifiedTime?.let { Instant.parse(it).toEpochMilliseconds() } ?: 0L
-                } catch (_: Exception) {
-                    0L
-                }
-                FileMetadata(
-                    name = fileName,
-                    size = sizeBytes,
-                    lastModified = lastModified,
-                    sha256Hash = sha256,
-                    exists = true
-                )
-            } else {
-                Logger.w("GoogleDriveStorageAdapter: getFileMetadata failed with status: ${response.status}")
-                null
+                fileItem = response.body<GoogleDriveFileListResponse>().files.firstOrNull()
             }
+
+            if (fileItem == null && gzFileName != fileName) {
+                val legacyQuery = "name = '$fileName' and trashed = false"
+                val legacyResponse = executeWithAuthRetry { token ->
+                    client.get(API_BASE_URL) {
+                        header(HttpHeaders.Authorization, "Bearer $token")
+                        parameter("spaces", "appDataFolder")
+                        parameter("q", legacyQuery)
+                        parameter("fields", "files(id,name,size,modifiedTime,md5Checksum,appProperties)")
+                    }
+                }
+                if (legacyResponse.status == HttpStatusCode.OK) {
+                    fileItem = legacyResponse.body<GoogleDriveFileListResponse>().files.firstOrNull()
+                }
+            }
+
+            val file = fileItem ?: return null
+            val sizeBytes = file.size?.toLongOrNull() ?: 0L
+            val sha256 = file.appProperties?.get("sha256") ?: file.md5Checksum ?: ""
+            val lastModified = try {
+                file.modifiedTime?.let { Instant.parse(it).toEpochMilliseconds() } ?: 0L
+            } catch (_: Exception) {
+                0L
+            }
+            FileMetadata(
+                name = file.name,
+                size = sizeBytes,
+                lastModified = lastModified,
+                sha256Hash = sha256,
+                exists = true
+            )
         } catch (e: Exception) {
             Logger.e("GoogleDriveStorageAdapter: getFileMetadata error: ${e.message}", e)
             null
@@ -266,20 +289,27 @@ class GoogleDriveStorageAdapter(
     override suspend fun downloadFile(fileName: String, destinationPath: String): Boolean {
         if (!isAuthenticated()) return false
 
+        val gzFileName = if (fileName.endsWith(".gz")) fileName else "$fileName.gz"
+
         if (!customBasePath.isNullOrBlank()) {
-            val sourcePath = FileUtils.joinPath(targetDirectory, fileName)
-            if (!FileUtils.fileExists(sourcePath)) return false
-            return FileUtils.copyFile(sourcePath, destinationPath)
+            val gzPath = FileUtils.joinPath(targetDirectory, gzFileName)
+            val legacyPath = FileUtils.joinPath(targetDirectory, fileName)
+            val sourcePath = when {
+                FileUtils.fileExists(gzPath) -> gzPath
+                FileUtils.fileExists(legacyPath) -> legacyPath
+                else -> return false
+            }
+            return FileUtils.decompressGzipIfNeeded(sourcePath, destinationPath)
         }
 
         return try {
-            val encodedQuery = "name = '$fileName' and trashed = false"
+            val gzQuery = "name = '$gzFileName' and trashed = false"
             val metaResponse = executeWithAuthRetry { token ->
                 client.get(API_BASE_URL) {
                     header(HttpHeaders.Authorization, "Bearer $token")
                     parameter("spaces", "appDataFolder")
-                    parameter("q", encodedQuery)
-                    parameter("fields", "files(id)")
+                    parameter("q", gzQuery)
+                    parameter("fields", "files(id,name)")
                 }
             }
 
@@ -288,8 +318,23 @@ class GoogleDriveStorageAdapter(
                 return false
             }
 
-            val list = metaResponse.body<GoogleDriveFileListResponse>()
-            val fileId = list.files.firstOrNull()?.id
+            var fileList = metaResponse.body<GoogleDriveFileListResponse>().files
+            if (fileList.isEmpty() && gzFileName != fileName) {
+                val legacyQuery = "name = '$fileName' and trashed = false"
+                val legacyMetaResponse = executeWithAuthRetry { token ->
+                    client.get(API_BASE_URL) {
+                        header(HttpHeaders.Authorization, "Bearer $token")
+                        parameter("spaces", "appDataFolder")
+                        parameter("q", legacyQuery)
+                        parameter("fields", "files(id,name)")
+                    }
+                }
+                if (legacyMetaResponse.status == HttpStatusCode.OK) {
+                    fileList = legacyMetaResponse.body<GoogleDriveFileListResponse>().files
+                }
+            }
+
+            val fileId = fileList.firstOrNull()?.id
             if (fileId.isNullOrBlank()) {
                 Logger.w("GoogleDriveStorageAdapter: Remote file '$fileName' not found in appDataFolder")
                 return false
@@ -328,16 +373,13 @@ class GoogleDriveStorageAdapter(
                 return false
             }
 
-            val moveSuccess = tempFile.renameTo(destFile) || run {
-                FileUtils.copyFile(tempFile.absolutePath, destFile.absolutePath).also {
-                    tempFile.delete()
-                }
-            }
+            val decompressSuccess = FileUtils.decompressGzipIfNeeded(tempFile.absolutePath, destFile.absolutePath)
+            tempFile.delete()
 
-            if (moveSuccess) {
+            if (decompressSuccess) {
                 Logger.i("GoogleDriveStorageAdapter: Database downloaded successfully from Google Drive (${destFile.length()} bytes)")
             }
-            moveSuccess
+            decompressSuccess
         } catch (e: Exception) {
             Logger.e("GoogleDriveStorageAdapter: Error downloading file: ${e.message}", e)
             false
@@ -351,51 +393,70 @@ class GoogleDriveStorageAdapter(
     ): Boolean {
         if (!isAuthenticated()) return false
 
-        if (!customBasePath.isNullOrBlank()) {
-            if (!FileUtils.fileExists(sourcePath)) return false
-            if (!FileUtils.ensureDirectoryExists(targetDirectory)) return false
-
-            val targetPath = FileUtils.joinPath(targetDirectory, fileName)
-            if (expectedHash != null && FileUtils.fileExists(targetPath)) {
-                val currentRemoteHash = FileUtils.calculateFileSha256(targetPath)
-                if (currentRemoteHash != null && currentRemoteHash != expectedHash) {
-                    return false
-                }
-            }
-
-            val tempFileName = "$fileName.tmp.${generateUuid()}"
-            val tempFilePath = FileUtils.joinPath(targetDirectory, tempFileName)
-            val copySuccess = FileUtils.copyFile(sourcePath, tempFilePath)
-            if (!copySuccess) {
-                FileUtils.deleteFile(tempFilePath)
-                return false
-            }
-
-            val moveSuccess = FileUtils.moveFile(tempFilePath, targetPath)
-            if (!moveSuccess) {
-                FileUtils.deleteFile(tempFilePath)
-                return false
-            }
-            return true
-        }
-
         val srcFile = File(sourcePath)
         if (!srcFile.exists()) {
             Logger.e("GoogleDriveStorageAdapter: Upload source file does not exist: $sourcePath")
             return false
         }
 
-        val fileBytes = srcFile.readBytes()
-        val newHash = FileUtils.calculateFileSha256(sourcePath) ?: ""
+        val uncompressedHash = FileUtils.calculateFileSha256(sourcePath) ?: ""
+        val gzFileName = if (fileName.endsWith(".gz")) fileName else "$fileName.gz"
+
+        val tempGzFile = File(srcFile.parentFile ?: File("."), "${srcFile.name}.compress_${generateUuid()}.gz")
+        val compressSuccess = FileUtils.compressGzip(sourcePath, tempGzFile.absolutePath)
+        if (!compressSuccess || !tempGzFile.exists()) {
+            tempGzFile.delete()
+            Logger.e("GoogleDriveStorageAdapter: Failed to compress source file: $sourcePath")
+            return false
+        }
 
         return try {
-            val encodedQuery = "name = '$fileName' and trashed = false"
+            if (!customBasePath.isNullOrBlank()) {
+                if (!FileUtils.ensureDirectoryExists(targetDirectory)) return false
+
+                val targetPath = FileUtils.joinPath(targetDirectory, gzFileName)
+                val legacyPath = FileUtils.joinPath(targetDirectory, fileName)
+
+                if (expectedHash != null) {
+                    val currentRemoteHash = when {
+                        FileUtils.fileExists(targetPath) -> FileUtils.calculateUncompressedSha256(targetPath)
+                        FileUtils.fileExists(legacyPath) -> FileUtils.calculateUncompressedSha256(legacyPath)
+                        else -> null
+                    }
+                    if (currentRemoteHash != null && currentRemoteHash != expectedHash) {
+                        return false
+                    }
+                }
+
+                val tempFileName = "$gzFileName.tmp.${generateUuid()}"
+                val tempFilePath = FileUtils.joinPath(targetDirectory, tempFileName)
+                val copySuccess = FileUtils.copyFile(tempGzFile.absolutePath, tempFilePath)
+                if (!copySuccess) {
+                    FileUtils.deleteFile(tempFilePath)
+                    return false
+                }
+
+                val moveSuccess = FileUtils.moveFile(tempFilePath, targetPath)
+                if (!moveSuccess) {
+                    FileUtils.deleteFile(tempFilePath)
+                    return false
+                }
+
+                if (gzFileName != fileName && FileUtils.fileExists(legacyPath)) {
+                    FileUtils.deleteFile(legacyPath)
+                }
+                return true
+            }
+
+            val compressedBytes = tempGzFile.readBytes()
+
+            val gzQuery = "name = '$gzFileName' and trashed = false"
             val searchResponse = executeWithAuthRetry { token ->
                 client.get(API_BASE_URL) {
                     header(HttpHeaders.Authorization, "Bearer $token")
                     parameter("spaces", "appDataFolder")
-                    parameter("q", encodedQuery)
-                    parameter("fields", "files(id,appProperties,md5Checksum)")
+                    parameter("q", gzQuery)
+                    parameter("fields", "files(id,name,appProperties,md5Checksum)")
                 }
             }
 
@@ -404,8 +465,23 @@ class GoogleDriveStorageAdapter(
                 return false
             }
 
-            val list = searchResponse.body<GoogleDriveFileListResponse>()
-            val existingFile = list.files.firstOrNull()
+            var existingFiles = searchResponse.body<GoogleDriveFileListResponse>().files
+            if (existingFiles.isEmpty() && gzFileName != fileName) {
+                val legacyQuery = "name = '$fileName' and trashed = false"
+                val legacySearchResponse = executeWithAuthRetry { token ->
+                    client.get(API_BASE_URL) {
+                        header(HttpHeaders.Authorization, "Bearer $token")
+                        parameter("spaces", "appDataFolder")
+                        parameter("q", legacyQuery)
+                        parameter("fields", "files(id,name,appProperties,md5Checksum)")
+                    }
+                }
+                if (legacySearchResponse.status == HttpStatusCode.OK) {
+                    existingFiles = legacySearchResponse.body<GoogleDriveFileListResponse>().files
+                }
+            }
+
+            val existingFile = existingFiles.firstOrNull()
 
             if (existingFile != null) {
                 // Optimistic concurrency check
@@ -423,7 +499,12 @@ class GoogleDriveStorageAdapter(
                     client.patch("$API_BASE_URL/$fileId") {
                         header(HttpHeaders.Authorization, "Bearer $token")
                         contentType(ContentType.Application.Json)
-                        setBody(GoogleDriveUpdateMetadataRequest(appProperties = mapOf("sha256" to newHash)))
+                        setBody(
+                            GoogleDriveUpdateMetadataRequest(
+                                name = gzFileName,
+                                appProperties = mapOf("sha256" to uncompressedHash, "compressed" to "true")
+                            )
+                        )
                     }
                 }
 
@@ -433,12 +514,12 @@ class GoogleDriveStorageAdapter(
                         header(HttpHeaders.Authorization, "Bearer $token")
                         parameter("uploadType", "media")
                         contentType(ContentType.Application.OctetStream)
-                        setBody(fileBytes)
+                        setBody(compressedBytes)
                     }
                 }
 
                 if (uploadResponse.status == HttpStatusCode.OK) {
-                    Logger.i("GoogleDriveStorageAdapter: Updated '$fileName' in Google Drive appDataFolder (${fileBytes.size} bytes)")
+                    Logger.i("GoogleDriveStorageAdapter: Updated '$gzFileName' in Google Drive appDataFolder (${compressedBytes.size} bytes compressed)")
                     true
                 } else {
                     Logger.e("GoogleDriveStorageAdapter: Upload media content failed with status: ${uploadResponse.status}")
@@ -452,9 +533,9 @@ class GoogleDriveStorageAdapter(
                         contentType(ContentType.Application.Json)
                         setBody(
                             GoogleDriveCreateFileRequest(
-                                name = fileName,
+                                name = gzFileName,
                                 parents = listOf("appDataFolder"),
-                                appProperties = mapOf("sha256" to newHash)
+                                appProperties = mapOf("sha256" to uncompressedHash, "compressed" to "true")
                             )
                         )
                     }
@@ -474,12 +555,12 @@ class GoogleDriveStorageAdapter(
                         header(HttpHeaders.Authorization, "Bearer $token")
                         parameter("uploadType", "media")
                         contentType(ContentType.Application.OctetStream)
-                        setBody(fileBytes)
+                        setBody(compressedBytes)
                     }
                 }
 
                 if (uploadResponse.status == HttpStatusCode.OK) {
-                    Logger.i("GoogleDriveStorageAdapter: Uploaded initial '$fileName' to Google Drive appDataFolder (${fileBytes.size} bytes)")
+                    Logger.i("GoogleDriveStorageAdapter: Uploaded initial '$gzFileName' to Google Drive appDataFolder (${compressedBytes.size} bytes compressed)")
                     true
                 } else {
                     Logger.e("GoogleDriveStorageAdapter: Upload initial content failed with status: ${uploadResponse.status}")
@@ -489,6 +570,8 @@ class GoogleDriveStorageAdapter(
         } catch (e: Exception) {
             Logger.e("GoogleDriveStorageAdapter: Error uploading to Google Drive: ${e.message}", e)
             false
+        } finally {
+            tempGzFile.delete()
         }
     }
 
