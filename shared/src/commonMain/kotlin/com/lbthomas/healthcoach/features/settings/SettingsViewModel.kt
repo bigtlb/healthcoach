@@ -1,15 +1,17 @@
 package com.lbthomas.healthcoach.features.settings
 
-import com.lbthomas.healthcoach.core.enums.FontSizePreference
-import com.lbthomas.healthcoach.core.enums.GraphTimeFrame
-import com.lbthomas.healthcoach.core.enums.SelectedPage
-import com.lbthomas.healthcoach.core.enums.ThemeMode
-import com.lbthomas.healthcoach.core.enums.WeightUnit
+import app.cash.sqldelight.db.SqlDriver
+import com.lbthomas.healthcoach.core.database.DriverFactory
+import com.lbthomas.healthcoach.core.database.createDatabaseForDriver
+import com.lbthomas.healthcoach.core.enums.*
 import com.lbthomas.healthcoach.core.logging.LoggingConfig
+import com.lbthomas.healthcoach.core.sync.StorageAdapterFactory
 import com.lbthomas.healthcoach.core.sync.SyncConfig
+import com.lbthomas.healthcoach.core.sync.SyncEngine
 import com.lbthomas.healthcoach.core.sync.SyncProviderType
 import com.lbthomas.healthcoach.core.sync.p2p.*
 import com.lbthomas.healthcoach.core.theme.AppTheme
+import com.lbthomas.healthcoach.features.foodjournal.data.DefaultFoodData
 import com.lbthomas.healthcoach.features.settings.data.SettingsData
 import com.lbthomas.healthcoach.features.settings.data.SettingsStore
 import io.ktor.client.*
@@ -33,6 +35,9 @@ class SettingsViewModel {
     val peerServerManager: PeerServerManager?
     val discoveryAdvertiser: PeerDiscoveryAdvertiser?
     val discoveryBrowser: PeerDiscoveryBrowser?
+    val syncEngine: SyncEngine?
+    val driverFactory: DriverFactory?
+    val sqlDriver: SqlDriver?
 
     private val viewModelScope = CoroutineScope(Dispatchers.Default)
 
@@ -46,21 +51,38 @@ class SettingsViewModel {
         persistence: SettingsStore,
         peerServerManager: PeerServerManager? = null,
         discoveryAdvertiser: PeerDiscoveryAdvertiser? = null,
-        discoveryBrowser: PeerDiscoveryBrowser? = null
+        discoveryBrowser: PeerDiscoveryBrowser? = null,
+        syncEngine: SyncEngine? = null,
+        driverFactory: DriverFactory? = null,
+        sqlDriver: SqlDriver? = null
     ) {
         this.persistence = persistence
         this.settings = persistence.settings
         this.peerServerManager = peerServerManager
         this.discoveryAdvertiser = discoveryAdvertiser
         this.discoveryBrowser = discoveryBrowser
+        this.syncEngine = syncEngine
+        this.driverFactory = driverFactory
+        this.sqlDriver = sqlDriver
     }
 
-    constructor(settings: StateFlow<SettingsData>) {
+    constructor(
+        settings: StateFlow<SettingsData>,
+        peerServerManager: PeerServerManager? = null,
+        discoveryAdvertiser: PeerDiscoveryAdvertiser? = null,
+        discoveryBrowser: PeerDiscoveryBrowser? = null,
+        syncEngine: SyncEngine? = null,
+        driverFactory: DriverFactory? = null,
+        sqlDriver: SqlDriver? = null
+    ) {
         this.persistence = null
         this.settings = settings
-        this.peerServerManager = null
-        this.discoveryAdvertiser = null
-        this.discoveryBrowser = null
+        this.peerServerManager = peerServerManager
+        this.discoveryAdvertiser = discoveryAdvertiser
+        this.discoveryBrowser = discoveryBrowser
+        this.syncEngine = syncEngine
+        this.driverFactory = driverFactory
+        this.sqlDriver = sqlDriver
     }
 
     fun updateSettings(transform: (SettingsData) -> SettingsData) {
@@ -155,15 +177,17 @@ class SettingsViewModel {
         }
     }
 
+    fun isPeerServerEligible(settingsData: SettingsData = settings.value): Boolean {
+        return settingsData.sync.syncEnabled &&
+            settingsData.sync.syncProvider == SyncProviderType.PEER_TO_PEER &&
+            settingsData.peerSync.isServerMode &&
+            settingsData.peerSync.localServerEnabled
+    }
+
     fun setSyncEnabled(enabled: Boolean) {
         updateSettings { it.copy(sync = it.sync.copy(syncEnabled = enabled)) }
         val current = settings.value
-        if (!enabled) {
-            viewModelScope.launch {
-                discoveryAdvertiser?.stopAdvertising()
-                peerServerManager?.stop()
-            }
-        } else if (current.peerSync.isServerMode && current.peerSync.localServerEnabled) {
+        if (isPeerServerEligible(current)) {
             viewModelScope.launch {
                 val res = peerServerManager?.start(current.peerSync.localServerPort)
                 val boundPort = res?.getOrNull() ?: current.peerSync.localServerPort
@@ -173,11 +197,33 @@ class SettingsViewModel {
                     port = boundPort
                 )
             }
+        } else {
+            viewModelScope.launch {
+                discoveryAdvertiser?.stopAdvertising()
+                peerServerManager?.stop()
+            }
         }
     }
 
     fun setSyncProvider(provider: SyncProviderType) {
         updateSettings { it.copy(sync = it.sync.copy(syncProvider = provider)) }
+        val current = settings.value
+        if (isPeerServerEligible(current)) {
+            viewModelScope.launch {
+                val res = peerServerManager?.start(current.peerSync.localServerPort)
+                val boundPort = res?.getOrNull() ?: current.peerSync.localServerPort
+                discoveryAdvertiser?.startAdvertising(
+                    instanceId = current.peerSync.instanceId,
+                    deviceName = current.peerSync.deviceName,
+                    port = boundPort
+                )
+            }
+        } else {
+            viewModelScope.launch {
+                discoveryAdvertiser?.stopAdvertising()
+                peerServerManager?.stop()
+            }
+        }
     }
 
     fun setLocalSyncPath(path: String) {
@@ -258,7 +304,7 @@ class SettingsViewModel {
             it.copy(peerSync = it.peerSync.copy(localServerEnabled = enabled))
         }
         val current = settings.value
-        if (enabled && current.sync.syncEnabled && current.peerSync.isServerMode) {
+        if (isPeerServerEligible(current)) {
             viewModelScope.launch {
                 val res = peerServerManager?.start(current.peerSync.localServerPort)
                 val boundPort = res?.getOrNull() ?: current.peerSync.localServerPort
@@ -281,7 +327,7 @@ class SettingsViewModel {
             it.copy(peerSync = it.peerSync.copy(isServerMode = isServer))
         }
         val current = settings.value
-        if (isServer && current.sync.syncEnabled && current.peerSync.localServerEnabled) {
+        if (isPeerServerEligible(current)) {
             viewModelScope.launch {
                 val res = peerServerManager?.start(current.peerSync.localServerPort)
                 val boundPort = res?.getOrNull() ?: current.peerSync.localServerPort
@@ -302,7 +348,7 @@ class SettingsViewModel {
     fun setPeerServerPort(port: Int) {
         updateSettings { it.copy(peerSync = it.peerSync.copy(localServerPort = port)) }
         val current = settings.value
-        if (current.sync.syncEnabled && current.peerSync.isServerMode && current.peerSync.localServerEnabled) {
+        if (isPeerServerEligible(current)) {
             viewModelScope.launch {
                 val res = peerServerManager?.restart(port)
                 val boundPort = res?.getOrNull() ?: port
@@ -322,7 +368,7 @@ class SettingsViewModel {
     fun setDeviceName(deviceName: String) {
         updateSettings { it.copy(peerSync = it.peerSync.copy(deviceName = deviceName)) }
         val current = settings.value
-        if (current.sync.syncEnabled && current.peerSync.isServerMode && current.peerSync.localServerEnabled) {
+        if (isPeerServerEligible(current)) {
             val port = peerServerManager?.serverStatus?.value?.port ?: current.peerSync.localServerPort
             discoveryAdvertiser?.startAdvertising(
                 instanceId = current.peerSync.instanceId,
@@ -505,7 +551,7 @@ class SettingsViewModel {
 
     fun initializeServerIfEnabled() {
         val current = settings.value
-        if (current.sync.syncEnabled && current.peerSync.isServerMode && current.peerSync.localServerEnabled) {
+        if (isPeerServerEligible(current)) {
             viewModelScope.launch {
                 val res = peerServerManager?.start(current.peerSync.localServerPort)
                 val boundPort = res?.getOrNull() ?: current.peerSync.localServerPort
@@ -523,6 +569,90 @@ class SettingsViewModel {
             discoveryAdvertiser?.stopAdvertising()
             discoveryBrowser?.stopBrowsing()
             peerServerManager?.stop()
+        }
+    }
+
+    /**
+     * Resets local database by clearing all metric entries, restoring default food items,
+     * resetting sync cache/metadata, and resetting user settings to defaults.
+     */
+    suspend fun resetDatabaseAndSettings(): Result<Unit> {
+        return try {
+            if (driverFactory != null) {
+                val driver = driverFactory.createDriver()
+                try {
+                    driver.execute(null, "DELETE FROM weightEntry", 0, null)
+                    driver.execute(null, "DELETE FROM bloodPressureEntry", 0, null)
+                    driver.execute(null, "DELETE FROM mealEntry", 0, null)
+                    driver.execute(null, "DELETE FROM foodItem", 0, null)
+                    driver.execute(null, "DELETE FROM foodUnit", 0, null)
+                    driver.execute(null, "DELETE FROM profileSetting", 0, null)
+
+                    val db = createDatabaseForDriver(driver)
+                    DefaultFoodData.ensureDefaultFoodData(db)
+                    driver.notifyListeners("weightEntry", "bloodPressureEntry", "foodUnit", "foodItem", "mealEntry", "profileSetting")
+                } finally {
+                    try { driver.close() } catch (_: Exception) {}
+                }
+            }
+
+            sqlDriver?.notifyListeners("weightEntry", "bloodPressureEntry", "foodUnit", "foodItem", "mealEntry", "profileSetting")
+
+            // Clear local sync staging and cache files
+            syncEngine?.clearLocalSyncCache()
+
+            // Reset settings store
+            persistence?.resetSettings() ?: run {
+                if (settings is MutableStateFlow<SettingsData>) {
+                    settings.value = SettingsData()
+                }
+            }
+
+            LoggingConfig.clientLogger.i("Database and settings have been reset to defaults.")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            LoggingConfig.clientLogger.e("Failed to reset database and settings: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Resets the remote sync destination file for a specific provider.
+     */
+    suspend fun resetRemoteDestination(
+        providerType: SyncProviderType? = null,
+        localFolderOverride: String? = null
+    ): Result<Unit> {
+        val targetType = providerType ?: settings.value.sync.syncProvider
+        if (targetType == SyncProviderType.PEER_TO_PEER) {
+            return Result.failure(IllegalStateException("Peer to Peer storage cannot be remotely reset."))
+        }
+
+        val baseConfig = settings.value.toSyncConfig().copy(
+            providerType = targetType,
+            localFolderPath = localFolderOverride ?: settings.value.sync.localSyncPath
+        )
+        val adapter = StorageAdapterFactory.createAdapter(baseConfig)
+
+        return if (syncEngine != null) {
+            syncEngine.resetRemoteDestination(adapter)
+        } else {
+            val deleteSuccess = adapter.deleteFile()
+            if (deleteSuccess) Result.success(Unit) else Result.failure(Exception("Failed to delete remote destination file"))
+        }
+    }
+
+    /**
+     * Checks if an existing backup file is present in Google Drive appDataFolder.
+     */
+    suspend fun checkGoogleDriveExistingFile(): Boolean {
+        val googleConfig = settings.value.toSyncConfig().copy(providerType = SyncProviderType.GOOGLE_DRIVE)
+        val adapter = StorageAdapterFactory.createAdapter(googleConfig)
+        return try {
+            adapter.fileExists()
+        } catch (e: Exception) {
+            LoggingConfig.clientLogger.w("Failed to check Google Drive existing file: ${e.message}")
+            false
         }
     }
 }

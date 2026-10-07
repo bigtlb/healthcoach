@@ -5,9 +5,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -44,6 +46,10 @@ internal fun SyncStorageAuthSubTab(
     var isRevoking by remember { mutableStateOf(false) }
     var isValidatingToken by remember { mutableStateOf(false) }
     var actionFeedback by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
+
+    var showGoogleDriveDetectedDialog by remember { mutableStateOf(false) }
+    var showGoogleDriveConfirmResetDialog by remember { mutableStateOf(false) }
+    var isResettingGoogleDrive by remember { mutableStateOf(false) }
 
     val openDirectoryPicker = rememberDirectoryPicker { selectedPath ->
         settingsViewModel.setLocalSyncPath(selectedPath)
@@ -91,6 +97,13 @@ internal fun SyncStorageAuthSubTab(
                             settingsViewModel.setSyncProvider(SyncProviderType.GOOGLE_DRIVE)
                             folderValidationResult = null
                             actionFeedback = null
+                            if (settings.sync.googleAccessToken.isNotBlank() || settings.sync.googleRefreshToken.isNotBlank()) {
+                                coroutineScope.launch {
+                                    if (settingsViewModel.checkGoogleDriveExistingFile()) {
+                                        showGoogleDriveDetectedDialog = true
+                                    }
+                                }
+                            }
                         },
                         role = Role.RadioButton
                     )
@@ -490,6 +503,9 @@ internal fun SyncStorageAuthSubTab(
                                             refreshTokenExpiresAt = refreshExpiresAt
                                         )
                                         actionFeedback = true to "Successfully authorized ${session.email.ifBlank { "Google account" }}!"
+                                        if (settingsViewModel.checkGoogleDriveExistingFile()) {
+                                            showGoogleDriveDetectedDialog = true
+                                        }
                                     } else {
                                         val err = result.exceptionOrNull()?.message ?: "Authorization failed"
                                         settingsViewModel.setGoogleTokenStatus("Authorization Failed")
@@ -498,7 +514,7 @@ internal fun SyncStorageAuthSubTab(
                                     isAuthorizing = false
                                 }
                             },
-                            enabled = !isAuthorizing && !isValidatingToken && !isRevoking,
+                            enabled = !isAuthorizing && !isValidatingToken && !isRevoking && !isResettingGoogleDrive,
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                             modifier = Modifier.weight(1f).defaultMinSize(minWidth = 100.dp)
                         ) {
@@ -528,7 +544,7 @@ internal fun SyncStorageAuthSubTab(
                                     isRevoking = false
                                 }
                             },
-                            enabled = !isAuthorizing && !isValidatingToken && !isRevoking && (hasToken || settings.sync.googleAccountEmail.isNotBlank()),
+                            enabled = !isAuthorizing && !isValidatingToken && !isRevoking && !isResettingGoogleDrive && (hasToken || settings.sync.googleAccountEmail.isNotBlank()),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                             modifier = Modifier.weight(1f).defaultMinSize(minWidth = 80.dp)
                         ) {
@@ -587,7 +603,7 @@ internal fun SyncStorageAuthSubTab(
                                     isValidatingToken = false
                                 }
                             },
-                            enabled = !isAuthorizing && !isValidatingToken && !isRevoking && settings.sync.googleAccessToken.isNotBlank(),
+                            enabled = !isAuthorizing && !isValidatingToken && !isRevoking && !isResettingGoogleDrive && settings.sync.googleAccessToken.isNotBlank(),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                             modifier = Modifier.weight(1f).defaultMinSize(minWidth = 80.dp)
                         ) {
@@ -601,6 +617,39 @@ internal fun SyncStorageAuthSubTab(
                                 Text("Validating...", maxLines = 1, style = MaterialTheme.typography.labelMedium)
                             } else {
                                 Text("Validate", maxLines = 1, style = MaterialTheme.typography.labelMedium)
+                            }
+                        }
+
+                        // Reset File Button
+                        OutlinedButton(
+                            onClick = {
+                                showGoogleDriveConfirmResetDialog = true
+                            },
+                            enabled = !isAuthorizing && !isValidatingToken && !isRevoking && !isResettingGoogleDrive && hasToken,
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error
+                            ),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.6f)),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                            modifier = Modifier.weight(1f).defaultMinSize(minWidth = 80.dp)
+                        ) {
+                            if (isResettingGoogleDrive) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(14.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Resetting...", maxLines = 1, style = MaterialTheme.typography.labelMedium)
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.DeleteForever,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Reset File", maxLines = 1, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.error)
                             }
                         }
                     }
@@ -711,6 +760,102 @@ internal fun SyncStorageAuthSubTab(
         }
     }
 }
+
+if (showGoogleDriveDetectedDialog) {
+        AlertDialog(
+            onDismissRequest = { showGoogleDriveDetectedDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(28.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = "Existing Google Drive Sync File Detected",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "An existing synchronization database file was detected in your Google Drive appDataFolder.\n\nWould you like to reset the remote sync file?",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showGoogleDriveDetectedDialog = false
+                        showGoogleDriveConfirmResetDialog = true
+                    }
+                ) {
+                    Text("Yes, Reset File")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showGoogleDriveDetectedDialog = false }) {
+                    Text("No, Keep Existing File")
+                }
+            }
+        )
+    }
+
+    if (showGoogleDriveConfirmResetDialog) {
+        AlertDialog(
+            onDismissRequest = { showGoogleDriveConfirmResetDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = "Warning",
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(28.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = "Confirm Remote File Reset",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to permanently reset and delete the remote sync file on Google Drive? This action cannot be undone.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showGoogleDriveConfirmResetDialog = false
+                        isResettingGoogleDrive = true
+                        coroutineScope.launch {
+                            val result = settingsViewModel.resetRemoteDestination(SyncProviderType.GOOGLE_DRIVE)
+                            isResettingGoogleDrive = false
+                            if (result.isSuccess) {
+                                actionFeedback = true to "Google Drive sync file has been reset successfully."
+                            } else {
+                                val err = result.exceptionOrNull()?.message ?: "Failed to reset Google Drive sync file."
+                                actionFeedback = false to err
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
+                ) {
+                    Text("Yes, Permanently Delete")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showGoogleDriveConfirmResetDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 }
 
 @Preview

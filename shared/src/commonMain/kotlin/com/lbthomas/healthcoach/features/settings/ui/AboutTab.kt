@@ -6,7 +6,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,11 +22,19 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.lbthomas.healthcoach.core.AppInfo
 import com.lbthomas.healthcoach.core.OpenSourceAttribution
+import com.lbthomas.healthcoach.features.settings.SettingsViewModel
+import kotlinx.coroutines.launch
 
 @Composable
-internal fun AboutTabContent() {
+internal fun AboutTabContent(
+    settingsViewModel: SettingsViewModel? = null
+) {
     val uriHandler = LocalUriHandler.current
+    val coroutineScope = rememberCoroutineScope()
     var showLicenseDialog by remember { mutableStateOf(false) }
+    var showResetConfirmationDialog by remember { mutableStateOf(false) }
+    var isResetting by remember { mutableStateOf(false) }
+    var resetFeedback by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
 
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -151,6 +163,80 @@ internal fun AboutTabContent() {
                 }
             }
 
+            if (settingsViewModel != null) {
+                SettingsSection(title = "Maintenance & Data Reset") {
+                    Text(
+                        text = "Reset all application database tables (weight, blood pressure, meal logs), restore default foods, and revert all preferences to initial defaults.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Button(
+                            onClick = {
+                                resetFeedback = null
+                                showResetConfirmationDialog = true
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error,
+                                contentColor = MaterialTheme.colorScheme.onError
+                            ),
+                            enabled = !isResetting
+                        ) {
+                            if (isResetting) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onError
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Resetting...")
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.DeleteForever,
+                                    contentDescription = "Reset Database",
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Reset Database & Settings")
+                            }
+                        }
+                    }
+
+                    resetFeedback?.let { (success, message) ->
+                        Surface(
+                            shape = MaterialTheme.shapes.extraSmall,
+                            color = if (success) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = if (success) Icons.Default.CheckCircle else Icons.Default.Error,
+                                    contentDescription = null,
+                                    tint = if (success) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = message,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (success) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             Text(
                 text = "Open Source Licenses & Attributions",
                 style = MaterialTheme.typography.titleMedium
@@ -168,6 +254,61 @@ internal fun AboutTabContent() {
                 }
             }
         }
+    }
+
+    if (showResetConfirmationDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetConfirmationDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = "Warning",
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(28.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = "Reset Database & Settings?",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to reset HealthCoach? This will permanently erase all recorded weights, blood pressure entries, food journal entries, restore default food items, and reset all application settings to their defaults.\n\nThis action cannot be undone.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showResetConfirmationDialog = false
+                        isResetting = true
+                        coroutineScope.launch {
+                            val result = settingsViewModel?.resetDatabaseAndSettings()
+                            isResetting = false
+                            if (result?.isSuccess == true) {
+                                resetFeedback = true to "Database and settings successfully reset to defaults."
+                            } else {
+                                val err = result?.exceptionOrNull()?.message ?: "Unknown error"
+                                resetFeedback = false to "Failed to reset: $err"
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
+                ) {
+                    Text("Yes, Reset Everything")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showResetConfirmationDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     if (showLicenseDialog) {

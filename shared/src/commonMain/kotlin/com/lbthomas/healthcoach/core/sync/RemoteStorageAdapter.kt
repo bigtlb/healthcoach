@@ -47,4 +47,10 @@ interface RemoteStorageAdapter {
     suspend fun fileExists(fileName: String = SyncConfig.DEFAULT_REMOTE_DB_NAME): Boolean {
         return getFileMetadata(fileName)?.exists == true
     }
+
+    /**
+     * Delete or reset the remote database file from the destination storage.
+     * Returns true on success, false otherwise.
+     */
+    suspend fun deleteFile(fileName: String = SyncConfig.DEFAULT_REMOTE_DB_NAME): Boolean
 }

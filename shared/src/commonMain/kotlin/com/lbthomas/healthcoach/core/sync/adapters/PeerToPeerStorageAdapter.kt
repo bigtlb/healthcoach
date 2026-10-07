@@ -302,4 +302,10 @@ class PeerToPeerStorageAdapter(
             false
         }
     }
+
+    override suspend fun deleteFile(fileName: String): Boolean {
+        // Peer synchronization connects directly to an active peer application instance;
+        // remote peer instances manage their own local database lifecycles independently.
+        return false
+    }
 }

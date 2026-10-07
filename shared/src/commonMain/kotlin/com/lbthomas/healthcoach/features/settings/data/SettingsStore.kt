@@ -190,6 +190,12 @@ open class SettingsStore(private val settingsFile: File) {
         }
     }
 
+    fun resetSettings() {
+        val fresh = ensureInstanceIdentity(SettingsData())
+        _settings.value = fresh
+        saveSettings(fresh)
+    }
+
     private fun saveSettings(settingsToSave: SettingsData) {
         runCatching {
             val parent = settingsFile.parentFile

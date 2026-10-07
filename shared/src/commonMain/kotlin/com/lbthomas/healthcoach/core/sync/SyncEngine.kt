@@ -3,11 +3,7 @@ package com.lbthomas.healthcoach.core.sync
 import app.cash.sqldelight.db.SqlDriver
 import co.touchlab.kermit.Logger
 import com.lbthomas.healthcoach.Database
-import com.lbthomas.healthcoach.core.database.DriverFactory
-import com.lbthomas.healthcoach.core.database.createDatabaseForPath
-import com.lbthomas.healthcoach.core.database.getDbVersion
-import com.lbthomas.healthcoach.core.database.incrementalVacuum
-import com.lbthomas.healthcoach.core.database.setDbVersion
+import com.lbthomas.healthcoach.core.database.*
 import com.lbthomas.healthcoach.core.sync.handlers.*
 import com.lbthomas.healthcoach.core.utils.currentEpochMillis
 import com.lbthomas.healthcoach.features.settings.data.SettingsStore
@@ -330,6 +326,51 @@ class SyncEngine(
             )
             saveSyncMetadata(metadata)
             return SyncResult.Error(e, msg)
+        }
+    }
+
+    /**
+     * Clears local sync staging and cache files and resets sync metadata in settings.
+     */
+    fun clearLocalSyncCache() {
+        try {
+            FileUtils.deleteFile(getSyncedCachePath())
+            FileUtils.deleteFile(getRemoteStagingPath())
+            FileUtils.deleteFile(getMetadataPath())
+            saveSyncMetadata(
+                SyncMetadata(
+                    lastSyncedHash = null,
+                    lastSyncedTimestamp = 0L,
+                    lastSyncStatus = "Never Synced",
+                    lastSyncError = null
+                )
+            )
+        } catch (e: Exception) {
+            Logger.w("Failed to clear local sync cache: ${e.message}")
+        }
+    }
+
+    /**
+     * Resets the remote sync destination file and clears the local base cache.
+     */
+    suspend fun resetRemoteDestination(
+        adapter: RemoteStorageAdapter,
+        remoteFileName: String = SyncConfig.DEFAULT_REMOTE_DB_NAME
+    ): Result<Unit> {
+        return try {
+            val deleteSuccess = adapter.deleteFile(remoteFileName)
+            clearLocalSyncCache()
+            if (deleteSuccess) {
+                Logger.i("Successfully reset remote destination for provider ${adapter.providerType.name}")
+                Result.success(Unit)
+            } else {
+                val err = "Failed to delete remote file for provider ${adapter.providerType.name}"
+                Logger.w(err)
+                Result.failure(Exception(err))
+            }
+        } catch (e: Exception) {
+            Logger.e("Error resetting remote destination: ${e.message}", e)
+            Result.failure(e)
         }
     }
 }

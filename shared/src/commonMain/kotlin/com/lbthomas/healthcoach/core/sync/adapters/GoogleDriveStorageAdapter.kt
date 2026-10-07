@@ -575,6 +575,71 @@ class GoogleDriveStorageAdapter(
         }
     }
 
+    override suspend fun deleteFile(fileName: String): Boolean {
+        if (!isAuthenticated()) return false
+        val gzFileName = if (fileName.endsWith(".gz")) fileName else "$fileName.gz"
+
+        if (!customBasePath.isNullOrBlank()) {
+            val gzPath = FileUtils.joinPath(targetDirectory, gzFileName)
+            val legacyPath = FileUtils.joinPath(targetDirectory, fileName)
+            var deleted = false
+            if (FileUtils.fileExists(gzPath)) {
+                deleted = FileUtils.deleteFile(gzPath) || deleted
+            }
+            if (FileUtils.fileExists(legacyPath)) {
+                deleted = FileUtils.deleteFile(legacyPath) || deleted
+            }
+            return true
+        }
+
+        return try {
+            val gzQuery = "name = '$gzFileName' and trashed = false"
+            val metaResponse = executeWithAuthRetry { token ->
+                client.get(API_BASE_URL) {
+                    header(HttpHeaders.Authorization, "Bearer $token")
+                    parameter("spaces", "appDataFolder")
+                    parameter("q", gzQuery)
+                    parameter("fields", "files(id,name)")
+                }
+            }
+
+            var fileList = if (metaResponse.status == HttpStatusCode.OK) {
+                metaResponse.body<GoogleDriveFileListResponse>().files
+            } else emptyList()
+
+            if (fileList.isEmpty() && gzFileName != fileName) {
+                val legacyQuery = "name = '$fileName' and trashed = false"
+                val legacyMetaResponse = executeWithAuthRetry { token ->
+                    client.get(API_BASE_URL) {
+                        header(HttpHeaders.Authorization, "Bearer $token")
+                        parameter("spaces", "appDataFolder")
+                        parameter("q", legacyQuery)
+                        parameter("fields", "files(id,name)")
+                    }
+                }
+                if (legacyMetaResponse.status == HttpStatusCode.OK) {
+                    fileList = legacyMetaResponse.body<GoogleDriveFileListResponse>().files
+                }
+            }
+
+            for (fileItem in fileList) {
+                val delResponse = executeWithAuthRetry { token ->
+                    client.delete("$API_BASE_URL/${fileItem.id}") {
+                        header(HttpHeaders.Authorization, "Bearer $token")
+                    }
+                }
+                if (delResponse.status != HttpStatusCode.OK && delResponse.status != HttpStatusCode.NoContent) {
+                    Logger.w("GoogleDriveStorageAdapter: Delete file ${fileItem.id} returned status ${delResponse.status}")
+                }
+            }
+            Logger.i("GoogleDriveStorageAdapter: Reset/deleted remote file '$fileName' on Google Drive")
+            true
+        } catch (e: Exception) {
+            Logger.e("GoogleDriveStorageAdapter: Error deleting file '$fileName': ${e.message}", e)
+            false
+        }
+    }
+
     private fun isAuthenticated(): Boolean {
         return activeAccessToken.isNotBlank() ||
                 accessToken.isNotBlank() ||

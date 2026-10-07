@@ -5,6 +5,8 @@ import com.lbthomas.healthcoach.Database
 import com.lbthomas.healthcoach.core.database.DriverFactory
 import com.lbthomas.healthcoach.core.database.createDatabaseForDriver
 import com.lbthomas.healthcoach.core.sync.FileUtils
+import com.lbthomas.healthcoach.core.sync.SyncConfig
+import com.lbthomas.healthcoach.core.sync.SyncProviderType
 import com.lbthomas.healthcoach.features.settings.SettingsViewModel
 import com.lbthomas.healthcoach.features.settings.data.PeerSyncSettings
 import com.lbthomas.healthcoach.features.settings.data.SettingsData
@@ -442,7 +444,7 @@ class PeerServerManagerTest {
         runBlocking {
             settingsStore.updateSettings {
                 it.copy(
-                    sync = it.sync.copy(syncEnabled = true),
+                    sync = it.sync.copy(syncEnabled = true, syncProvider = SyncProviderType.PEER_TO_PEER),
                     peerSync = it.peerSync.copy(isServerMode = false, localServerEnabled = true, localServerPort = 0)
                 )
             }
@@ -478,6 +480,69 @@ class PeerServerManagerTest {
             delay(200.milliseconds)
             assertFalse(serverManager.serverStatus.value.isRunning)
             assertFalse(viewModel.settings.value.peerSync.isServerMode)
+        }
+    }
+
+    @Test
+    fun testSettingsViewModel_SwitchAwayFromPeerToPeerStopsServerAndRelaunchChecks() {
+        runBlocking {
+            settingsStore.updateSettings {
+                it.copy(
+                    sync = it.sync.copy(syncEnabled = true, syncProvider = SyncProviderType.PEER_TO_PEER),
+                    peerSync = it.peerSync.copy(isServerMode = true, localServerEnabled = true, localServerPort = 0)
+                )
+            }
+            val viewModel = SettingsViewModel(
+                persistence = settingsStore,
+                peerServerManager = serverManager
+            )
+
+            // Server initializes when peer to peer, isServerMode, and localServerEnabled are active
+            viewModel.initializeServerIfEnabled()
+            delay(200.milliseconds)
+            assertTrue(serverManager.serverStatus.value.isRunning, "Server should run when all peer conditions are met")
+
+            // Switching away to Local Folder must immediately stop the server
+            viewModel.setSyncProvider(SyncProviderType.LOCAL_FOLDER)
+            delay(200.milliseconds)
+            assertFalse(serverManager.serverStatus.value.isRunning, "Server should stop when switching away to LOCAL_FOLDER")
+
+            // Simulate relaunch: server should remain stopped because provider is not PEER_TO_PEER
+            viewModel.initializeServerIfEnabled()
+            delay(200.milliseconds)
+            assertFalse(serverManager.serverStatus.value.isRunning, "Server should remain stopped on relaunch when not PEER_TO_PEER")
+
+            // Switch to Google Drive: server remains stopped
+            viewModel.setSyncProvider(SyncProviderType.GOOGLE_DRIVE)
+            delay(200.milliseconds)
+            assertFalse(serverManager.serverStatus.value.isRunning, "Server should remain stopped on GOOGLE_DRIVE")
+
+            // Simulate relaunch: server should remain stopped
+            viewModel.initializeServerIfEnabled()
+            delay(200.milliseconds)
+            assertFalse(serverManager.serverStatus.value.isRunning, "Server should remain stopped on relaunch when GOOGLE_DRIVE")
+
+            // Switch back to Peer-to-Peer: server starts
+            viewModel.setSyncProvider(SyncProviderType.PEER_TO_PEER)
+            delay(200.milliseconds)
+            assertTrue(serverManager.serverStatus.value.isRunning, "Server should start when switching back to PEER_TO_PEER")
+
+            // Simulate relaunch when isServerMode is false
+            viewModel.setPeerIsServerMode(false)
+            delay(200.milliseconds)
+            assertFalse(serverManager.serverStatus.value.isRunning)
+            viewModel.initializeServerIfEnabled()
+            delay(200.milliseconds)
+            assertFalse(serverManager.serverStatus.value.isRunning, "Server should remain stopped on relaunch when isServerMode is false")
+
+            // Restore isServerMode true but set localServerEnabled false
+            viewModel.setPeerIsServerMode(true)
+            viewModel.setPeerServerEnabled(false)
+            delay(200.milliseconds)
+            assertFalse(serverManager.serverStatus.value.isRunning)
+            viewModel.initializeServerIfEnabled()
+            delay(200.milliseconds)
+            assertFalse(serverManager.serverStatus.value.isRunning, "Server should remain stopped on relaunch when localServerEnabled is false")
         }
     }
 }

@@ -178,7 +178,7 @@ fun SettingsDialog(
                                     SettingsTab.WEIGHT -> WeightTabContent(settings, settingsViewModel)
                                     SettingsTab.BLOOD_PRESSURE -> BloodPressureTabContent(settings, settingsViewModel)
                                     SettingsTab.SYNC -> SyncTabContent(settings, settingsViewModel)
-                                    SettingsTab.ABOUT -> AboutTabContent()
+                                    SettingsTab.ABOUT -> AboutTabContent(settingsViewModel)
                                 }
                             }
                         }

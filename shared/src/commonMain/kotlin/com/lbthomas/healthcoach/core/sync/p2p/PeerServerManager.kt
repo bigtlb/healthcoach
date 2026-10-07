@@ -1,39 +1,28 @@
 package com.lbthomas.healthcoach.core.sync.p2p
 
 import com.lbthomas.healthcoach.core.database.DriverFactory
+import com.lbthomas.healthcoach.core.database.createDatabaseForDriver
 import com.lbthomas.healthcoach.core.logging.LoggingConfig
 import com.lbthomas.healthcoach.core.sync.FileUtils
 import com.lbthomas.healthcoach.core.sync.SyncConfig
 import com.lbthomas.healthcoach.core.utils.currentEpochMillis
 import com.lbthomas.healthcoach.core.utils.generateUuid
+import com.lbthomas.healthcoach.features.foodjournal.data.DefaultFoodData
 import com.lbthomas.healthcoach.features.settings.data.SettingsStore
 import com.lbthomas.healthcoach.features.sync.SyncNotificationManager
-import io.ktor.http.ContentType
-import io.ktor.http.HttpHeaders
-import io.ktor.http.HttpMethod
-import io.ktor.http.HttpStatusCode
-import io.ktor.serialization.kotlinx.json.json
-import io.ktor.server.application.ApplicationCall
-import io.ktor.server.application.install
-import io.ktor.server.cio.CIO
-import io.ktor.server.cio.CIOApplicationEngine
-import io.ktor.server.engine.EmbeddedServer
-import io.ktor.server.engine.embeddedServer
-import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.server.plugins.cors.routing.CORS
-import io.ktor.server.plugins.origin
-import io.ktor.server.plugins.statuspages.StatusPages
-import io.ktor.server.request.header
-import io.ktor.server.request.receive
-import io.ktor.server.request.receiveChannel
-import io.ktor.server.response.header
-import io.ktor.server.response.respond
-import io.ktor.server.response.respondBytes
-import io.ktor.server.routing.get
-import io.ktor.server.routing.post
-import io.ktor.server.routing.routing
-import io.ktor.utils.io.ByteReadChannel
-import io.ktor.utils.io.readAvailable
+import io.ktor.http.*
+import io.ktor.serialization.kotlinx.json.*
+import io.ktor.server.application.*
+import io.ktor.server.cio.*
+import io.ktor.server.engine.*
+import io.ktor.server.plugins.*
+import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.plugins.cors.routing.*
+import io.ktor.server.plugins.statuspages.*
+import io.ktor.server.request.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
+import io.ktor.utils.io.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -596,6 +585,36 @@ class PeerServerManager(
                     call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Failed to process upload: ${e.message}"))
                 }
             }
+        }
+    }
+
+    /**
+     * Resets the local server database by clearing all metric tables and restoring default food items.
+     */
+    suspend fun resetDatabase(): Result<Unit> = serverMutex.withLock {
+        try {
+            val driver = driverFactory.createDriver()
+            try {
+                driver.execute(null, "DELETE FROM weightEntry", 0, null)
+                driver.execute(null, "DELETE FROM bloodPressureEntry", 0, null)
+                driver.execute(null, "DELETE FROM mealEntry", 0, null)
+                driver.execute(null, "DELETE FROM foodItem", 0, null)
+                driver.execute(null, "DELETE FROM foodUnit", 0, null)
+                driver.execute(null, "DELETE FROM profileSetting", 0, null)
+
+                val db = createDatabaseForDriver(driver)
+                DefaultFoodData.ensureDefaultFoodData(db)
+                driver.notifyListeners("weightEntry", "bloodPressureEntry", "foodUnit", "foodItem", "mealEntry", "profileSetting")
+            } finally {
+                try { driver.close() } catch (_: Exception) {}
+            }
+
+            onDatabaseReset?.invoke()
+            LoggingConfig.serverLogger.i("Server database has been reset to defaults.")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            LoggingConfig.serverLogger.e("Failed to reset server database: ${e.message}", e)
+            Result.failure(e)
         }
     }
 

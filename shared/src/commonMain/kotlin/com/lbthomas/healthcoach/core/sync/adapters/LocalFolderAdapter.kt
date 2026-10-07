@@ -129,4 +129,19 @@ class LocalFolderAdapter(
 
         return true
     }
+
+    override suspend fun deleteFile(fileName: String): Boolean {
+        if (targetDirectory.isBlank()) return false
+        val filePath = FileUtils.joinPath(targetDirectory, fileName)
+        val gzFileName = if (fileName.endsWith(".gz")) fileName else "$fileName.gz"
+        val gzFilePath = FileUtils.joinPath(targetDirectory, gzFileName)
+        var deleted = false
+        if (FileUtils.fileExists(filePath)) {
+            deleted = FileUtils.deleteFile(filePath) || deleted
+        }
+        if (FileUtils.fileExists(gzFilePath)) {
+            deleted = FileUtils.deleteFile(gzFilePath) || deleted
+        }
+        return true
+    }
 }

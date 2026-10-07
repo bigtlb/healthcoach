@@ -7,8 +7,8 @@ import com.lbthomas.healthcoach.core.database.DriverFactory
 import com.lbthomas.healthcoach.core.database.createDatabaseForDriver
 import com.lbthomas.healthcoach.core.sync.SyncEngine
 import com.lbthomas.healthcoach.core.sync.p2p.PeerServerManager
-import com.lbthomas.healthcoach.features.bloodpressure.ui.BloodPressureViewModel
 import com.lbthomas.healthcoach.features.bloodpressure.data.BloodPressureRepository
+import com.lbthomas.healthcoach.features.bloodpressure.ui.BloodPressureViewModel
 import com.lbthomas.healthcoach.features.foodjournal.FoodJournalViewModel
 import com.lbthomas.healthcoach.features.foodjournal.data.FoodJournalRepository
 import com.lbthomas.healthcoach.features.profile.ProfileViewModel
@@ -37,7 +37,10 @@ val appModule = module {
             persistence = get(),
             peerServerManager = getOrNull(),
             discoveryAdvertiser = getOrNull(),
-            discoveryBrowser = getOrNull()
+            discoveryBrowser = getOrNull(),
+            syncEngine = getOrNull(),
+            driverFactory = getOrNull(),
+            sqlDriver = getOrNull()
         )
     }
 
