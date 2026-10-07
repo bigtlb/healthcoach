@@ -140,8 +140,8 @@ Two primary workflows automate verification and release builds:
 2. **Release Packaging (`.github/workflows/release.yml`)**: Triggered by release tags (`v*`) or manual dispatch. Builds all native binaries in parallel across Windows and Ubuntu runners, generates categorized changelogs from Conventional Commits, and publishes the GitHub Release.
 
 #### Maintainer Action Items
-- [ ] Trigger the initial release workflow via manual dispatch or by pushing a version tag (e.g., `v1.0.0`).
-- [ ] Verify that generated binary artifacts (`HealthCoach.msi`, `HealthCoach.apk`, `HealthCoach.aab`, `HealthCoach.flatpak`, `HealthCoach.deb`, `HealthCoach.rpm`) attach cleanly to the GitHub Release.
+- [x] Trigger the initial release workflow via manual dispatch or by pushing a version tag (e.g., `v1.0.0`).
+- [x] Verify that generated binary artifacts (`HealthCoach.msi`, `HealthCoach.apk`, `HealthCoach.aab`, `HealthCoach.flatpak`, `HealthCoach.deb`, `HealthCoach.rpm`) attach cleanly to the GitHub Release.
 
 ---
 
@@ -151,8 +151,8 @@ Two primary workflows automate verification and release builds:
 As soon as the initial release artifacts are published, the public GitHub Pages site is deployed at `https://bigtlb.github.io/healthcoach/`. It provides immediate binary downloads, hosts the full release history with commit summaries, displays the privacy policy and medical disclaimer, and serves as the destination for in-app companion client discovery links.
 
 #### Maintainer Action Items
-- [ ] Verify the live landing page at `https://bigtlb.github.io/healthcoach/`.
-- [ ] Review the published Privacy Policy (`docs/privacy-policy.html`) and Medical Disclaimer (`docs/terms.html`).
+- [x] Verify the live landing page at `https://bigtlb.github.io/healthcoach/`.
+- [x] Review the published Privacy Policy (`docs/privacy-policy.html`) and Medical Disclaimer (`docs/terms.html`).
 
 #### Implementation Deliverables
 - [x] Create static landing page (`docs/index.html`) with direct download buttons for latest MSI, APK, and Flatpak/DEB binaries.
@@ -167,10 +167,10 @@ As soon as the initial release artifacts are published, the public GitHub Pages 
 HealthCoach is prepared for distribution via official application catalogs: the Google Play Store for Android and Flathub for Linux.
 
 #### Maintainer Action Items (Google Play Console)
-- [ ] Register Google Play Developer account at [Google Play Console](https://play.google.com/console/signup) ($25 one-time fee) and complete verification.
-- [ ] Create app listing (`HealthCoach`), set default language to `en-US`, Free app.
-- [ ] Complete store listing assets (512x512 icon, 1024x500 feature graphic, screenshots, descriptions).
-- [ ] Complete policies:
+- [x] Register Google Play Developer account at [Google Play Console](https://play.google.com/console/signup) ($25 one-time fee) and complete verification.
+- [x] Create app listing (`HealthCoach`), set default language to `en-US`, Free app.
+- [x] Complete store listing assets (512x512 icon, 1024x500 feature graphic, screenshots, descriptions).
+- [x] Complete policies:
   - **Privacy Policy**: `https://bigtlb.github.io/healthcoach/privacy-policy.html`
   - **Data Safety Form**: Declare "No data collected / No data shared".
   - **Health App Declarations**: Declare health tracking (weight, blood pressure, nutrition).
