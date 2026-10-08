@@ -1,17 +1,19 @@
-app-id: com.lbthomas.healthcoach
+id: com.lbthomas.healthcoach
 runtime: org.freedesktop.Platform
-runtime-version: '23.08'
+runtime-version: '26.08'
 sdk: org.freedesktop.Sdk
 command: HealthCoach
 
 finish-args:
-  - --socket=x11
   - --share=ipc
-  - --share=network
+  - --socket=fallback-x11
+  - --socket=wayland
   - --device=dri
+
+  - --share=network
+
   - --filesystem=xdg-documents
   - --filesystem=xdg-download
-  - --talk-name=org.freedesktop.Notifications
 
 modules:
   - name: healthcoach
