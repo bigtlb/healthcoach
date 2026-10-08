@@ -97,7 +97,7 @@ tasks.register<Exec>("packageFlatpakBundle") {
     doNotTrackState("Flatpak manages bundle creation from OSTree repository")
 
     val flatpakDir = layout.buildDirectory.dir("flatpak")
-    val bundleFile = flatpakDir.get().asFile.resolve("HealthCoach.flatpak")
+    val bundleFile = flatpakDir.get().asFile.resolve("HealthCoach-${appPackageVersion}.flatpak")
 
     workingDir = rootProject.projectDir
     commandLine(

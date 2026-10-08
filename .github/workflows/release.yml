@@ -88,13 +88,23 @@ jobs:
           New-Item -ItemType Directory -Force -Path staging
           Copy-Item -Path "desktopApp/build/compose/binaries/main-release/msi/*.msi" -Destination staging/
           
+          # Extract version from MSI filename (e.g., HealthCoach-0.9.7.msi -> 0.9.7)
+          $msiFile = Get-ChildItem -Path "desktopApp/build/compose/binaries/main-release/msi/*.msi" | Select-Object -First 1
+          $version = "0.0.1"
+          if ($msiFile -and $msiFile.Name -match '^HealthCoach-(.+)\.msi$') {
+            $version = $Matches[1]
+          } elseif ($env:GITHUB_REF_NAME -match '^v?(.+)$') {
+            $version = $Matches[1]
+          }
+          
           $distDir = "desktopApp/build/compose/binaries/main-release/app/HealthCoach"
           if (-not (Test-Path $distDir)) {
             $distDir = "desktopApp/build/compose/binaries/main-release/app"
           }
           if (Test-Path $distDir) {
-            Write-Host "Creating portable Windows ZIP from $distDir..."
-            Compress-Archive -Path "$distDir" -DestinationPath "staging/HealthCoach-windows.zip" -Force
+            $zipName = "HealthCoach-$version-windows.zip"
+            Write-Host "Creating portable Windows ZIP ($zipName) from $distDir..."
+            Compress-Archive -Path "$distDir" -DestinationPath "staging/$zipName" -Force
           } else {
             Write-Warning "Distributable directory $distDir not found!"
           }
@@ -161,16 +171,38 @@ jobs:
           cp desktopApp/build/compose/binaries/main-release/rpm/*.rpm staging/ || true
           cp desktopApp/build/flatpak/*.flatpak staging/ || true
           
+          # Determine package version from generated native packages, tags, or fallback
+          VERSION=""
+          if compgen -G "desktopApp/build/compose/binaries/main-release/deb/healthcoach_*_amd64.deb" > /dev/null; then
+            DEB_FILE=$(ls desktopApp/build/compose/binaries/main-release/deb/healthcoach_*_amd64.deb | head -n 1)
+            DEB_BASENAME=$(basename "$DEB_FILE")
+            if [[ "$DEB_BASENAME" =~ healthcoach_(.+)_amd64\.deb ]]; then
+              VERSION="${BASH_REMATCH[1]}"
+            fi
+          fi
+          if [ -z "$VERSION" ] && compgen -G "desktopApp/build/flatpak/HealthCoach-*.flatpak" > /dev/null; then
+            FLATPAK_FILE=$(ls desktopApp/build/flatpak/HealthCoach-*.flatpak | head -n 1)
+            FLATPAK_BASENAME=$(basename "$FLATPAK_FILE")
+            if [[ "$FLATPAK_BASENAME" =~ HealthCoach-(.+)\.flatpak ]]; then
+              VERSION="${BASH_REMATCH[1]}"
+            fi
+          fi
+          if [ -z "$VERSION" ]; then
+            TAG=$(git describe --tags --match "v*" --abbrev=0 2>/dev/null || git describe --tags --match "v*" --always 2>/dev/null || echo "0.0.1")
+            VERSION="${TAG#v}"
+          fi
+          echo "Detected release version for Android packaging: $VERSION"
+          
           # Stage Android APK
           if compgen -G "androidApp/build/outputs/apk/release/*-signed.apk" > /dev/null; then
-            cp androidApp/build/outputs/apk/release/*-signed.apk staging/HealthCoach.apk
+            cp androidApp/build/outputs/apk/release/*-signed.apk "staging/HealthCoach-${VERSION}.apk"
           elif compgen -G "androidApp/build/outputs/apk/release/*.apk" > /dev/null; then
-            cp androidApp/build/outputs/apk/release/*.apk staging/HealthCoach.apk
+            cp androidApp/build/outputs/apk/release/*.apk "staging/HealthCoach-${VERSION}.apk"
           fi
           
           # Stage Android App Bundle (.aab)
           if compgen -G "androidApp/build/outputs/bundle/release/*.aab" > /dev/null; then
-            cp androidApp/build/outputs/bundle/release/*.aab staging/HealthCoach.aab
+            cp androidApp/build/outputs/bundle/release/*.aab "staging/HealthCoach-${VERSION}.aab"
           fi
           
           ls -la staging/

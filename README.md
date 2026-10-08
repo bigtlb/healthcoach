@@ -211,7 +211,7 @@ flatpak install --user -y flathub org.freedesktop.Platform//23.08 org.freedeskto
   ```bash
   ./gradlew :desktopApp:packageFlatpakBundle
   ```
-  *(Output generated at `desktopApp/build/flatpak/HealthCoach.flatpak`)*
+  *(Output generated at `desktopApp/build/flatpak/HealthCoach-<version>.flatpak`)*
 * **Build local Flatpak OSTree repository**:
   ```bash
   ./gradlew :desktopApp:packageFlatpak

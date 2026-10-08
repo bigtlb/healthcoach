@@ -141,7 +141,7 @@ Two primary workflows automate verification and release builds:
 
 #### Maintainer Action Items
 - [x] Trigger the initial release workflow via manual dispatch or by pushing a version tag (e.g., `v1.0.0`).
-- [x] Verify that generated binary artifacts (`HealthCoach.msi`, `HealthCoach.apk`, `HealthCoach.aab`, `HealthCoach.flatpak`, `HealthCoach.deb`, `HealthCoach.rpm`) attach cleanly to the GitHub Release.
+- [x] Verify that generated binary artifacts (`HealthCoach-<version>.msi`, `HealthCoach-<version>-windows.zip`, `HealthCoach-<version>.apk`, `HealthCoach-<version>.aab`, `HealthCoach-<version>.flatpak`, `healthcoach_<version>_amd64.deb`, `healthcoach-<version>-1.x86_64.rpm`) attach cleanly to the GitHub Release.
 
 ---
 
