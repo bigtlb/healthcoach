@@ -77,12 +77,23 @@ fun GoalProjectionCard(
 
             when (projection) {
                 is WeightGoalProjection.Feasible -> {
-                    Text(
-                        text = projection.message,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Estimated Duration:",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                        )
+                        Text(
+                            text = projection.message,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -104,14 +115,8 @@ fun GoalProjectionCard(
 
                 is WeightGoalProjection.Infeasible -> {
                     Text(
-                        text = "Incompatible Goal Configuration",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onErrorContainer
-                    )
-                    Text(
                         text = projection.reason,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onErrorContainer
                     )
                 }
@@ -127,7 +132,7 @@ fun GoalProjectionCard(
 
                 is WeightGoalProjection.Undefined -> {
                     Text(
-                        text = "Enter your current weight, target weight, and daily calorie surplus/deficit to project your timeline.",
+                        text = "Enter current weight, target weight, and calorie delta to see your projected timeline.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -145,7 +150,7 @@ fun GoalProjectionCardFeasiblePreview() {
             projection = WeightGoalProjection.Feasible(
                 totalDays = 74,
                 targetDate = LocalDate(2026, 12, 15),
-                message = "Projected 10.5 weeks to target weight (1.0 lb/week loss)"
+                message = "~10.5 weeks (74 days)"
             ),
             modifier = Modifier.padding(16.dp)
         )

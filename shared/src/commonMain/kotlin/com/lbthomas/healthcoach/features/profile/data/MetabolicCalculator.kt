@@ -236,7 +236,7 @@ object MetabolicCalculator {
             val totalCaloriesNeeded = abs(weightDiff) * KCAL_PER_KG_FAT
             val totalDays = ceil(totalCaloriesNeeded / dailyDeficit).toInt()
             val targetDate = LocalDate.fromEpochDays(fromDate.toEpochDays() + totalDays)
-            val message = formatProjectionMessage(totalDays, targetDate)
+            val message = formatProjectionMessage(totalDays)
             return WeightGoalProjection.Feasible(totalDays, targetDate, message)
         }
 
@@ -249,26 +249,27 @@ object MetabolicCalculator {
             val totalCaloriesNeeded = weightDiff * KCAL_PER_KG_FAT
             val totalDays = ceil(totalCaloriesNeeded / dailySurplus).toInt()
             val targetDate = LocalDate.fromEpochDays(fromDate.toEpochDays() + totalDays)
-            val message = formatProjectionMessage(totalDays, targetDate)
+            val message = formatProjectionMessage(totalDays)
             return WeightGoalProjection.Feasible(totalDays, targetDate, message)
         }
 
         return WeightGoalProjection.Undefined
     }
 
-    private fun formatProjectionMessage(totalDays: Int, targetDate: LocalDate): String {
-        val durationText = when {
+    private fun formatProjectionMessage(totalDays: Int): String {
+        return when {
             totalDays == 1 -> "1 day"
             totalDays < 14 -> "$totalDays days"
             totalDays < 60 -> {
                 val weeks = (totalDays / 7.0 * 10).roundToInt() / 10.0
-                "~$weeks weeks ($totalDays days)"
+                val weeksStr = if (weeks % 1.0 == 0.0) weeks.toInt().toString() else weeks.toString()
+                "~$weeksStr weeks ($totalDays days)"
             }
             else -> {
                 val months = (totalDays / 30.4375 * 10).roundToInt() / 10.0
-                "~$months months ($totalDays days)"
+                val monthsStr = if (months % 1.0 == 0.0) months.toInt().toString() else months.toString()
+                "~$monthsStr months ($totalDays days)"
             }
         }
-        return "$durationText (estimated target: ${targetDate.displayDate()})"
     }
 }

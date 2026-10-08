@@ -107,7 +107,7 @@ class MetabolicCalculatorTest {
         assertTrue(projection is WeightGoalProjection.Feasible)
         assertEquals(154, projection.totalDays)
         assertEquals(LocalDate.fromEpochDays(fromDate.toEpochDays() + 154), projection.targetDate)
-        assertTrue(projection.message.contains("154 days"))
+        assertEquals("~5.1 months (154 days)", projection.message)
     }
 
     @Test
@@ -138,6 +138,45 @@ class MetabolicCalculatorTest {
         assertTrue(projection is WeightGoalProjection.Feasible)
         assertEquals(77, projection.totalDays)
         assertEquals(LocalDate.fromEpochDays(fromDate.toEpochDays() + 77), projection.targetDate)
+        assertEquals("~2.5 months (77 days)", projection.message)
+    }
+
+    @Test
+    fun testGoalProjectionDurationFormatting() {
+        val fromDate = LocalDate(2026, 10, 1)
+
+        // 1 day: 0.1 kg loss @ 770 kcal/day deficit = (0.1 * 7700) / 770 = 1 day
+        val proj1Day = MetabolicCalculator.calculateWeightGoalProjection(
+            currentWeightKg = 80.0,
+            targetWeightKg = 79.9,
+            targetCalorieDelta = -770.0,
+            fromDate = fromDate
+        )
+        assertTrue(proj1Day is WeightGoalProjection.Feasible)
+        assertEquals(1, proj1Day.totalDays)
+        assertEquals("1 day", proj1Day.message)
+
+        // Days < 14: e.g. 7 days (0.5 kg loss @ 550 kcal/day deficit = 7 days)
+        val proj7Days = MetabolicCalculator.calculateWeightGoalProjection(
+            currentWeightKg = 80.0,
+            targetWeightKg = 79.5,
+            targetCalorieDelta = -550.0,
+            fromDate = fromDate
+        )
+        assertTrue(proj7Days is WeightGoalProjection.Feasible)
+        assertEquals(7, proj7Days.totalDays)
+        assertEquals("7 days", proj7Days.message)
+
+        // Days < 60: e.g. 28 days (4 weeks) (2 kg loss @ 550 kcal/day deficit = 28 days)
+        val proj28Days = MetabolicCalculator.calculateWeightGoalProjection(
+            currentWeightKg = 80.0,
+            targetWeightKg = 78.0,
+            targetCalorieDelta = -550.0,
+            fromDate = fromDate
+        )
+        assertTrue(proj28Days is WeightGoalProjection.Feasible)
+        assertEquals(28, proj28Days.totalDays)
+        assertEquals("~4 weeks (28 days)", proj28Days.message)
     }
 
     @Test
