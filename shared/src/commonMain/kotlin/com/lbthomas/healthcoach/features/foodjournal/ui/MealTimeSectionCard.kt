@@ -229,13 +229,13 @@ private fun MealEntryRow(
     }
 }
 
-private fun formatPortionCalculation(entry: MealEntryData): String {
+internal fun formatPortionCalculation(entry: MealEntryData): String {
     val multiplierStr = formatDecimal(entry.portionMultiplier)
     val unitQuantityStr = formatDecimal(entry.unitQuantity)
     val caloriesPerUnitStr = formatCalories(entry.caloriesPerUnit)
 
     return if (entry.portionMultiplier == 1.0) {
-        "$unitQuantityStr ${entry.unitName} @ $caloriesPerUnitStr cal/${entry.unitName}"
+        "$unitQuantityStr ${entry.unitName} @ $caloriesPerUnitStr cal"
     } else {
         "$multiplierStr × ($unitQuantityStr ${entry.unitName} @ $caloriesPerUnitStr cal)"
     }
