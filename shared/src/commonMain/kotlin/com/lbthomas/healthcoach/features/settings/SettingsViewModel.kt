@@ -227,6 +227,10 @@ class SettingsViewModel {
     }
 
     fun setLocalSyncPath(path: String) {
+        val previous = settings.value.sync.localSyncPath
+        if (previous != path) {
+            syncEngine?.clearLocalSyncCache(SyncProviderType.LOCAL_FOLDER)
+        }
         updateSettings { it.copy(sync = it.sync.copy(localSyncPath = path)) }
     }
 
@@ -238,6 +242,10 @@ class SettingsViewModel {
         expiresAt: Long? = null,
         refreshTokenExpiresAt: Long? = null
     ) {
+        val prevEmail = settings.value.sync.googleAccountEmail
+        if (prevEmail.isNotBlank() && prevEmail != email) {
+            syncEngine?.clearLocalSyncCache(SyncProviderType.GOOGLE_DRIVE)
+        }
         updateSettings {
             it.copy(
                 sync = it.sync.copy(
@@ -253,6 +261,7 @@ class SettingsViewModel {
     }
 
     fun clearGoogleSession() {
+        syncEngine?.clearLocalSyncCache(SyncProviderType.GOOGLE_DRIVE)
         updateSettings {
             it.copy(
                 sync = it.sync.copy(
@@ -284,10 +293,18 @@ class SettingsViewModel {
     }
 
     fun setGoogleAccountEmail(email: String) {
+        val prevEmail = settings.value.sync.googleAccountEmail
+        if (prevEmail.isNotBlank() && prevEmail != email) {
+            syncEngine?.clearLocalSyncCache(SyncProviderType.GOOGLE_DRIVE)
+        }
         updateSettings { it.copy(sync = it.sync.copy(googleAccountEmail = email)) }
     }
 
     fun setRemoteFileName(name: String) {
+        val prev = settings.value.sync.remoteFileName
+        if (prev != name) {
+            syncEngine?.clearLocalSyncCache(settings.value.sync.syncProvider)
+        }
         updateSettings { it.copy(sync = it.sync.copy(remoteFileName = name)) }
     }
 
@@ -403,6 +420,10 @@ class SettingsViewModel {
         token: String,
         name: String
     ) {
+        val prev = settings.value.peerSync
+        if (prev.serverHost != host || prev.serverPort != port || prev.serverToken != token) {
+            syncEngine?.clearLocalSyncCache(SyncProviderType.PEER_TO_PEER)
+        }
         updateSettings {
             it.copy(
                 peerSync = it.peerSync.copy(

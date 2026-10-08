@@ -20,4 +20,6 @@ expect object FileUtils {
     fun compressGzip(sourcePath: String, destinationPath: String): Boolean
     fun decompressGzip(sourcePath: String, destinationPath: String): Boolean
     fun decompressGzipIfNeeded(sourcePath: String, destinationPath: String): Boolean
+    fun readUtf8String(filePath: String): String?
+    fun writeUtf8String(filePath: String, content: String): Boolean
 }

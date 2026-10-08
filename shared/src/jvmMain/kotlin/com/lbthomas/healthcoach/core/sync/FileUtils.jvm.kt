@@ -179,4 +179,25 @@ actual object FileUtils {
             copyFile(sourcePath, destinationPath)
         }
     }
+
+    actual fun readUtf8String(filePath: String): String? {
+        val file = File(filePath)
+        if (!file.exists() || !file.isFile) return null
+        return try {
+            file.readText(Charsets.UTF_8)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    actual fun writeUtf8String(filePath: String, content: String): Boolean {
+        val file = File(filePath)
+        return try {
+            file.parentFile?.mkdirs()
+            file.writeText(content, Charsets.UTF_8)
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
 }

@@ -54,7 +54,67 @@ class SyncEngine(
         return syncDir
     }
 
-    fun getSyncedCachePath(): String = FileUtils.joinPath(getSyncDirectory(), "synced_cache.db")
+    fun getSyncedCachePath(providerType: SyncProviderType = SyncProviderType.LOCAL_FOLDER): String {
+        val providerKey = providerType.name.lowercase()
+        return FileUtils.joinPath(getSyncDirectory(), "synced_cache_$providerKey.db.gz")
+    }
+
+    fun getSyncedWorkingCachePath(providerType: SyncProviderType = SyncProviderType.LOCAL_FOLDER): String {
+        val providerKey = providerType.name.lowercase()
+        return FileUtils.joinPath(getSyncDirectory(), "synced_cache_$providerKey.db")
+    }
+
+    fun getSyncedCacheMetaPath(providerType: SyncProviderType = SyncProviderType.LOCAL_FOLDER): String {
+        val providerKey = providerType.name.lowercase()
+        return FileUtils.joinPath(getSyncDirectory(), "synced_cache_$providerKey.meta")
+    }
+
+    fun getTargetConfigKey(config: SyncConfig): String {
+        val remoteFileName = config.remoteFileName.ifBlank { SyncConfig.DEFAULT_REMOTE_DB_NAME }.trim()
+        return when (config.providerType) {
+            SyncProviderType.LOCAL_FOLDER -> "LOCAL_FOLDER:${config.localFolderPath.trim()}:$remoteFileName"
+            SyncProviderType.GOOGLE_DRIVE -> "GOOGLE_DRIVE:${config.googleAccountEmail.trim().lowercase()}:$remoteFileName"
+            SyncProviderType.PEER_TO_PEER -> "PEER_TO_PEER:${config.peerServerHost.trim()}:${config.peerServerPort}:${config.peerServerToken.trim()}:$remoteFileName"
+        }
+    }
+
+    fun hasSyncedCache(providerType: SyncProviderType): Boolean {
+        val gzPath = getSyncedCachePath(providerType)
+        val dbPath = getSyncedWorkingCachePath(providerType)
+        return FileUtils.fileExists(gzPath) || FileUtils.fileExists(dbPath)
+    }
+
+    fun migrateLegacyCacheIfNeeded(providerType: SyncProviderType, targetKey: String) {
+        val syncDir = getSyncDirectory()
+        val legacyDbPath = FileUtils.joinPath(syncDir, "synced_cache.db")
+        val legacyGzPath = FileUtils.joinPath(syncDir, "synced_cache.db.gz")
+        val compressedCachePath = getSyncedCachePath(providerType)
+        val metaPath = getSyncedCacheMetaPath(providerType)
+
+        if (!hasSyncedCache(providerType)) {
+            if (FileUtils.fileExists(legacyDbPath)) {
+                Logger.i("Migrating legacy uncompressed synced_cache.db to $compressedCachePath")
+                if (FileUtils.compressGzip(legacyDbPath, compressedCachePath)) {
+                    FileUtils.writeUtf8String(metaPath, targetKey)
+                    FileUtils.deleteFile(legacyDbPath)
+                }
+            } else if (FileUtils.fileExists(legacyGzPath)) {
+                Logger.i("Migrating legacy synced_cache.db.gz to $compressedCachePath")
+                if (FileUtils.copyFile(legacyGzPath, compressedCachePath)) {
+                    FileUtils.writeUtf8String(metaPath, targetKey)
+                    FileUtils.deleteFile(legacyGzPath)
+                }
+            }
+        } else {
+            if (FileUtils.fileExists(legacyDbPath)) {
+                FileUtils.deleteFile(legacyDbPath)
+            }
+            if (FileUtils.fileExists(legacyGzPath)) {
+                FileUtils.deleteFile(legacyGzPath)
+            }
+        }
+    }
+
     fun getRemoteStagingPath(): String = FileUtils.joinPath(getSyncDirectory(), "remote_staging.db")
     fun getMetadataPath(): String = FileUtils.joinPath(getSyncDirectory(), "sync_metadata.json")
 
@@ -133,12 +193,26 @@ class SyncEngine(
         val adapter = StorageAdapterFactory.createAdapter(config)
         val remoteFileName = config.remoteFileName.ifBlank { SyncConfig.DEFAULT_REMOTE_DB_NAME }
         val syncDir = getSyncDirectory()
-        val syncedCachePath = getSyncedCachePath()
+        val providerType = config.providerType
+        val compressedCachePath = getSyncedCachePath(providerType)
+        val workingCachePath = getSyncedWorkingCachePath(providerType)
+        val metaPath = getSyncedCacheMetaPath(providerType)
         val stagingPath = getRemoteStagingPath()
         val liveDbPath = driverFactory.getDatabaseFilePath()
+        val currentTargetKey = getTargetConfigKey(config)
 
         try {
             currentCoroutineContext().ensureActive()
+
+            // 0. Invalidate cache if the target configuration for this provider has changed
+            migrateLegacyCacheIfNeeded(providerType, currentTargetKey)
+            if (hasSyncedCache(providerType)) {
+                val savedTargetKey = FileUtils.readUtf8String(metaPath)
+                if (savedTargetKey != null && savedTargetKey != currentTargetKey) {
+                    Logger.i("Configuration for provider $providerType changed from '$savedTargetKey' to '$currentTargetKey'. Clearing cached base snapshot.")
+                    clearLocalSyncCache(providerType)
+                }
+            }
 
             // 1. Test connection
             val connResult = adapter.testConnection()
@@ -179,9 +253,10 @@ class SyncEngine(
                     return SyncResult.Error(IllegalStateException(err), err)
                 }
 
-                // Copy to base cache
-                FileUtils.copyFile(stagingPath, syncedCachePath)
-                val finalHash = FileUtils.calculateFileSha256(syncedCachePath)
+                // Compress staging database to persistent base cache
+                FileUtils.compressGzip(stagingPath, compressedCachePath)
+                FileUtils.writeUtf8String(metaPath, currentTargetKey)
+                val finalHash = FileUtils.calculateFileSha256(stagingPath)
                 val localRecordCount = tableHandlers.sumOf { it.selectRecordCount(localDatabase) }
                 val stats = SyncStats(uploaded = localRecordCount, downloaded = 0)
                 val msg = stats.toSummaryMessage()
@@ -251,14 +326,23 @@ class SyncEngine(
 
             currentCoroutineContext().ensureActive()
 
-            // 3. Merge: Check if base cache exists
+            // 3. Prepare base cache for merge
             val stagingDb = createDatabaseForPath(driverFactory, stagingPath)
-            val hasBaseCache = FileUtils.fileExists(syncedCachePath)
+            var hasBaseCache = false
+            if (FileUtils.fileExists(compressedCachePath)) {
+                FileUtils.deleteFile(workingCachePath)
+                if (FileUtils.decompressGzip(compressedCachePath, workingCachePath)) {
+                    hasBaseCache = true
+                }
+            } else if (FileUtils.fileExists(workingCachePath)) {
+                hasBaseCache = true
+            }
+
             var syncStats = SyncStats()
 
             if (!hasBaseCache) {
                 // Fresh device / initial sync bootstrap without cache
-                Logger.i("Base cache absent. Performing fresh sync / bootstrap.")
+                Logger.i("Base cache absent for $providerType. Performing fresh sync / bootstrap.")
                 val isLocalEmpty = tableHandlers.all { !it.hasRecords(localDatabase) }
 
                 if (isLocalEmpty) {
@@ -275,8 +359,8 @@ class SyncEngine(
                 }
             } else {
                 // 3-Way Snapshot Differential Merge
-                Logger.i("Base cache exists. Performing 3-way differential merge across all registered tables.")
-                val baseDb = createDatabaseForPath(driverFactory, syncedCachePath)
+                Logger.i("Base cache exists for $providerType. Performing 3-way differential merge across all registered tables.")
+                val baseDb = createDatabaseForPath(driverFactory, workingCachePath)
                 tableHandlers.forEach { handler ->
                     syncStats += handler.threeWayMerge(baseDb = baseDb, localDb = localDatabase, remoteDb = stagingDb)
                 }
@@ -298,9 +382,10 @@ class SyncEngine(
                 return SyncResult.ConflictResolved("Concurrent update detected; retrying merge", loadSyncMetadata())
             }
 
-            // 5. Update base cache
-            FileUtils.copyFile(stagingPath, syncedCachePath)
-            val finalHash = FileUtils.calculateFileSha256(syncedCachePath)
+            // 5. Update persistent base cache (compressed) and configuration metadata
+            FileUtils.compressGzip(stagingPath, compressedCachePath)
+            FileUtils.writeUtf8String(metaPath, currentTargetKey)
+            val finalHash = FileUtils.calculateFileSha256(stagingPath)
             val msg = syncStats.toSummaryMessage()
             val metadata = SyncMetadata(
                 lastSyncedHash = finalHash,
@@ -310,7 +395,7 @@ class SyncEngine(
                 localSchemaVersion = Database.Companion.Schema.version
             )
             saveSyncMetadata(metadata)
-            Logger.i("Sync completed successfully: $msg. Final hash: $finalHash")
+            Logger.i("Sync completed successfully for $providerType: $msg. Final hash: $finalHash")
             return SyncResult.Success(msg, metadata, syncStats)
 
         } catch (c: CancellationException) {
@@ -326,32 +411,51 @@ class SyncEngine(
             )
             saveSyncMetadata(metadata)
             return SyncResult.Error(e, msg)
+        } finally {
+            // Clean up temporary uncompressed working database to save space
+            FileUtils.deleteFile(workingCachePath)
         }
     }
 
     /**
      * Clears local sync staging and cache files and resets sync metadata in settings.
+     * If [providerType] is specified, clears only that provider's cache and metadata key.
+     * If [providerType] is null, clears all provider caches, staging, and metadata.
      */
-    fun clearLocalSyncCache() {
+    fun clearLocalSyncCache(providerType: SyncProviderType? = null) {
         try {
-            FileUtils.deleteFile(getSyncedCachePath())
-            FileUtils.deleteFile(getRemoteStagingPath())
-            FileUtils.deleteFile(getMetadataPath())
-            saveSyncMetadata(
-                SyncMetadata(
-                    lastSyncedHash = null,
-                    lastSyncedTimestamp = 0L,
-                    lastSyncStatus = "Never Synced",
-                    lastSyncError = null
+            if (providerType != null) {
+                FileUtils.deleteFile(getSyncedCachePath(providerType))
+                FileUtils.deleteFile(getSyncedWorkingCachePath(providerType))
+                FileUtils.deleteFile(getSyncedCacheMetaPath(providerType))
+                Logger.i("Cleared local sync cache for provider $providerType")
+            } else {
+                for (type in SyncProviderType.entries) {
+                    FileUtils.deleteFile(getSyncedCachePath(type))
+                    FileUtils.deleteFile(getSyncedWorkingCachePath(type))
+                    FileUtils.deleteFile(getSyncedCacheMetaPath(type))
+                }
+                FileUtils.deleteFile(FileUtils.joinPath(getSyncDirectory(), "synced_cache.db"))
+                FileUtils.deleteFile(FileUtils.joinPath(getSyncDirectory(), "synced_cache.db.gz"))
+                FileUtils.deleteFile(getRemoteStagingPath())
+                FileUtils.deleteFile(getMetadataPath())
+                saveSyncMetadata(
+                    SyncMetadata(
+                        lastSyncedHash = null,
+                        lastSyncedTimestamp = 0L,
+                        lastSyncStatus = "Never Synced",
+                        lastSyncError = null
+                    )
                 )
-            )
+                Logger.i("Cleared all local sync caches and metadata")
+            }
         } catch (e: Exception) {
             Logger.w("Failed to clear local sync cache: ${e.message}")
         }
     }
 
     /**
-     * Resets the remote sync destination file and clears the local base cache.
+     * Resets the remote sync destination file and clears the local base cache for that provider.
      */
     suspend fun resetRemoteDestination(
         adapter: RemoteStorageAdapter,
@@ -359,7 +463,7 @@ class SyncEngine(
     ): Result<Unit> {
         return try {
             val deleteSuccess = adapter.deleteFile(remoteFileName)
-            clearLocalSyncCache()
+            clearLocalSyncCache(adapter.providerType)
             if (deleteSuccess) {
                 Logger.i("Successfully reset remote destination for provider ${adapter.providerType.name}")
                 Result.success(Unit)

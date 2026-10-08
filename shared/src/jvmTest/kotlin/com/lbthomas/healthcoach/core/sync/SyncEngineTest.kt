@@ -400,6 +400,199 @@ class SyncEngineTest {
         assertTrue(authRes.isSuccess)
         assertTrue(adapter.authState.value is AuthState.Authenticated)
     }
+
+    @Test
+    fun testSeparateCompressedCachePerSyncMethodAndSelectiveReset() = runBlocking {
+        val engine = createEngineForDirectory(localDbDir, localDatabase)
+
+        // Local DB has 1 entry
+        localDatabase.weightEntryQueries.insert("entry-1", "2026-10-01", 75.0, 1000L)
+
+        val localConfig = SyncConfig(
+            providerType = SyncProviderType.LOCAL_FOLDER,
+            localFolderPath = remoteStorageDir.absolutePath,
+            remoteFileName = "healthcoach.db"
+        )
+        val googleConfig = SyncConfig(
+            providerType = SyncProviderType.GOOGLE_DRIVE,
+            localFolderPath = remoteStorageDir.absolutePath,
+            remoteFileName = "healthcoach.db",
+            googleAccessToken = "mock_token"
+        )
+
+        // 1. Sync to Local Folder
+        val resLocal = engine.sync(localConfig)
+        assertTrue(resLocal is SyncResult.Success)
+
+        // 2. Sync to Google Drive
+        val resGoogle = engine.sync(googleConfig)
+        assertTrue(resGoogle is SyncResult.Success)
+
+        // 3. Verify both compressed caches exist on disk
+        val localCacheFile = File(engine.getSyncedCachePath(SyncProviderType.LOCAL_FOLDER))
+        val googleCacheFile = File(engine.getSyncedCachePath(SyncProviderType.GOOGLE_DRIVE))
+        assertTrue(localCacheFile.exists(), "Local folder compressed cache should exist")
+        assertTrue(googleCacheFile.exists(), "Google drive compressed cache should exist")
+        assertTrue(FileUtils.isGzipFile(localCacheFile.absolutePath), "Local cache should be gzipped")
+        assertTrue(FileUtils.isGzipFile(googleCacheFile.absolutePath), "Google cache should be gzipped")
+
+        // 4. Verify working uncompressed cache files are cleaned up
+        val localWorkingCacheFile = File(engine.getSyncedWorkingCachePath(SyncProviderType.LOCAL_FOLDER))
+        val googleWorkingCacheFile = File(engine.getSyncedWorkingCachePath(SyncProviderType.GOOGLE_DRIVE))
+        assertFalse(localWorkingCacheFile.exists(), "Working uncompressed cache should be cleaned up")
+        assertFalse(googleWorkingCacheFile.exists(), "Working uncompressed cache should be cleaned up")
+
+        // 5. Reset only Google Drive destination
+        val googleAdapter = StorageAdapterFactory.createAdapter(googleConfig)
+        val resetResult = engine.resetRemoteDestination(googleAdapter)
+        assertTrue(resetResult.isSuccess)
+
+        // 6. Verify Google Drive cache is deleted, but Local Folder cache remains
+        assertFalse(googleCacheFile.exists(), "Google cache should be cleared on reset")
+        assertTrue(localCacheFile.exists(), "Local folder cache should remain intact after Google Drive reset")
+    }
+
+    @Test
+    fun testConfigurationChangeInvalidatesProviderCache() = runBlocking {
+        val engine = createEngineForDirectory(localDbDir, localDatabase)
+
+        localDatabase.weightEntryQueries.insert("entry-config-1", "2026-10-01", 70.0, 1000L)
+
+        val folder1 = File(tempDir, "remote_folder_1").apply { mkdirs() }
+        val folder2 = File(tempDir, "remote_folder_2").apply { mkdirs() }
+
+        val config1 = SyncConfig(
+            providerType = SyncProviderType.LOCAL_FOLDER,
+            localFolderPath = folder1.absolutePath,
+            remoteFileName = "healthcoach.db"
+        )
+
+        // Sync with folder1
+        val res1 = engine.sync(config1)
+        assertTrue(res1 is SyncResult.Success)
+
+        val cacheFile = File(engine.getSyncedCachePath(SyncProviderType.LOCAL_FOLDER))
+        val metaFile = File(engine.getSyncedCacheMetaPath(SyncProviderType.LOCAL_FOLDER))
+        assertTrue(cacheFile.exists())
+        assertTrue(metaFile.exists())
+        assertEquals(engine.getTargetConfigKey(config1), FileUtils.readUtf8String(metaFile.absolutePath))
+
+        // Change config to folder2
+        val config2 = SyncConfig(
+            providerType = SyncProviderType.LOCAL_FOLDER,
+            localFolderPath = folder2.absolutePath,
+            remoteFileName = "healthcoach.db"
+        )
+
+        val res2 = engine.sync(config2)
+        assertTrue(res2 is SyncResult.Success)
+
+        // Meta file should now reflect config2
+        assertEquals(engine.getTargetConfigKey(config2), FileUtils.readUtf8String(metaFile.absolutePath))
+    }
+
+    @Test
+    fun testMultiProviderSyncPreventsUnintentionalDeletions() = runBlocking {
+        val engine = createEngineForDirectory(localDbDir, localDatabase)
+
+        val localDestDir = File(tempDir, "multi_sync_local").apply { mkdirs() }
+        val googleDestDir = File(tempDir, "multi_sync_gdrive").apply { mkdirs() }
+
+        val localConfig = SyncConfig(
+            providerType = SyncProviderType.LOCAL_FOLDER,
+            localFolderPath = localDestDir.absolutePath,
+            remoteFileName = "healthcoach.db"
+        )
+        val googleConfig = SyncConfig(
+            providerType = SyncProviderType.GOOGLE_DRIVE,
+            localFolderPath = googleDestDir.absolutePath,
+            remoteFileName = "healthcoach.db",
+            googleAccessToken = "token_abc"
+        )
+
+        // 1. Initial entries
+        localDatabase.weightEntryQueries.insert("item-1", "2026-10-01", 70.0, 1000L)
+        localDatabase.weightEntryQueries.insert("item-2", "2026-10-02", 71.0, 1000L)
+
+        // Sync to both targets
+        assertTrue(engine.sync(localConfig) is SyncResult.Success)
+        assertTrue(engine.sync(googleConfig) is SyncResult.Success)
+
+        // 2. Add item-3 locally
+        localDatabase.weightEntryQueries.insert("item-3", "2026-10-03", 72.0, 2000L)
+
+        // Sync to Local Folder
+        val resLocal = engine.sync(localConfig)
+        assertTrue(resLocal is SyncResult.Success)
+
+        // 3. Now sync to Google Drive
+        // If cache was shared, Google Drive sync would see differences and potentially corrupt/delete records!
+        // With isolated caches, Google Drive sync properly merges item-3
+        val resGoogle = engine.sync(googleConfig)
+        assertTrue(resGoogle is SyncResult.Success)
+
+        val allLocalItems = localDatabase.weightEntryQueries.selectAll().executeAsList().map { it.id }.toSet()
+        assertEquals(setOf("item-1", "item-2", "item-3"), allLocalItems, "All 3 items must be preserved locally")
+    }
+
+    @Test
+    fun testLegacyCacheMigrationTransformsAndDeletesDanglingCache() = runBlocking {
+        val engine = createEngineForDirectory(localDbDir, localDatabase)
+
+        // Seed initial local & remote data
+        localDatabase.weightEntryQueries.insert("legacy-1", "2026-10-01", 70.0, 1000L)
+
+        // Place legacy uncompressed synced_cache.db into the sync directory
+        val syncDir = File(engine.getSyncDirectory()).apply { mkdirs() }
+        val legacyCacheFile = File(syncDir, "synced_cache.db")
+        val driver = JdbcSqliteDriver("jdbc:sqlite:${legacyCacheFile.absolutePath}")
+        val legacyDb = createDatabaseForDriver(driver)
+        legacyDb.weightEntryQueries.insert("legacy-1", "2026-10-01", 70.0, 1000L)
+        driver.close()
+
+        val localConfig = SyncConfig(
+            providerType = SyncProviderType.LOCAL_FOLDER,
+            localFolderPath = remoteStorageDir.absolutePath,
+            remoteFileName = "healthcoach.db"
+        )
+
+        // Remote database matches legacy cache
+        val remoteAppDir = File(remoteStorageDir, SyncConfig.LOCAL_APP_SUBFOLDER).apply { mkdirs() }
+        val remoteDbFile = File(remoteAppDir, "healthcoach.db")
+        val remoteDriver = JdbcSqliteDriver("jdbc:sqlite:${remoteDbFile.absolutePath}")
+        val remoteDb = createDatabaseForDriver(remoteDriver)
+        remoteDb.weightEntryQueries.insert("legacy-1", "2026-10-01", 70.0, 1000L)
+        remoteDriver.close()
+
+        // Add a new entry locally
+        localDatabase.weightEntryQueries.insert("legacy-2", "2026-10-02", 71.0, 2000L)
+
+        assertTrue(legacyCacheFile.exists(), "Legacy cache should exist before sync")
+
+        // Perform sync with local provider
+        val res = engine.sync(localConfig)
+        if (res is SyncResult.Error) {
+            println("Sync failed with: ${res.message}, cause: ${res.error.message}")
+            res.error.printStackTrace()
+        }
+        assertTrue(res is SyncResult.Success, "Expected success but got: $res")
+
+        // Verify legacy cache was transformed and not left dangling
+        assertFalse(legacyCacheFile.exists(), "Legacy uncompressed cache file should be deleted")
+        val migratedGzCache = File(engine.getSyncedCachePath(SyncProviderType.LOCAL_FOLDER))
+        assertTrue(migratedGzCache.exists(), "Migrated gzip cache should exist")
+        assertTrue(FileUtils.isGzipFile(migratedGzCache.absolutePath))
+
+        val metaFile = File(engine.getSyncedCacheMetaPath(SyncProviderType.LOCAL_FOLDER))
+        assertTrue(metaFile.exists(), "Metadata file should exist")
+        assertEquals(engine.getTargetConfigKey(localConfig), FileUtils.readUtf8String(metaFile.absolutePath))
+
+        // Remote DB should have both items
+        val verifyDriver = JdbcSqliteDriver("jdbc:sqlite:${remoteDbFile.absolutePath}")
+        val verifyDb = Database(verifyDriver)
+        val remoteList = verifyDb.weightEntryQueries.selectAll().executeAsList().map { it.id }
+        assertEquals(listOf("legacy-1", "legacy-2"), remoteList)
+    }
 }
 
 private class CustomTestDriverFactory(private val baseDir: File) : DriverFactory() {
