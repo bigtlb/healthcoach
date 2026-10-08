@@ -27,6 +27,7 @@ import com.lbthomas.healthcoach.features.settings.SettingsViewModel
 import com.lbthomas.healthcoach.features.settings.data.PeerSyncSettings
 import com.lbthomas.healthcoach.features.settings.data.SettingsData
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.yield
 import org.koin.compose.KoinApplication
 import org.koin.compose.koinInject
 import org.koin.dsl.koinConfiguration
@@ -403,9 +404,14 @@ private fun PeerPairingModalDialog(
     var pinVisible by remember { mutableStateOf(false) }
     var isPairing by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    val pinFocusRequester = remember { FocusRequester() }
 
     LaunchedEffect(Unit) {
         settingsViewModel.requestPairingPin(host, port)
+        yield()
+        runCatching {
+            pinFocusRequester.requestFocus()
+        }
     }
 
     AlertDialog(
@@ -459,7 +465,9 @@ private fun PeerPairingModalDialog(
                             )
                         }
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(pinFocusRequester)
                 )
 
                 Row(
@@ -542,8 +550,16 @@ private fun ManualPeerPairingModalDialog(
     var isPairing by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
+    val hostFocusRequester = remember { FocusRequester() }
     val portFocusRequester = remember { FocusRequester() }
     val pinFocusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        yield()
+        runCatching {
+            hostFocusRequester.requestFocus()
+        }
+    }
 
     fun submitPairing() {
         val port = portInput.toIntOrNull()
@@ -600,7 +616,9 @@ private fun ManualPeerPairingModalDialog(
                     keyboardActions = KeyboardActions(
                         onNext = { portFocusRequester.requestFocus() }
                     ),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(hostFocusRequester)
                 )
 
                 OutlinedTextField(
