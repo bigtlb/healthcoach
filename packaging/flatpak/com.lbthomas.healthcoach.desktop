@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=HealthCoach
+Comment=Personal health and wellness companion with local-first SQLite
+Exec=HealthCoach
+Icon=com.lbthomas.healthcoach
+Terminal=false
+Categories=Utility;MedicalSoftware;
+Keywords=health;wellness;fitness;tracker;sqlite;blood-pressure;nutrition;

@@ -215,6 +215,83 @@
             background: rgba(136, 75, 106, 0.08);
         }
 
+        .unsigned-box {
+            margin-top: 1.25rem;
+            padding: 0.85rem 1rem;
+            background: #FFF0F5;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            text-align: left;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .unsigned-header {
+            margin-bottom: 0.35rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .unsigned-badge {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--primary-dark);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .unsigned-text {
+            font-size: 0.82rem;
+            margin-bottom: 0.5rem;
+            line-height: 1.45;
+            color: var(--text-main);
+        }
+
+        .unsigned-details {
+            margin-top: 0.35rem;
+            border-top: 1px dashed var(--border);
+            padding-top: 0.45rem;
+        }
+
+        .unsigned-details summary {
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 0.82rem;
+            outline: none;
+            user-select: none;
+        }
+
+        .unsigned-details summary:hover {
+            color: var(--primary-dark);
+        }
+
+        .unsigned-steps {
+            margin: 0.5rem 0 0.5rem 1.2rem;
+            padding: 0;
+            font-size: 0.8rem;
+            line-height: 1.5;
+        }
+
+        .unsigned-steps li {
+            margin-bottom: 0.35rem;
+        }
+
+        .canonical-link {
+            font-size: 0.78rem;
+            margin-top: 0.5rem;
+        }
+
+        .canonical-link a {
+            color: var(--primary);
+            font-weight: 600;
+            text-decoration: underline;
+        }
+
+        .canonical-link a:hover {
+            color: var(--primary-dark);
+        }
+
         .features-section {
             background: #ffffff;
             border-top: 1px solid var(--border);
@@ -415,10 +492,29 @@
                         <img src="images/windows.svg" alt="Windows" width="44" height="44">
                     </div>
                     <h3>Windows</h3>
-                    <p>Standalone MSI installer with embedded custom JRE & native SQLite drivers. No Java install required.</p>
+                    <p>Standalone MSI installer or portable ZIP archive with embedded custom JRE & native SQLite drivers. No Java install required.</p>
                 </div>
                 <div>
                     <a href="https://github.com/bigtlb/healthcoach/releases/latest" class="btn-download">Download .MSI</a>
+                    <a href="https://github.com/bigtlb/healthcoach/releases/latest" class="btn-download btn-secondary">Download .ZIP</a>
+                    <div class="unsigned-box">
+                        <div class="unsigned-header">
+                            <span class="unsigned-badge">⚠️ Unsigned Release Notice</span>
+                        </div>
+                        <p class="unsigned-text">
+                            Windows packages are currently unsigned. Windows Defender SmartScreen may display <em>"Windows protected your PC"</em> on first launch.
+                        </p>
+                        <details class="unsigned-details">
+                            <summary>How to bypass SmartScreen</summary>
+                            <ol class="unsigned-steps">
+                                <li><strong>MSI Installer:</strong> Click <em>"More info"</em> &rarr; click <em>"Run anyway"</em>.</li>
+                                <li><strong>Portable ZIP:</strong> Right-click the downloaded <code>.zip</code> file &rarr; select <strong>Properties</strong> &rarr; check <strong>Unblock</strong> &rarr; click <strong>Apply</strong>, then extract and run <code>HealthCoach.exe</code>.</li>
+                            </ol>
+                            <p class="canonical-link">
+                                Canonical Reference: <a href="https://learn.microsoft.com/en-us/windows/security/operating-system-security/virus-and-threat-protection/microsoft-defender-smartscreen/" target="_blank" rel="noopener">Microsoft Defender SmartScreen Documentation ↗</a>
+                            </p>
+                        </details>
+                    </div>
                 </div>
             </div>
 
@@ -428,10 +524,11 @@
                         <img src="images/tux.svg" alt="Linux Tux" width="44" height="44">
                     </div>
                     <h3>Linux</h3>
-                    <p>Native Debian (.deb) or Fedora / RHEL (.rpm) packages, or sandboxed Flatpak on Flathub.</p>
+                    <p>Standalone sandboxed Flatpak (.flatpak bundle), native Debian (.deb), or Fedora / RHEL (.rpm) packages.</p>
                 </div>
                 <div>
-                    <a href="https://github.com/bigtlb/healthcoach/releases/latest" class="btn-download">Download .DEB</a>
+                    <a href="https://github.com/bigtlb/healthcoach/releases/latest" class="btn-download">Download .FLATPAK</a>
+                    <a href="https://github.com/bigtlb/healthcoach/releases/latest" class="btn-download btn-secondary">Download .DEB</a>
                     <a href="https://github.com/bigtlb/healthcoach/releases/latest" class="btn-download btn-secondary">Download .RPM</a>
                 </div>
             </div>

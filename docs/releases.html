@@ -284,7 +284,9 @@
                         release.assets.forEach(asset => {
                             let icon = '📦';
                             let isPrimary = false;
-                            if (asset.name.endsWith('.msi')) { icon = '🪟 Windows Setup'; isPrimary = true; }
+                            if (asset.name.endsWith('.msi')) { icon = '🪟 Windows Setup (.msi)'; isPrimary = true; }
+                            else if (asset.name.endsWith('.zip') && asset.name.toLowerCase().includes('windows')) { icon = '🪟 Windows Portable (.zip)'; isPrimary = true; }
+                            else if (asset.name.endsWith('.flatpak')) { icon = '🐧 Linux Flatpak'; isPrimary = true; }
                             else if (asset.name.endsWith('.apk')) { icon = '🤖 Android APK'; isPrimary = true; }
                             else if (asset.name.endsWith('.deb')) { icon = '🐧 Linux DEB'; isPrimary = true; }
                             else if (asset.name.endsWith('.rpm')) { icon = '🐧 Linux RPM'; isPrimary = true; }
@@ -333,6 +335,8 @@
                     </div>
                     <div class="download-assets">
                         <a href="https://github.com/bigtlb/healthcoach/releases/latest" class="btn-asset btn-primary-asset">🪟 Windows MSI</a>
+                        <a href="https://github.com/bigtlb/healthcoach/releases/latest" class="btn-asset btn-primary-asset">🪟 Windows ZIP</a>
+                        <a href="https://github.com/bigtlb/healthcoach/releases/latest" class="btn-asset btn-primary-asset">🐧 Linux Flatpak</a>
                         <a href="https://github.com/bigtlb/healthcoach/releases/latest" class="btn-asset btn-primary-asset">🐧 Linux DEB</a>
                         <a href="https://github.com/bigtlb/healthcoach/releases/latest" class="btn-asset btn-primary-asset">🐧 Linux RPM</a>
                         <a href="https://github.com/bigtlb/healthcoach/releases/latest" class="btn-asset btn-primary-asset">🤖 Android APK</a>

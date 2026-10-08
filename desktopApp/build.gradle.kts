@@ -69,3 +69,43 @@ compose.desktop {
         }
     }
 }
+
+tasks.register<Exec>("packageFlatpak") {
+    group = "compose desktop"
+    description = "Packages the application into a local Flatpak repository"
+    dependsOn("createReleaseDistributable")
+    doNotTrackState("Flatpak builder manages its own build cache and OSTree repository")
+
+    val flatpakDir = layout.buildDirectory.dir("flatpak")
+    val distDir = layout.buildDirectory.dir("compose/binaries/main-release/app")
+    val manifestFile = rootProject.file("packaging/flatpak/com.lbthomas.healthcoach.yml")
+
+    workingDir = rootProject.projectDir
+    commandLine(
+        "flatpak-builder",
+        "--force-clean",
+        "--repo=${flatpakDir.get().asFile.path}/repo",
+        "${flatpakDir.get().asFile.path}/build",
+        manifestFile.absolutePath
+    )
+}
+
+tasks.register<Exec>("packageFlatpakBundle") {
+    group = "compose desktop"
+    description = "Creates a standalone .flatpak single-file bundle for direct distribution"
+    dependsOn("packageFlatpak")
+    doNotTrackState("Flatpak manages bundle creation from OSTree repository")
+
+    val flatpakDir = layout.buildDirectory.dir("flatpak")
+    val bundleFile = flatpakDir.get().asFile.resolve("HealthCoach.flatpak")
+
+    workingDir = rootProject.projectDir
+    commandLine(
+        "flatpak",
+        "build-bundle",
+        "${flatpakDir.get().asFile.path}/repo",
+        bundleFile.absolutePath,
+        "com.lbthomas.healthcoach",
+        "master"
+    )
+}

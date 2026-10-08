@@ -182,10 +182,41 @@ HealthCoach/
   ```bash
   ./gradlew :desktopApp:hotRun --auto
   ```
-* **Package desktop distribution**:
+* **Package desktop distribution for current OS**:
   ```bash
   ./gradlew :desktopApp:packageDistributionForCurrentOS
   ```
+
+### Linux Flatpak Packaging
+Building standalone `.flatpak` bundles requires `flatpak`, `flatpak-builder`, and the Freedesktop 23.08 Platform and SDK.
+
+#### 1. Install Flatpak & Flatpak Builder
+* **Fedora / RHEL**:
+  ```bash
+  sudo dnf install -y flatpak flatpak-builder
+  ```
+* **Debian / Ubuntu / Linux Mint**:
+  ```bash
+  sudo apt update && sudo apt install -y flatpak flatpak-builder
+  ```
+
+#### 2. Configure Flathub Remote & Install Runtime / SDK
+```bash
+flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+flatpak install --user -y flathub org.freedesktop.Platform//23.08 org.freedesktop.Sdk//23.08
+```
+
+#### 3. Build Flatpak
+* **Build standalone distributable bundle (`.flatpak`)**:
+  ```bash
+  ./gradlew :desktopApp:packageFlatpakBundle
+  ```
+  *(Output generated at `desktopApp/build/flatpak/HealthCoach.flatpak`)*
+* **Build local Flatpak OSTree repository**:
+  ```bash
+  ./gradlew :desktopApp:packageFlatpak
+  ```
+  *(Output generated at `desktopApp/build/flatpak/repo/`)*
 
 ### Android Application
 * **Assemble Debug APK**:

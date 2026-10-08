@@ -20,7 +20,7 @@ permissions:
 
 jobs:
   build-windows:
-    name: Build Windows MSI Package
+    name: Build Windows MSI & Portable ZIP Packages
     runs-on: windows-latest
 
     steps:
@@ -38,14 +38,14 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Build Windows MSI Installer
+      - name: Build Windows MSI Installer and Portable Distributable
         env:
           GOOGLE_CLIENT_ID_DESKTOP: ${{ vars.GOOGLE_CLIENT_ID_DESKTOP }}
           GOOGLE_CLIENT_SECRET_DESKTOP: ${{ vars.GOOGLE_CLIENT_SECRET_DESKTOP }}
         shell: bash
-        run: ./gradlew :desktopApp:packageReleaseMsi --no-daemon
+        run: ./gradlew :desktopApp:packageReleaseMsi :desktopApp:createReleaseDistributable --no-daemon
 
-      - name: Code Sign Windows MSI Package
+      - name: Code Sign Windows Binaries
         if: env.WINDOWS_SIGNING_CERT_BASE64 != ''
         env:
           WINDOWS_SIGNING_CERT_BASE64: ${{ secrets.WINDOWS_SIGNING_CERT_BASE64 }}
@@ -72,25 +72,43 @@ jobs:
             & $signtool verify /pa /v $file.FullName
           }
 
+          $exeFiles = Get-ChildItem -Path "desktopApp/build/compose/binaries/main-release/app" -Filter "*.exe" -Recurse
+          foreach ($file in $exeFiles) {
+            Write-Host "Signing $($file.FullName)..."
+            & $signtool sign /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 /f $certPath /p $env:WINDOWS_SIGNING_CERT_PASSWORD $file.FullName
+            & $signtool verify /pa /v $file.FullName
+          }
+
           Remove-Item -Path $certPath -Force
           Write-Host "Code signing completed successfully."
 
       - name: Stage Windows Artifacts
-        shell: bash
+        shell: pwsh
         run: |
-          mkdir -p staging
-          cp desktopApp/build/compose/binaries/main-release/msi/*.msi staging/
-          ls -la staging/
+          New-Item -ItemType Directory -Force -Path staging
+          Copy-Item -Path "desktopApp/build/compose/binaries/main-release/msi/*.msi" -Destination staging/
+          
+          $distDir = "desktopApp/build/compose/binaries/main-release/app/HealthCoach"
+          if (-not (Test-Path $distDir)) {
+            $distDir = "desktopApp/build/compose/binaries/main-release/app"
+          }
+          if (Test-Path $distDir) {
+            Write-Host "Creating portable Windows ZIP from $distDir..."
+            Compress-Archive -Path "$distDir" -DestinationPath "staging/HealthCoach-windows.zip" -Force
+          } else {
+            Write-Warning "Distributable directory $distDir not found!"
+          }
+          Get-ChildItem -Path staging
 
-      - name: Upload Windows MSI Artifact
+      - name: Upload Windows Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: windows-msi
-          path: staging/*.msi
+          name: windows-packages
+          path: staging/*
           retention-days: 5
 
   build-linux-and-android:
-    name: Build Linux DEB & RPM, Android APK & AAB Packages
+    name: Build Linux DEB, RPM & Flatpak, Android APK & AAB Packages
     runs-on: ubuntu-latest
 
     steps:
@@ -111,8 +129,11 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Install RPM Packaging Tools
-        run: sudo apt-get update && sudo apt-get install -y rpm
+      - name: Install Linux Packaging Tools
+        run: |
+          sudo apt-get update && sudo apt-get install -y rpm flatpak flatpak-builder
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user -y flathub org.freedesktop.Platform//23.08 org.freedesktop.Sdk//23.08
 
       - name: Decode Release Keystore
         if: env.RELEASE_KEYSTORE_BASE64 != ''
@@ -122,7 +143,7 @@ jobs:
           echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > release.keystore
           echo "Keystore decoded successfully."
 
-      - name: Build Linux DEB & RPM and Android Packages
+      - name: Build Linux (DEB, RPM, Flatpak) and Android Packages
         env:
           GOOGLE_CLIENT_ID_DESKTOP: ${{ vars.GOOGLE_CLIENT_ID_DESKTOP }}
           GOOGLE_CLIENT_SECRET_DESKTOP: ${{ vars.GOOGLE_CLIENT_SECRET_DESKTOP }}
@@ -131,13 +152,14 @@ jobs:
           RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: |
-          ./gradlew :desktopApp:packageReleaseDeb :desktopApp:packageReleaseRpm :androidApp:assembleRelease :androidApp:bundleRelease --no-daemon
+          ./gradlew :desktopApp:packageReleaseDeb :desktopApp:packageReleaseRpm :desktopApp:packageFlatpakBundle :androidApp:assembleRelease :androidApp:bundleRelease --no-daemon
 
       - name: Stage Linux and Android Artifacts
         run: |
           mkdir -p staging
           cp desktopApp/build/compose/binaries/main-release/deb/*.deb staging/ || true
           cp desktopApp/build/compose/binaries/main-release/rpm/*.rpm staging/ || true
+          cp desktopApp/build/flatpak/*.flatpak staging/ || true
           
           # Stage Android APK
           if compgen -G "androidApp/build/outputs/apk/release/*-signed.apk" > /dev/null; then
@@ -192,12 +214,61 @@ jobs:
             echo "tag=$TAG" >> $GITHUB_OUTPUT
           fi
 
-      - name: Generate Release Notes & Publish GitHub Release
+      - name: Generate Changelog & Release Notes
+        id: generate_notes
+        run: |
+          TARGET_TAG="${{ steps.release_tag.outputs.tag }}"
+          echo "Target tag: $TARGET_TAG"
+          
+          # Ensure git history and tags are available
+          git fetch --tags --unshallow 2>/dev/null || git fetch --tags 2>/dev/null || true
+          
+          # Find the previous release tag before TARGET_TAG
+          PREV_TAG=$(git tag -l "v*" --sort=-v:refname | grep -v "^${TARGET_TAG}$" | head -n 1 || true)
+          if [ -z "$PREV_TAG" ]; then
+            PREV_TAG=$(git describe --tags --abbrev=0 "${TARGET_TAG}^" 2>/dev/null || true)
+          fi
+          
+          echo "Previous tag: $PREV_TAG"
+          
+          NOTES_FILE="RELEASE_NOTES.md"
+          
+          echo "### HealthCoach ${TARGET_TAG}" > $NOTES_FILE
+          echo "" >> $NOTES_FILE
+          echo "Local-first health and wellness tracking application for Desktop and Android." >> $NOTES_FILE
+          echo "" >> $NOTES_FILE
+          echo "#### Downloads & Packaging" >> $NOTES_FILE
+          echo "- **Windows**: \`.msi\` installer and standalone \`.zip\` portable archive (with bundled JRE & native SQLite drivers)." >> $NOTES_FILE
+          echo "- **Linux**: Standalone \`.flatpak\` bundle, Debian/Ubuntu \`.deb\`, and Fedora/RHEL \`.rpm\` packages." >> $NOTES_FILE
+          echo "- **Android**: Standalone universal \`.apk\` and Google Play \`.aab\` bundle." >> $NOTES_FILE
+          echo "" >> $NOTES_FILE
+          echo "#### ⚠️ Unsigned Windows Notice & SmartScreen Workaround" >> $NOTES_FILE
+          echo "Windows packages are currently unsigned. On first launch, Windows Defender SmartScreen may display *\"Windows protected your PC\"*." >> $NOTES_FILE
+          echo "- **MSI Installer**: Click **More info** → **Run anyway**." >> $NOTES_FILE
+          echo "- **Portable ZIP**: Right-click the downloaded \`.zip\` archive → **Properties** → check **Unblock** → **Apply** before extracting and running \`HealthCoach.exe\`." >> $NOTES_FILE
+          echo "- For full details and documentation, visit [https://bigtlb.github.io/healthcoach/](https://bigtlb.github.io/healthcoach/)." >> $NOTES_FILE
+          echo "" >> $NOTES_FILE
+          echo "#### Changelog" >> $NOTES_FILE
+          
+          if [ -n "$PREV_TAG" ]; then
+            echo "Commits since **${PREV_TAG}**:" >> $NOTES_FILE
+            echo "" >> $NOTES_FILE
+            git log "${PREV_TAG}..${TARGET_TAG}" --pretty=format:"* %s (%h)" --no-merges >> $NOTES_FILE || git log "${PREV_TAG}..HEAD" --pretty=format:"* %s (%h)" --no-merges >> $NOTES_FILE || git log -n 25 --pretty=format:"* %s (%h)" --no-merges >> $NOTES_FILE
+          else
+            echo "Commits for **${TARGET_TAG}**:" >> $NOTES_FILE
+            echo "" >> $NOTES_FILE
+            git log "${TARGET_TAG}" --pretty=format:"* %s (%h)" --no-merges 2>/dev/null || git log -n 25 --pretty=format:"* %s (%h)" --no-merges >> $NOTES_FILE
+          fi
+          
+          echo "" >> $NOTES_FILE
+          cat $NOTES_FILE
+
+      - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.release_tag.outputs.tag }}
           name: Release ${{ steps.release_tag.outputs.tag }}
+          body_path: RELEASE_NOTES.md
           files: release-assets/*
-          generate_release_notes: true
           draft: false
           prerelease: false

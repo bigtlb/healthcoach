@@ -1,0 +1,34 @@
+app-id: com.lbthomas.healthcoach
+runtime: org.freedesktop.Platform
+runtime-version: '23.08'
+sdk: org.freedesktop.Sdk
+command: HealthCoach
+
+finish-args:
+  - --socket=x11
+  - --share=ipc
+  - --share=network
+  - --device=dri
+  - --filesystem=xdg-documents
+  - --filesystem=xdg-download
+  - --talk-name=org.freedesktop.Notifications
+
+modules:
+  - name: healthcoach
+    buildsystem: simple
+    build-commands:
+      - cp -r bin /app/
+      - cp -r lib /app/
+      - install -D -m 0644 com.lbthomas.healthcoach.desktop /app/share/applications/com.lbthomas.healthcoach.desktop
+      - install -D -m 0644 com.lbthomas.healthcoach.metainfo.xml /app/share/metainfo/com.lbthomas.healthcoach.metainfo.xml
+      - install -D -m 0644 scales.png /app/share/icons/hicolor/256x256/apps/com.lbthomas.healthcoach.png
+    sources:
+      - type: dir
+        path: ../../desktopApp/build/compose/binaries/main-release/app/HealthCoach
+      - type: file
+        path: com.lbthomas.healthcoach.desktop
+      - type: file
+        path: com.lbthomas.healthcoach.metainfo.xml
+      - type: file
+        path: ../../desktopApp/src/main/resources/scales.png
+        dest-filename: scales.png
