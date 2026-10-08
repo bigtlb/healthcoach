@@ -40,7 +40,15 @@ compose.desktop {
             description = "Health and wellness tracking application"
             vendor = "LBThomas"
 
-            modules("java.sql", "jdk.unsupported", "java.naming", "java.management")
+            modules(
+                "jdk.accessibility",
+                "jdk.unsupported",
+                "java.desktop",
+                "java.sql",
+                "java.management",
+                "java.naming",
+                "java.xml"
+            )
 
             linux {
                 // Debian package names must be lowercase, numbers, plus, minus, and dots
