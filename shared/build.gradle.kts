@@ -173,6 +173,7 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.compose.uiTooling)
             implementation(libs.androidx.activity.compose)
+            implementation(libs.androidx.documentfile)
             implementation(libs.sqldelight.android.driver)
             implementation(libs.koin.android)
             implementation(libs.play.services.auth)

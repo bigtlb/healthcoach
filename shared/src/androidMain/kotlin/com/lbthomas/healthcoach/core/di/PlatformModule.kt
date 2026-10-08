@@ -5,6 +5,7 @@ import co.touchlab.kermit.LogcatWriter
 import co.touchlab.kermit.Logger
 import com.lbthomas.healthcoach.core.database.DriverFactory
 import com.lbthomas.healthcoach.core.logging.LoggingConfig
+import com.lbthomas.healthcoach.core.sync.FileUtils
 import com.lbthomas.healthcoach.core.sync.p2p.PeerDiscoveryAdvertiser
 import com.lbthomas.healthcoach.core.sync.p2p.PeerDiscoveryBrowser
 import com.lbthomas.healthcoach.core.sync.auth.GoogleOAuthManager
@@ -26,7 +27,7 @@ actual fun KoinApplication.configurePlatformContext(context: Any?) {
     if (context is Context) {
         androidContext(context)
         GoogleOAuthManager.setContext(context.applicationContext)
+        FileUtils.setContext(context.applicationContext)
     }
     Logger.setLogWriters(LogcatWriter())
-    Logger.setMinSeverity(LoggingConfig.minSeverity)
 }

@@ -38,18 +38,12 @@ class LocalFolderAdapter(
             // Test write & delete permission with a temporary marker file
             val testFileName = ".healthcoach_write_test_${generateUuid()}"
             val testFilePath = FileUtils.joinPath(targetDirectory, testFileName)
-            val testBytes = "test_connection".encodeToByteArray()
 
-            // We test writing and deleting via temp file copy
-            val tempSourcePath = FileUtils.joinPath(targetDirectory, "$testFileName.src")
             val writeSuccess = try {
-                FileUtils.copyFile(testFilePath, testFilePath) // test
-                // Perform simple write test using platform file utilities
-                val isWritable = FileUtils.isDirectoryWritable(targetDirectory)
-                isWritable
+                val created = FileUtils.writeUtf8String(testFilePath, "test_connection")
+                created && FileUtils.isDirectoryWritable(targetDirectory)
             } finally {
                 FileUtils.deleteFile(testFilePath)
-                FileUtils.deleteFile(tempSourcePath)
             }
 
             if (writeSuccess) {
