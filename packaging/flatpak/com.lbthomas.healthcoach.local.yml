@@ -19,18 +19,18 @@ modules:
   - name: healthcoach
     buildsystem: simple
     build-commands:
-      - cp -r HealthCoach/bin /app/
-      - cp -r HealthCoach/lib /app/
-      - install -D -m 0644 HealthCoach/scales.png /app/share/icons/hicolor/256x256/apps/com.lbthomas.healthcoach.png
+      - cp -r bin /app/
+      - cp -r lib /app/
       - install -D -m 0644 com.lbthomas.healthcoach.desktop /app/share/applications/com.lbthomas.healthcoach.desktop
       - install -D -m 0644 com.lbthomas.healthcoach.metainfo.xml /app/share/metainfo/com.lbthomas.healthcoach.metainfo.xml
+      - install -D -m 0644 scales.png /app/share/icons/hicolor/256x256/apps/com.lbthomas.healthcoach.png
     sources:
-      - type: archive
-        url: https://github.com/bigtlb/healthcoach/releases/download/v0.9.8/HealthCoach-0.9.8-linux-x64.tar.gz
-        sha256: PUT_HEALTHCOACH_0_9_8_TARBALL_SHA256_HERE
-
+      - type: dir
+        path: ../../desktopApp/build/compose/binaries/main-release/app/HealthCoach
       - type: file
         path: com.lbthomas.healthcoach.desktop
-
       - type: file
         path: com.lbthomas.healthcoach.metainfo.xml
+      - type: file
+        path: ../../desktopApp/src/main/resources/scales.png
+        dest-filename: scales.png

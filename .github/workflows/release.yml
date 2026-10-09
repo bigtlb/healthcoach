@@ -194,6 +194,7 @@ jobs:
           echo "Detected release version for Android packaging: $VERSION"
           
           # Create portable Linux tarball for Flathub
+          cp desktopApp/src/main/resources/scales.png desktopApp/build/compose/binaries/main-release/app/HealthCoach/scales.png
           tar -czvf "staging/HealthCoach-${VERSION}-linux-x64.tar.gz" -C desktopApp/build/compose/binaries/main-release/app HealthCoach
           
           # Stage Android APK
