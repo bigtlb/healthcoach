@@ -78,7 +78,7 @@ tasks.register<Exec>("packageFlatpak") {
 
     val flatpakDir = layout.buildDirectory.dir("flatpak")
     val distDir = layout.buildDirectory.dir("compose/binaries/main-release/app")
-    val manifestFile = rootProject.file("packaging/flatpak/com.lbthomas.healthcoach.yml")
+    val manifestFile = rootProject.file("packaging/flatpak/com.lbthomas.healthcoach.local.yml")
 
     workingDir = rootProject.projectDir
     commandLine(
