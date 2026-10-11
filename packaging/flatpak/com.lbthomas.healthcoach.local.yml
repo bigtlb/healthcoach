@@ -5,9 +5,8 @@ sdk: org.freedesktop.Sdk
 command: HealthCoach
 
 finish-args:
-  - --share=ipc
   - --socket=x11
-  - --socket=wayland
+  - --share=ipc
   - --device=dri
 
   - --share=network
