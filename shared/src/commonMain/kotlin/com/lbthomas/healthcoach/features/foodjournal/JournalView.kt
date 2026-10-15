@@ -163,6 +163,7 @@ fun JournalView(
         ) {
             MealTimeCardList(
                 summary = dailySummary,
+                isWideLayout = isWideLayout,
                 onAddFoodClick = { mealTime ->
                     targetMealTime = mealTime
                     showSearchAndLogDialog = true

@@ -42,11 +42,11 @@ open class FoodJournalViewModel : ViewModel {
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
         recentFoodItems = repository
-            .observeRecentFoodItems(10)
+            .observeRecentFoodItems(30)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
         frequentFoodItems = repository
-            .observeFrequentFoodItems(10)
+            .observeFrequentFoodItems(30)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
         searchResults = _searchQuery

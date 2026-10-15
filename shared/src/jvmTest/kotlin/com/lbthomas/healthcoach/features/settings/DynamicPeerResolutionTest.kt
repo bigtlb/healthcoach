@@ -69,6 +69,13 @@ class DynamicPeerResolutionTest {
             )
         }
 
+        // Wait for asynchronous flow collection on viewModelScope
+        kotlinx.coroutines.withTimeout(2000) {
+            while (viewModel.settings.value.peerSync.serverHost != "192.168.1.55") {
+                kotlinx.coroutines.delay(10)
+            }
+        }
+
         // Settings should be automatically updated
         assertEquals("192.168.1.55", viewModel.settings.value.peerSync.serverHost)
         assertEquals(9000, viewModel.settings.value.peerSync.serverPort)

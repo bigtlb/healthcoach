@@ -3,12 +3,14 @@ package com.lbthomas.healthcoach.features.foodjournal.ui
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.lbthomas.healthcoach.core.enums.MealTime
+import com.lbthomas.healthcoach.core.ui.VerticalScrollbarBox
 import com.lbthomas.healthcoach.features.foodjournal.data.DailyMealSummaryData
 import com.lbthomas.healthcoach.features.foodjournal.data.MealEntryData
 import com.lbthomas.healthcoach.features.foodjournal.data.MealTimeGroupData
@@ -20,28 +22,36 @@ fun MealTimeCardList(
     onAddFoodClick: (MealTime) -> Unit,
     onEditEntryClick: (MealEntryData) -> Unit,
     onDeleteEntryClick: (MealEntryData) -> Unit,
+    isWideLayout: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val groupMap = summary.mealGroups.associateBy { it.mealTime }
+    val listState = rememberLazyListState()
 
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+    VerticalScrollbarBox(
+        state = listState,
+        modifier = modifier.fillMaxSize()
     ) {
-        items(MealTime.entries.sortedBy { it.order }, key = { it.name }) { mealTime ->
-            val group = groupMap[mealTime]
-            val entries = group?.entries ?: emptyList()
-            val subtotal = group?.subtotalCalories ?: 0.0
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = if (isWideLayout) 16.dp else 80.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            items(MealTime.entries.sortedBy { it.order }, key = { it.name }) { mealTime ->
+                val group = groupMap[mealTime]
+                val entries = group?.entries ?: emptyList()
+                val subtotal = group?.subtotalCalories ?: 0.0
 
-            MealTimeSectionCard(
-                mealTime = mealTime,
-                entries = entries,
-                subtotalCalories = subtotal,
-                onAddFoodClick = onAddFoodClick,
-                onEditEntryClick = onEditEntryClick,
-                onDeleteEntryClick = onDeleteEntryClick
-            )
+                MealTimeSectionCard(
+                    mealTime = mealTime,
+                    entries = entries,
+                    subtotalCalories = subtotal,
+                    onAddFoodClick = onAddFoodClick,
+                    onEditEntryClick = onEditEntryClick,
+                    onDeleteEntryClick = onDeleteEntryClick
+                )
+            }
         }
     }
 }
