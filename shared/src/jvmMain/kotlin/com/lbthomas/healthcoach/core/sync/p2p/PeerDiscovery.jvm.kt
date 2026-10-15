@@ -5,7 +5,10 @@ import com.lbthomas.healthcoach.core.utils.currentEpochMillis
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.withTimeoutOrNull
 import java.net.InetAddress
 import java.net.NetworkInterface
 import javax.jmdns.JmDNS
@@ -120,7 +123,11 @@ actual open class PeerDiscoveryBrowser {
                 override fun serviceRemoved(event: ServiceEvent) {
                     val removedName = event.name
                     _discoveredPeers.update { list ->
-                        list.filterNot { it.name == removedName || "${PeerDiscoveryConstants.SERVICE_NAME_PREFIX} - ${it.instanceId.take(8)}" == removedName }
+                        list.filterNot { peer ->
+                            peer.name == removedName ||
+                            "${PeerDiscoveryConstants.SERVICE_NAME_PREFIX} - ${peer.instanceId.take(8)}" == removedName ||
+                            removedName.contains(peer.instanceId.take(8))
+                        }
                     }
                     LoggingConfig.discoveryLogger.d("mDNS service removed: $removedName")
                 }
@@ -204,6 +211,30 @@ actual open class PeerDiscoveryBrowser {
 
     actual open fun clearPeers() {
         _discoveredPeers.value = emptyList()
+    }
+
+    actual open suspend fun resolvePeer(targetInstanceId: String, timeoutMillis: Long): DiscoveredPeer? {
+        if (targetInstanceId.isBlank()) return null
+
+        val existing = _discoveredPeers.value.firstOrNull { it.instanceId == targetInstanceId }
+        if (existing != null) return existing
+
+        val wasBrowsing = _isBrowsing
+        if (!wasBrowsing) {
+            startBrowsing("")
+        }
+
+        return try {
+            withTimeoutOrNull(timeoutMillis) {
+                _discoveredPeers.filter { list ->
+                    list.any { it.instanceId == targetInstanceId }
+                }.first().firstOrNull { it.instanceId == targetInstanceId }
+            }
+        } finally {
+            if (!wasBrowsing) {
+                stopBrowsing()
+            }
+        }
     }
 
     private fun getLocalNonLoopbackAddress(): InetAddress? {

@@ -8,6 +8,7 @@ import com.lbthomas.healthcoach.core.sync.auth.ProviderCredentials
 import com.lbthomas.healthcoach.core.sync.auth.RequiresAuth
 import com.lbthomas.healthcoach.core.sync.p2p.PairRequest
 import com.lbthomas.healthcoach.core.sync.p2p.PairResponse
+import com.lbthomas.healthcoach.core.sync.p2p.PeerDiscoveryBrowser
 import com.lbthomas.healthcoach.core.sync.p2p.PeerStatusResponse
 import com.lbthomas.healthcoach.core.sync.p2p.ServerSyncMetadata
 import com.lbthomas.healthcoach.core.utils.generateUuid
@@ -35,12 +36,15 @@ import java.io.FileOutputStream
  * concurrency checks via SHA-256 validation.
  */
 class PeerToPeerStorageAdapter(
-    val serverHost: String = "",
-    val serverPort: Int = SyncConfig.DEFAULT_P2P_PORT,
+    var serverHost: String = "",
+    var serverPort: Int = SyncConfig.DEFAULT_P2P_PORT,
     val serverToken: String = "",
     val serverName: String = "",
     val clientInstanceId: String = "",
     val clientDeviceName: String = "",
+    val serverInstanceId: String = "",
+    private val discoveryBrowser: PeerDiscoveryBrowser? = null,
+    private val onServerAddressUpdated: ((newHost: String, newPort: Int) -> Unit)? = null,
     private val httpClient: HttpClient? = null
 ) : RemoteStorageAdapter, RequiresAuth {
 
@@ -77,48 +81,70 @@ class PeerToPeerStorageAdapter(
     private val baseUrl: String
         get() = "http://${serverHost.trim()}:$serverPort"
 
-    override suspend fun authenticate(credentials: ProviderCredentials): Result<String> {
-        if (serverHost.isBlank() || serverPort <= 0) {
-            val errorMsg = "Peer server host and port must be configured"
-            _authState.value = AuthState.Error(errorMsg)
-            return Result.failure(IllegalArgumentException(errorMsg))
+    private suspend fun <T> withPeerResolutionFallback(block: suspend () -> T): T {
+        return try {
+            block()
+        } catch (e: Exception) {
+            if (serverInstanceId.isNotBlank() && discoveryBrowser != null) {
+                LoggingConfig.clientLogger.i("Peer connection to $baseUrl failed (${e.message}). Attempting dynamic mDNS resolution for server instance '$serverInstanceId'...")
+                val resolved = discoveryBrowser.resolvePeer(serverInstanceId, timeoutMillis = 3000L)
+                if (resolved != null && resolved.host.isNotBlank() && resolved.port > 0 &&
+                    (resolved.host != serverHost || resolved.port != serverPort)) {
+                    LoggingConfig.clientLogger.i("Resolved peer server at ${resolved.host}:${resolved.port}. Retrying operation...")
+                    serverHost = resolved.host
+                    serverPort = resolved.port
+                    onServerAddressUpdated?.invoke(resolved.host, resolved.port)
+                    return block()
+                }
+            }
+            throw e
         }
+    }
 
+    override suspend fun authenticate(credentials: ProviderCredentials): Result<String> {
         val pinToUse = credentials.password.ifBlank { credentials.token }
         LoggingConfig.clientLogger.i("Initiating pairing handshake with peer server at $baseUrl...")
 
         return try {
-            val request = PairRequest(
-                clientInstanceId = clientInstanceId,
-                clientName = clientDeviceName.ifBlank { "HealthCoach Client" },
-                pin = pinToUse
-            )
-
-            val response = client.post("$baseUrl/api/v1/auth/pair") {
-                contentType(ContentType.Application.Json)
-                setBody(request)
-            }
-
-            when (response.status) {
-                HttpStatusCode.OK -> {
-                    val pairResponse = response.body<PairResponse>()
-                    val token = pairResponse.token
-                    activeToken = token
-                    _authState.value = AuthState.Authenticated(token)
-                    LoggingConfig.clientLogger.i("Pairing successful with peer server '${pairResponse.serverName}' (ID: ${pairResponse.serverInstanceId})")
-                    Result.success(token)
+            withPeerResolutionFallback {
+                if (serverHost.isBlank() || serverPort <= 0) {
+                    val errorMsg = "Peer server host and port must be configured"
+                    _authState.value = AuthState.Error(errorMsg)
+                    return@withPeerResolutionFallback Result.failure(IllegalArgumentException(errorMsg))
                 }
-                HttpStatusCode.Unauthorized -> {
-                    val msg = "Invalid PIN for server at $serverHost:$serverPort"
-                    LoggingConfig.clientLogger.w(msg)
-                    _authState.value = AuthState.Error("Invalid PIN")
-                    Result.failure(IllegalStateException(msg))
+
+                val request = PairRequest(
+                    clientInstanceId = clientInstanceId,
+                    clientName = clientDeviceName.ifBlank { "HealthCoach Client" },
+                    pin = pinToUse
+                )
+
+                val response = client.post("$baseUrl/api/v1/auth/pair") {
+                    contentType(ContentType.Application.Json)
+                    setBody(request)
                 }
-                else -> {
-                    val msg = "Pairing failed with status: ${response.status}"
-                    LoggingConfig.clientLogger.e(msg)
-                    _authState.value = AuthState.Error(msg)
-                    Result.failure(IllegalStateException(msg))
+
+                when (response.status) {
+                    HttpStatusCode.OK -> {
+                        val pairResponse = response.body<PairResponse>()
+                        val token = pairResponse.token
+                        activeToken = token
+                        _authState.value = AuthState.Authenticated(token)
+                        LoggingConfig.clientLogger.i("Pairing successful with peer server '${pairResponse.serverName}' (ID: ${pairResponse.serverInstanceId})")
+                        Result.success(token)
+                    }
+                    HttpStatusCode.Unauthorized -> {
+                        val msg = "Invalid PIN for server at $serverHost:$serverPort"
+                        LoggingConfig.clientLogger.w(msg)
+                        _authState.value = AuthState.Error("Invalid PIN")
+                        Result.failure(IllegalStateException(msg))
+                    }
+                    else -> {
+                        val msg = "Pairing failed with status: ${response.status}"
+                        LoggingConfig.clientLogger.e(msg)
+                        _authState.value = AuthState.Error(msg)
+                        Result.failure(IllegalStateException(msg))
+                    }
                 }
             }
         } catch (e: Exception) {
@@ -136,26 +162,28 @@ class PeerToPeerStorageAdapter(
     }
 
     override suspend fun testConnection(): Result<Unit> {
-        if (serverHost.isBlank() || serverPort <= 0) {
-            return Result.failure(IllegalArgumentException("Peer server host and port must be specified"))
-        }
-
         return try {
-            val token = activeToken
-            val response = client.get("$baseUrl/api/v1/status") {
-                if (token.isNotBlank()) {
-                    header(HttpHeaders.Authorization, "Bearer $token")
+            withPeerResolutionFallback {
+                if (serverHost.isBlank() || serverPort <= 0) {
+                    return@withPeerResolutionFallback Result.failure(IllegalArgumentException("Peer server host and port must be specified"))
                 }
-            }
-            if (response.status == HttpStatusCode.OK) {
-                val statusResponse = response.body<PeerStatusResponse>()
-                if (token.isNotBlank() && !statusResponse.isAccessGranted) {
-                    Result.failure(IllegalStateException("Pairing required: server authorization token is invalid or expired"))
+
+                val token = activeToken
+                val response = client.get("$baseUrl/api/v1/status") {
+                    if (token.isNotBlank()) {
+                        header(HttpHeaders.Authorization, "Bearer $token")
+                    }
+                }
+                if (response.status == HttpStatusCode.OK) {
+                    val statusResponse = response.body<PeerStatusResponse>()
+                    if (token.isNotBlank() && !statusResponse.isAccessGranted) {
+                        Result.failure(IllegalStateException("Pairing required: server authorization token is invalid or expired"))
+                    } else {
+                        Result.success(Unit)
+                    }
                 } else {
-                    Result.success(Unit)
+                    Result.failure(IllegalStateException("Server responded with HTTP ${response.status}"))
                 }
-            } else {
-                Result.failure(IllegalStateException("Server responded with HTTP ${response.status}"))
             }
         } catch (e: Exception) {
             LoggingConfig.clientLogger.w("Connection test failed for $baseUrl: ${e.message}")
@@ -171,26 +199,28 @@ class PeerToPeerStorageAdapter(
         }
 
         return try {
-            val response = client.get("$baseUrl/api/v1/sync/metadata") {
-                header(HttpHeaders.Authorization, "Bearer $token")
-            }
-
-            if (response.status == HttpStatusCode.OK) {
-                val metadata = response.body<ServerSyncMetadata>()
-                if (!metadata.exists) {
-                    null
-                } else {
-                    FileMetadata(
-                        name = fileName,
-                        size = metadata.sizeBytes,
-                        lastModified = metadata.lastModified,
-                        sha256Hash = metadata.sha256Hash,
-                        exists = true
-                    )
+            withPeerResolutionFallback {
+                val response = client.get("$baseUrl/api/v1/sync/metadata") {
+                    header(HttpHeaders.Authorization, "Bearer $token")
                 }
-            } else {
-                LoggingConfig.clientLogger.w("Metadata request failed with status: ${response.status}")
-                null
+
+                if (response.status == HttpStatusCode.OK) {
+                    val metadata = response.body<ServerSyncMetadata>()
+                    if (!metadata.exists) {
+                        null
+                    } else {
+                        FileMetadata(
+                            name = fileName,
+                            size = metadata.sizeBytes,
+                            lastModified = metadata.lastModified,
+                            sha256Hash = metadata.sha256Hash,
+                            exists = true
+                        )
+                    }
+                } else {
+                    LoggingConfig.clientLogger.w("Metadata request failed with status: ${response.status}")
+                    null
+                }
             }
         } catch (e: Exception) {
             LoggingConfig.clientLogger.e("Error retrieving peer metadata: ${e.message}", e)
@@ -211,41 +241,43 @@ class PeerToPeerStorageAdapter(
         val tempFile = File(destDir, "${destFile.name}.download_${generateUuid()}")
 
         return try {
-            val response = client.get("$baseUrl/api/v1/sync/db/download") {
-                header(HttpHeaders.Authorization, "Bearer $token")
-            }
-
-            if (response.status != HttpStatusCode.OK) {
-                LoggingConfig.clientLogger.e("Download failed with server status: ${response.status}")
-                return false
-            }
-
-            val channel: ByteReadChannel = response.bodyAsChannel()
-            FileOutputStream(tempFile).use { output ->
-                val buffer = ByteArray(8192)
-                while (!channel.isClosedForRead) {
-                    val bytesRead = channel.readAvailable(buffer, 0, buffer.size)
-                    if (bytesRead <= 0) break
-                    output.write(buffer, 0, bytesRead)
+            withPeerResolutionFallback {
+                val response = client.get("$baseUrl/api/v1/sync/db/download") {
+                    header(HttpHeaders.Authorization, "Bearer $token")
                 }
-            }
 
-            if (!tempFile.exists() || tempFile.length() == 0L) {
-                tempFile.delete()
-                LoggingConfig.clientLogger.e("Downloaded file is empty")
-                return false
-            }
+                if (response.status != HttpStatusCode.OK) {
+                    LoggingConfig.clientLogger.e("Download failed with server status: ${response.status}")
+                    return@withPeerResolutionFallback false
+                }
 
-            val moveSuccess = tempFile.renameTo(destFile) || run {
-                FileUtils.copyFile(tempFile.absolutePath, destFile.absolutePath).also {
+                val channel: ByteReadChannel = response.bodyAsChannel()
+                FileOutputStream(tempFile).use { output ->
+                    val buffer = ByteArray(8192)
+                    while (!channel.isClosedForRead) {
+                        val bytesRead = channel.readAvailable(buffer, 0, buffer.size)
+                        if (bytesRead <= 0) break
+                        output.write(buffer, 0, bytesRead)
+                    }
+                }
+
+                if (!tempFile.exists() || tempFile.length() == 0L) {
                     tempFile.delete()
+                    LoggingConfig.clientLogger.e("Downloaded file is empty")
+                    return@withPeerResolutionFallback false
                 }
-            }
 
-            if (moveSuccess && LoggingConfig.p2pClientLogging) {
-                LoggingConfig.clientLogger.i("Database downloaded successfully from peer server (${destFile.length()} bytes)")
+                val moveSuccess = tempFile.renameTo(destFile) || run {
+                    FileUtils.copyFile(tempFile.absolutePath, destFile.absolutePath).also {
+                        tempFile.delete()
+                    }
+                }
+
+                if (moveSuccess && LoggingConfig.p2pClientLogging) {
+                    LoggingConfig.clientLogger.i("Database downloaded successfully from peer server (${destFile.length()} bytes)")
+                }
+                moveSuccess
             }
-            moveSuccess
         } catch (e: Exception) {
             tempFile.delete()
             LoggingConfig.clientLogger.e("Error downloading database from peer server: ${e.message}", e)
@@ -271,30 +303,32 @@ class PeerToPeerStorageAdapter(
         }
 
         return try {
-            val fileBytes = srcFile.readBytes()
-            val response = client.post("$baseUrl/api/v1/sync/db/upload") {
-                header(HttpHeaders.Authorization, "Bearer $token")
-                if (!expectedHash.isNullOrBlank()) {
-                    header("X-Expected-Hash", expectedHash)
-                }
-                contentType(ContentType.Application.OctetStream)
-                setBody(fileBytes)
-            }
-
-            when (response.status) {
-                HttpStatusCode.OK -> {
-                    if (LoggingConfig.p2pClientLogging) {
-                        LoggingConfig.clientLogger.i("Database uploaded successfully to peer server (${fileBytes.size} bytes)")
+            withPeerResolutionFallback {
+                val fileBytes = srcFile.readBytes()
+                val response = client.post("$baseUrl/api/v1/sync/db/upload") {
+                    header(HttpHeaders.Authorization, "Bearer $token")
+                    if (!expectedHash.isNullOrBlank()) {
+                        header("X-Expected-Hash", expectedHash)
                     }
-                    true
+                    contentType(ContentType.Application.OctetStream)
+                    setBody(fileBytes)
                 }
-                HttpStatusCode.Conflict -> {
-                    LoggingConfig.clientLogger.w("Upload rejected by peer server due to concurrent modification (HTTP 409 Conflict)")
-                    false
-                }
-                else -> {
-                    LoggingConfig.clientLogger.e("Upload failed with server status: ${response.status}")
-                    false
+
+                when (response.status) {
+                    HttpStatusCode.OK -> {
+                        if (LoggingConfig.p2pClientLogging) {
+                            LoggingConfig.clientLogger.i("Database uploaded successfully to peer server (${fileBytes.size} bytes)")
+                        }
+                        true
+                    }
+                    HttpStatusCode.Conflict -> {
+                        LoggingConfig.clientLogger.w("Upload rejected by peer server due to concurrent modification (HTTP 409 Conflict)")
+                        false
+                    }
+                    else -> {
+                        LoggingConfig.clientLogger.e("Upload failed with server status: ${response.status}")
+                        false
+                    }
                 }
             }
         } catch (e: Exception) {

@@ -57,4 +57,16 @@ class PeerDiscoveryTest {
         val stopResult = advertiser.stopAdvertising()
         assertTrue(stopResult.isSuccess)
     }
+
+    @Test
+    fun testBrowserResolvePeer_Jvm() = runBlocking {
+        val browser = PeerDiscoveryBrowser()
+        // Resolving empty target returns null immediately
+        val emptyResult = browser.resolvePeer("", timeoutMillis = 100L)
+        assertNull(emptyResult)
+
+        // Resolving non-existent target with short timeout returns null
+        val notFoundResult = browser.resolvePeer("non-existent-instance-id", timeoutMillis = 100L)
+        assertNull(notFoundResult)
+    }
 }

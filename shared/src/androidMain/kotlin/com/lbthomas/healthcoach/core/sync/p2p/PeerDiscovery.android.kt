@@ -6,9 +6,13 @@ import android.net.nsd.NsdServiceInfo
 import android.net.wifi.WifiManager
 import com.lbthomas.healthcoach.core.logging.LoggingConfig
 import com.lbthomas.healthcoach.core.utils.currentEpochMillis
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 
 actual open class PeerDiscoveryAdvertiser(private val context: Context) {
@@ -128,6 +132,9 @@ actual open class PeerDiscoveryBrowser(private val context: Context) {
     private var _isBrowsing = false
     private var localInstanceId: String = ""
 
+    private var browserScope: CoroutineScope? = null
+    private var resolveChannel: Channel<NsdServiceInfo>? = null
+
     private val _discoveredPeers = MutableStateFlow<List<DiscoveredPeer>>(emptyList())
     actual open val discoveredPeers: StateFlow<List<DiscoveredPeer>> = _discoveredPeers.asStateFlow()
 
@@ -141,6 +148,18 @@ actual open class PeerDiscoveryBrowser(private val context: Context) {
         try {
             acquireMulticastLock()
 
+            val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+            browserScope = scope
+            val channel = Channel<NsdServiceInfo>(capacity = Channel.UNLIMITED)
+            resolveChannel = channel
+
+            scope.launch {
+                for (service in channel) {
+                    if (!_isBrowsing) break
+                    resolveServiceSequential(manager, service)
+                }
+            }
+
             val listener = object : NsdManager.DiscoveryListener {
                 override fun onDiscoveryStarted(regType: String) {
                     _isBrowsing = true
@@ -149,14 +168,18 @@ actual open class PeerDiscoveryBrowser(private val context: Context) {
 
                 override fun onServiceFound(service: NsdServiceInfo) {
                     if (service.serviceType.contains("_healthcoach-sync")) {
-                        resolveFoundService(service)
+                        resolveChannel?.trySend(service)
                     }
                 }
 
                 override fun onServiceLost(service: NsdServiceInfo) {
                     val lostName = service.serviceName
                     _discoveredPeers.update { list ->
-                        list.filterNot { it.name == lostName || "${PeerDiscoveryConstants.SERVICE_NAME_PREFIX} - ${it.instanceId.take(8)}" == lostName }
+                        list.filterNot { peer ->
+                            peer.name == lostName ||
+                            "${PeerDiscoveryConstants.SERVICE_NAME_PREFIX} - ${peer.instanceId.take(8)}" == lostName ||
+                            lostName.contains(peer.instanceId.take(8))
+                        }
                     }
                     LoggingConfig.discoveryLogger.d("Android NSD service lost: $lostName")
                 }
@@ -181,61 +204,85 @@ actual open class PeerDiscoveryBrowser(private val context: Context) {
         } catch (e: Throwable) {
             LoggingConfig.discoveryLogger.e("Failed to start Android NSD discovery: ${e.message}", e)
             _isBrowsing = false
+            resolveChannel?.close()
+            resolveChannel = null
+            browserScope?.cancel()
+            browserScope = null
             releaseMulticastLock()
         }
     }
 
-    private fun resolveFoundService(serviceInfo: NsdServiceInfo) {
-        val manager = nsdManager ?: return
+    private suspend fun resolveServiceSequential(manager: NsdManager, serviceInfo: NsdServiceInfo) {
+        val deferred = CompletableDeferred<Unit>()
         try {
             manager.resolveService(serviceInfo, object : NsdManager.ResolveListener {
                 override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
                     LoggingConfig.discoveryLogger.w("Android NSD resolve failed for ${serviceInfo.serviceName}: errorCode $errorCode")
+                    deferred.complete(Unit)
                 }
 
                 override fun onServiceResolved(resolvedInfo: NsdServiceInfo) {
-                    val attributes = resolvedInfo.attributes
-                    val peerInstanceId = attributes["instanceId"]?.let { String(it, Charsets.UTF_8) } ?: ""
-
-                    // Filter out local instance
-                    if (peerInstanceId.isBlank() || peerInstanceId == this@PeerDiscoveryBrowser.localInstanceId) {
-                        return
-                    }
-
-                    val deviceName = attributes["deviceName"]?.let { String(it, Charsets.UTF_8) }
-                        ?.takeIf { it.isNotBlank() }
-                        ?: resolvedInfo.serviceName
-
-                    val host = resolvedInfo.host?.hostAddress ?: ""
-                    val port = resolvedInfo.port
-
-                    if (host.isNotBlank() && port > 0) {
-                        val peer = DiscoveredPeer(
-                            instanceId = peerInstanceId,
-                            name = deviceName,
-                            host = host,
-                            port = port,
-                            interfaceVersion = attributes["interfaceVersion"]?.let { String(it, Charsets.UTF_8) } ?: PeerDiscoveryConstants.INTERFACE_VERSION,
-                            lastSeenTimestamp = currentEpochMillis()
-                        )
-
-                        _discoveredPeers.update { current ->
-                            val updated = current.filterNot { it.instanceId == peer.instanceId }.toMutableList()
-                            updated.add(peer)
-                            updated.sortedBy { it.name }
-                        }
-                        LoggingConfig.discoveryLogger.i("Discovered peer on Android: '$deviceName' ($host:$port, id: $peerInstanceId)")
+                    try {
+                        processResolvedService(resolvedInfo)
+                    } catch (e: Exception) {
+                        LoggingConfig.discoveryLogger.w("Error processing resolved service ${resolvedInfo.serviceName}: ${e.message}")
+                    } finally {
+                        deferred.complete(Unit)
                     }
                 }
             })
+            withTimeoutOrNull(4000L) {
+                deferred.await()
+            }
         } catch (e: Exception) {
-            LoggingConfig.discoveryLogger.w("Error initiating resolve for ${serviceInfo.serviceName}: ${e.message}")
+            LoggingConfig.discoveryLogger.w("Error initiating sequential resolve for ${serviceInfo.serviceName}: ${e.message}")
+            deferred.complete(Unit)
+        }
+    }
+
+    private fun processResolvedService(resolvedInfo: NsdServiceInfo) {
+        val attributes = resolvedInfo.attributes
+        val peerInstanceId = attributes["instanceId"]?.let { String(it, Charsets.UTF_8) } ?: ""
+
+        // Filter out local instance
+        if (peerInstanceId.isBlank() || peerInstanceId == this@PeerDiscoveryBrowser.localInstanceId) {
+            return
+        }
+
+        val deviceName = attributes["deviceName"]?.let { String(it, Charsets.UTF_8) }
+            ?.takeIf { it.isNotBlank() }
+            ?: resolvedInfo.serviceName
+
+        val host = resolvedInfo.host?.hostAddress ?: ""
+        val port = resolvedInfo.port
+
+        if (host.isNotBlank() && port > 0) {
+            val peer = DiscoveredPeer(
+                instanceId = peerInstanceId,
+                name = deviceName,
+                host = host,
+                port = port,
+                interfaceVersion = attributes["interfaceVersion"]?.let { String(it, Charsets.UTF_8) } ?: PeerDiscoveryConstants.INTERFACE_VERSION,
+                lastSeenTimestamp = currentEpochMillis()
+            )
+
+            _discoveredPeers.update { current ->
+                val updated = current.filterNot { it.instanceId == peer.instanceId }.toMutableList()
+                updated.add(peer)
+                updated.sortedBy { it.name }
+            }
+            LoggingConfig.discoveryLogger.i("Discovered peer on Android: '$deviceName' ($host:$port, id: $peerInstanceId)")
         }
     }
 
     actual open fun stopBrowsing() {
         val manager = nsdManager ?: return
         try {
+            resolveChannel?.close()
+            resolveChannel = null
+            browserScope?.cancel()
+            browserScope = null
+
             discoveryListener?.let {
                 manager.stopServiceDiscovery(it)
                 discoveryListener = null
@@ -250,6 +297,30 @@ actual open class PeerDiscoveryBrowser(private val context: Context) {
 
     actual open fun clearPeers() {
         _discoveredPeers.value = emptyList()
+    }
+
+    actual open suspend fun resolvePeer(targetInstanceId: String, timeoutMillis: Long): DiscoveredPeer? {
+        if (targetInstanceId.isBlank()) return null
+
+        val existing = _discoveredPeers.value.firstOrNull { it.instanceId == targetInstanceId }
+        if (existing != null) return existing
+
+        val wasBrowsing = _isBrowsing
+        if (!wasBrowsing) {
+            startBrowsing("")
+        }
+
+        return try {
+            withTimeoutOrNull(timeoutMillis) {
+                _discoveredPeers.filter { list ->
+                    list.any { it.instanceId == targetInstanceId }
+                }.first().firstOrNull { it.instanceId == targetInstanceId }
+            }
+        } finally {
+            if (!wasBrowsing) {
+                stopBrowsing()
+            }
+        }
     }
 
     private fun acquireMulticastLock() {

@@ -64,6 +64,7 @@ class SettingsViewModel {
         this.syncEngine = syncEngine
         this.driverFactory = driverFactory
         this.sqlDriver = sqlDriver
+        setupDynamicPeerObservation()
     }
 
     constructor(
@@ -83,6 +84,36 @@ class SettingsViewModel {
         this.syncEngine = syncEngine
         this.driverFactory = driverFactory
         this.sqlDriver = sqlDriver
+        setupDynamicPeerObservation()
+    }
+
+    private fun setupDynamicPeerObservation() {
+        discoveryBrowser?.let { browser ->
+            viewModelScope.launch {
+                browser.discoveredPeers.collect { peers ->
+                    val targetInstanceId = settings.value.peerSync.serverInstanceId
+                    if (!targetInstanceId.isNullOrBlank()) {
+                        val matching = peers.firstOrNull { it.instanceId == targetInstanceId }
+                        if (matching != null && matching.host.isNotBlank() && matching.port > 0) {
+                            val currentHost = settings.value.peerSync.serverHost
+                            val currentPort = settings.value.peerSync.serverPort
+                            if (matching.host != currentHost || matching.port != currentPort) {
+                                LoggingConfig.clientLogger.i("Dynamic peer resolution updated server address from $currentHost:$currentPort to ${matching.host}:${matching.port} for target '$targetInstanceId'")
+                                updateSettings {
+                                    it.copy(
+                                        peerSync = it.peerSync.copy(
+                                            serverHost = matching.host,
+                                            serverPort = matching.port,
+                                            serverName = matching.name.ifBlank { it.peerSync.serverName }
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     fun updateSettings(transform: (SettingsData) -> SettingsData) {
@@ -540,8 +571,46 @@ class SettingsViewModel {
     suspend fun testPeerConnection(
         host: String = settings.value.peerSync.serverHost,
         port: Int = settings.value.peerSync.serverPort,
-        token: String = settings.value.peerSync.serverToken
+        token: String = settings.value.peerSync.serverToken,
+        targetInstanceId: String? = settings.value.peerSync.serverInstanceId
     ): Result<PeerStatusResponse> {
+        val initialResult = performTestConnection(host, port, token)
+        if (initialResult.isSuccess) {
+            return initialResult
+        }
+
+        // Fallback: If initial connection failed and we have a target server instance ID, attempt dynamic mDNS resolution
+        if (!targetInstanceId.isNullOrBlank() && discoveryBrowser != null) {
+            LoggingConfig.clientLogger.i("Initial test connection to $host:$port failed. Probing via mDNS for server instance '$targetInstanceId'...")
+            val resolvedPeer = discoveryBrowser.resolvePeer(targetInstanceId, timeoutMillis = 3000L)
+            if (resolvedPeer != null && resolvedPeer.host.isNotBlank() && resolvedPeer.port > 0) {
+                if (resolvedPeer.host != host || resolvedPeer.port != port) {
+                    LoggingConfig.clientLogger.i("Discovered server at ${resolvedPeer.host}:${resolvedPeer.port}. Updating settings and retrying connection test...")
+                    updateSettings {
+                        it.copy(
+                            peerSync = it.peerSync.copy(
+                                serverHost = resolvedPeer.host,
+                                serverPort = resolvedPeer.port,
+                                serverName = resolvedPeer.name.ifBlank { it.peerSync.serverName }
+                            )
+                        )
+                    }
+                    return performTestConnection(resolvedPeer.host, resolvedPeer.port, token)
+                }
+            }
+        }
+
+        return initialResult
+    }
+
+    private suspend fun performTestConnection(
+        host: String,
+        port: Int,
+        token: String
+    ): Result<PeerStatusResponse> {
+        if (host.isBlank() || port <= 0) {
+            return Result.failure(IllegalArgumentException("Server host and port must be specified"))
+        }
         val client = HttpClient(CIO) {
             install(ContentNegotiation) {
                 json(Json {

@@ -30,4 +30,5 @@ expect open class PeerDiscoveryBrowser {
     open fun startBrowsing(localInstanceId: String)
     open fun stopBrowsing()
     open fun clearPeers()
+    open suspend fun resolvePeer(targetInstanceId: String, timeoutMillis: Long = 3000L): DiscoveredPeer?
 }

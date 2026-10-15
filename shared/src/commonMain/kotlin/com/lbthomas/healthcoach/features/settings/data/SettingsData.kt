@@ -115,6 +115,7 @@ data class SettingsData(
             peerServerPort = peerSync.serverPort,
             peerServerToken = peerSync.serverToken,
             peerServerName = peerSync.serverName,
+            peerServerInstanceId = peerSync.serverInstanceId ?: "",
             clientInstanceId = peerSync.instanceId,
             clientDeviceName = peerSync.deviceName
         )

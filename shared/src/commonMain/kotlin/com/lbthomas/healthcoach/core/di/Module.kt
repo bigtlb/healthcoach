@@ -56,7 +56,7 @@ val appModule = module {
     single { ProfileRepository(database = get(), weightRepository = get()) }
     factory { ProfileViewModel(repository = get(), settingsStore = get()) }
 
-    single { SyncEngine(localDatabase = get(), driverFactory = get(), settingsStore = get()) }
+    single { SyncEngine(localDatabase = get(), driverFactory = get(), settingsStore = get(), discoveryBrowser = getOrNull()) }
     single { SyncViewModel(syncEngine = get(), settingsStore = get()) }
     single {
         val driver: SqlDriver = get()

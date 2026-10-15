@@ -5,6 +5,7 @@ import co.touchlab.kermit.Logger
 import com.lbthomas.healthcoach.Database
 import com.lbthomas.healthcoach.core.database.*
 import com.lbthomas.healthcoach.core.sync.handlers.*
+import com.lbthomas.healthcoach.core.sync.p2p.PeerDiscoveryBrowser
 import com.lbthomas.healthcoach.core.utils.currentEpochMillis
 import com.lbthomas.healthcoach.features.settings.data.SettingsStore
 import kotlinx.coroutines.CancellationException
@@ -34,6 +35,7 @@ class SyncEngine(
     private val localDatabase: Database,
     private val driverFactory: DriverFactory,
     private val settingsStore: SettingsStore? = null,
+    private val discoveryBrowser: PeerDiscoveryBrowser? = null,
     val tableHandlers: List<TableSyncHandler> = listOf(
         WeightTableSyncHandler,
         BloodPressureTableSyncHandler,
@@ -190,7 +192,20 @@ class SyncEngine(
     }
 
     private suspend fun executeSyncAttempt(config: SyncConfig): SyncResult {
-        val adapter = StorageAdapterFactory.createAdapter(config)
+        val adapter = StorageAdapterFactory.createAdapter(
+            config = config,
+            discoveryBrowser = discoveryBrowser,
+            onServerAddressUpdated = { newHost, newPort ->
+                settingsStore?.updateSettings {
+                    it.copy(
+                        peerSync = it.peerSync.copy(
+                            serverHost = newHost,
+                            serverPort = newPort
+                        )
+                    )
+                }
+            }
+        )
         val remoteFileName = config.remoteFileName.ifBlank { SyncConfig.DEFAULT_REMOTE_DB_NAME }
         val syncDir = getSyncDirectory()
         val providerType = config.providerType

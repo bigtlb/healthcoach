@@ -4,12 +4,17 @@ import com.lbthomas.healthcoach.core.sync.adapters.GoogleDriveStorageAdapter
 import com.lbthomas.healthcoach.core.sync.adapters.LocalFolderAdapter
 import com.lbthomas.healthcoach.core.sync.adapters.PeerToPeerStorageAdapter
 import com.lbthomas.healthcoach.core.sync.auth.GoogleOAuthManager
+import com.lbthomas.healthcoach.core.sync.p2p.PeerDiscoveryBrowser
 
 /**
  * Factory for creating configured [RemoteStorageAdapter] instances.
  */
 object StorageAdapterFactory {
-    fun createAdapter(config: SyncConfig): RemoteStorageAdapter {
+    fun createAdapter(
+        config: SyncConfig,
+        discoveryBrowser: PeerDiscoveryBrowser? = null,
+        onServerAddressUpdated: ((newHost: String, newPort: Int) -> Unit)? = null
+    ): RemoteStorageAdapter {
         return when (config.providerType) {
             SyncProviderType.LOCAL_FOLDER -> {
                 LocalFolderAdapter(
@@ -34,7 +39,10 @@ object StorageAdapterFactory {
                     serverToken = config.peerServerToken,
                     serverName = config.peerServerName,
                     clientInstanceId = config.clientInstanceId,
-                    clientDeviceName = config.clientDeviceName
+                    clientDeviceName = config.clientDeviceName,
+                    serverInstanceId = config.peerServerInstanceId,
+                    discoveryBrowser = discoveryBrowser,
+                    onServerAddressUpdated = onServerAddressUpdated
                 )
             }
         }

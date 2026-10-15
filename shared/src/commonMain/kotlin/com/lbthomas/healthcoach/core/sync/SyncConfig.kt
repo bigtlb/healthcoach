@@ -27,6 +27,7 @@ data class SyncConfig(
     val peerServerPort: Int = DEFAULT_P2P_PORT,
     val peerServerToken: String = "",
     val peerServerName: String = "",
+    val peerServerInstanceId: String = "",
     val clientInstanceId: String = "",
     val clientDeviceName: String = ""
 ) {
