@@ -16,7 +16,7 @@ kotlinx-coroutines = "1.11.0"
 material3 = "1.12.0-alpha03"
 
 composeMaterialIconsVersion = "1.7.3"
-ktorVersion = "3.1.1"
+ktorVersion = "3.6.0"
 jmdnsVersion = "3.5.9"
 kermitVersion = "2.1.0"
 koinAnnotationsVersion = "4.2.2"
