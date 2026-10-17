@@ -1,0 +1,87 @@
+version: 2
+updates:
+  # 1. Gradle Dependencies (Kotlin Multiplatform, Android, Desktop, Compose)
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "chore"
+    # Group related dependencies together to prevent PR explosion
+    groups:
+      compose-multiplatform:
+        patterns:
+          - "org.jetbrains.compose*"
+          - "org.jetbrains.kotlinx:kotlinx-coroutines*"
+        update-types:
+          - "minor"
+          - "patch"
+
+      kotlin-ecosystem:
+        patterns:
+          - "org.jetbrains.kotlin*"
+          - "org.jetbrains.kotlinx:kotlinx-serialization*"
+          - "org.jetbrains.kotlinx:kotlinx-datetime*"
+        update-types:
+          - "minor"
+          - "patch"
+
+      android-and-androidx:
+        patterns:
+          - "com.android.*"
+          - "androidx.*"
+        update-types:
+          - "minor"
+          - "patch"
+
+      ktor-and-networking:
+        patterns:
+          - "io.ktor:*"
+        update-types:
+          - "minor"
+          - "patch"
+
+      sqldelight-database:
+        patterns:
+          - "app.cash.sqldelight:*"
+        update-types:
+          - "minor"
+          - "patch"
+
+      koin-di:
+        patterns:
+          - "io.insert-koin:*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # 2. GitHub Actions Workflows (.github/workflows/*.yml)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: "chore(ci)"
+      include: "scope"
+    labels:
+      - "ci"
+      - "dependencies"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
