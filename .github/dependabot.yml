@@ -20,6 +20,9 @@ updates:
       compose-multiplatform:
         patterns:
           - "org.jetbrains.compose*"
+          - "org.jetbrains.compose.material3*"
+          - "org.jetbrains.compose.material*"
+          - "org.jetbrains.androidx.lifecycle*"
           - "org.jetbrains.kotlinx:kotlinx-coroutines*"
         update-types:
           - "minor"
