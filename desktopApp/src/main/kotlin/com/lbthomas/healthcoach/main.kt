@@ -16,7 +16,7 @@ import com.lbthomas.healthcoach.features.settings.SettingsViewModel
 import com.lbthomas.healthcoach.features.settings.data.SettingsData
 import com.lbthomas.healthcoach.features.sync.SyncNotificationManager
 import healthcoach.shared.generated.resources.Res
-import healthcoach.shared.generated.resources.scales
+import healthcoach.shared.generated.resources.scales_icon
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -42,7 +42,7 @@ fun main() {
         val settings = settingsViewModel.settings.value
 
         val windowState = GetWindowState(settings)
-        val icon = painterResource(Res.drawable.scales)
+        val icon = painterResource(Res.drawable.scales_icon)
 
         if (isTraySupported) {
             Tray(

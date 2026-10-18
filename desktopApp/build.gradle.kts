@@ -66,6 +66,11 @@ compose.desktop {
                 dirChooser = true
                 perUserInstall = true
             }
+
+            macOS {
+                packageName = "HealthCoach"
+                iconFile.set(project.file("src/main/resources/scales.png"))
+            }
         }
     }
 }
