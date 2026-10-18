@@ -25,7 +25,7 @@ kotlinxDatetimeVersion = "0.8.0"
 kotlinxSerializationVersion = "1.11.0"
 playServicesAuthVersion = "21.3.0"
 slf4jVersion = "2.0.18"
-sqlDelightVersion = "2.3.2"
+sqlDelightVersion = "2.4.1"
 vicoVersion = "3.3.1"
 
 [libraries]
