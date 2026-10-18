@@ -1,13 +1,11 @@
 package com.lbthomas.healthcoach.core.sync.p2p
 
 import com.lbthomas.healthcoach.core.database.DriverFactory
-import com.lbthomas.healthcoach.core.database.createDatabaseForDriver
 import com.lbthomas.healthcoach.core.logging.LoggingConfig
 import com.lbthomas.healthcoach.core.sync.FileUtils
 import com.lbthomas.healthcoach.core.sync.SyncConfig
 import com.lbthomas.healthcoach.core.utils.currentEpochMillis
 import com.lbthomas.healthcoach.core.utils.generateUuid
-import com.lbthomas.healthcoach.features.foodjournal.data.DefaultFoodData
 import com.lbthomas.healthcoach.features.settings.data.SettingsStore
 import com.lbthomas.healthcoach.features.sync.SyncNotificationManager
 import io.ktor.http.*
@@ -585,36 +583,6 @@ class PeerServerManager(
                     call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Failed to process upload: ${e.message}"))
                 }
             }
-        }
-    }
-
-    /**
-     * Resets the local server database by clearing all metric tables and restoring default food items.
-     */
-    suspend fun resetDatabase(): Result<Unit> = serverMutex.withLock {
-        try {
-            val driver = driverFactory.createDriver()
-            try {
-                driver.execute(null, "DELETE FROM weightEntry", 0, null)
-                driver.execute(null, "DELETE FROM bloodPressureEntry", 0, null)
-                driver.execute(null, "DELETE FROM mealEntry", 0, null)
-                driver.execute(null, "DELETE FROM foodItem", 0, null)
-                driver.execute(null, "DELETE FROM foodUnit", 0, null)
-                driver.execute(null, "DELETE FROM profileSetting", 0, null)
-
-                val db = createDatabaseForDriver(driver)
-                DefaultFoodData.ensureDefaultFoodData(db)
-                driver.notifyListeners("weightEntry", "bloodPressureEntry", "foodUnit", "foodItem", "mealEntry", "profileSetting")
-            } finally {
-                try { driver.close() } catch (_: Exception) {}
-            }
-
-            onDatabaseReset?.invoke()
-            LoggingConfig.serverLogger.i("Server database has been reset to defaults.")
-            Result.success(Unit)
-        } catch (e: Exception) {
-            LoggingConfig.serverLogger.e("Failed to reset server database: ${e.message}", e)
-            Result.failure(e)
         }
     }
 

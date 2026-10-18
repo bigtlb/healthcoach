@@ -663,10 +663,13 @@ class SettingsViewModel {
     }
 
     /**
-     * Resets local database by clearing all metric entries, restoring default food items,
-     * resetting sync cache/metadata, and resetting user settings to defaults.
+     * Resets local database by clearing metric entries, resetting sync cache/metadata,
+     * and resetting user settings to defaults.
+     *
+     * @param resetFoodDefinitions if true, clears all custom food items and units and restores
+     * only default common foods. If false (default), preserves user-defined foods and units.
      */
-    suspend fun resetDatabaseAndSettings(): Result<Unit> {
+    suspend fun resetDatabaseAndSettings(resetFoodDefinitions: Boolean = false): Result<Unit> {
         return try {
             if (driverFactory != null) {
                 val driver = driverFactory.createDriver()
@@ -674,8 +677,10 @@ class SettingsViewModel {
                     driver.execute(null, "DELETE FROM weightEntry", 0, null)
                     driver.execute(null, "DELETE FROM bloodPressureEntry", 0, null)
                     driver.execute(null, "DELETE FROM mealEntry", 0, null)
-                    driver.execute(null, "DELETE FROM foodItem", 0, null)
-                    driver.execute(null, "DELETE FROM foodUnit", 0, null)
+                    if (resetFoodDefinitions) {
+                        driver.execute(null, "DELETE FROM foodItem", 0, null)
+                        driver.execute(null, "DELETE FROM foodUnit", 0, null)
+                    }
                     driver.execute(null, "DELETE FROM profileSetting", 0, null)
 
                     val db = createDatabaseForDriver(driver)

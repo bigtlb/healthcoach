@@ -33,6 +33,7 @@ internal fun AboutTabContent(
     val coroutineScope = rememberCoroutineScope()
     var showLicenseDialog by remember { mutableStateOf(false) }
     var showResetConfirmationDialog by remember { mutableStateOf(false) }
+    var resetFoodDefinitions by remember { mutableStateOf(false) }
     var isResetting by remember { mutableStateOf(false) }
     var resetFeedback by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
 
@@ -181,6 +182,7 @@ internal fun AboutTabContent(
                         Button(
                             onClick = {
                                 resetFeedback = null
+                                resetFoodDefinitions = false
                                 showResetConfirmationDialog = true
                             },
                             colors = ButtonDefaults.buttonColors(
@@ -274,21 +276,60 @@ internal fun AboutTabContent(
                 )
             },
             text = {
-                Text(
-                    text = "Are you sure you want to reset HealthCoach? This will permanently erase all recorded weights, blood pressure entries, food journal entries, restore default food items, and reset all application settings to their defaults.\n\nThis action cannot be undone.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = "Are you sure you want to reset HealthCoach? This will permanently erase all recorded weights, blood pressure entries, food journal entries, and reset all application settings to their defaults.\n\nThis action cannot be undone.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
+                    Surface(
+                        shape = MaterialTheme.shapes.small,
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { resetFoodDefinitions = !resetFoodDefinitions }
+                                .padding(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = resetFoodDefinitions,
+                                onCheckedChange = { resetFoodDefinitions = it }
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = "Would you like to reset your food definitions also?",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = "A reset will clean it out to only the predefined common foods. If unchecked, your custom food definitions will be preserved.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
             },
             confirmButton = {
                 Button(
                     onClick = {
+                        val purgeFoods = resetFoodDefinitions
                         showResetConfirmationDialog = false
                         isResetting = true
                         coroutineScope.launch {
-                            val result = settingsViewModel?.resetDatabaseAndSettings()
+                            val result = settingsViewModel?.resetDatabaseAndSettings(resetFoodDefinitions = purgeFoods)
                             isResetting = false
                             if (result?.isSuccess == true) {
-                                resetFeedback = true to "Database and settings successfully reset to defaults."
+                                resetFeedback = true to if (purgeFoods) {
+                                    "Database, food definitions, and settings successfully reset to defaults."
+                                } else {
+                                    "Database and settings successfully reset (custom food definitions preserved)."
+                                }
                             } else {
                                 val err = result?.exceptionOrNull()?.message ?: "Unknown error"
                                 resetFeedback = false to "Failed to reset: $err"
