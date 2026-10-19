@@ -2,6 +2,10 @@
 -dontoptimize
 -dontnote
 
+# Coroutines
+-keep class kotlinx.coroutines.** { *; }
+-dontwarn kotlinx.coroutines.**
+
 # SQLite JDBC Driver
 -keep class org.sqlite.** { *; }
 -dontwarn org.sqlite.**
