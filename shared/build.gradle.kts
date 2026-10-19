@@ -171,6 +171,7 @@ kotlin {
             implementation(libs.sqldelight.sqlite.driver)
             implementation(libs.slf4j)
             implementation(libs.jmdns)
+            implementation(libs.kotlin.reflect)
         }
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)

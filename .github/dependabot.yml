@@ -15,6 +15,11 @@ updates:
     labels:
       - "dependencies"
       - "chore"
+    ignore:
+      - dependency-name: "org.jetbrains.kotlinx:kotlinx-coroutines*"
+        versions: [">= 1.12.0"]
+      - dependency-name: "org.jetbrains.compose.material3*"
+        versions: [">= 1.13.0-alpha01"]
     # Group related dependencies together to prevent PR explosion
     groups:
       compose-multiplatform:

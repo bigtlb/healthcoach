@@ -7,6 +7,7 @@ plugins {
 }
 
 dependencies {
+    implementation(enforcedPlatform(libs.kotlinx.coroutines.bom))
     implementation(project(":shared"))
 
     implementation(compose.desktop.currentOs)
@@ -19,6 +20,7 @@ dependencies {
     implementation(libs.slf4j)
     implementation(libs.koin.core)
     implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlin.reflect)
 }
 
 val appVersionName = (rootProject.extra["appVersionName"] as? String) ?: "0.0.1"

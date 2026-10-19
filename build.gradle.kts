@@ -55,3 +55,14 @@ fun resolveAppVersionCode(): Int {
 
 extra["appVersionName"] = resolveAppVersion()
 extra["appVersionCode"] = resolveAppVersionCode()
+
+subprojects {
+    configurations.all {
+        resolutionStrategy.eachDependency {
+            if (requested.group == "org.jetbrains.kotlinx" && requested.name.startsWith("kotlinx-coroutines")) {
+                useVersion(libs.versions.kotlinx.coroutines.get())
+                because("Align coroutines with Compose Multiplatform to prevent VerifyError and ProGuard ABI incompatibilities")
+            }
+        }
+    }
+}
