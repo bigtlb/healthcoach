@@ -54,7 +54,7 @@ jobs:
 
       - name: Upload Test & Lint Reports
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: main-build-verification-reports
           path: |

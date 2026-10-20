@@ -111,7 +111,7 @@ jobs:
           Get-ChildItem -Path staging
 
       - name: Upload Windows Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-packages
           path: staging/*
@@ -352,7 +352,7 @@ jobs:
           fi
 
       - name: Upload Linux and Android Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: linux-android-packages
           path: staging/*
