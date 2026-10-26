@@ -12,6 +12,7 @@ import com.lbthomas.healthcoach.core.sync.SyncProviderType
 import com.lbthomas.healthcoach.core.sync.p2p.PeerClientRecord
 import com.lbthomas.healthcoach.core.sync.p2p.PeerServerStatus
 import com.lbthomas.healthcoach.core.theme.AppTheme
+import com.lbthomas.healthcoach.features.settings.data.AccessibilitySettings
 import com.lbthomas.healthcoach.features.settings.data.AppearanceSettings
 import com.lbthomas.healthcoach.features.settings.data.BloodPressureSettings
 import com.lbthomas.healthcoach.features.settings.data.FoodJournalSettings
@@ -31,6 +32,9 @@ class SettingsDataTest {
     @Test
     fun testDefaultSettingsValues() {
         val settings = SettingsData()
+
+        // Accessibility
+        assertEquals(1.0f, settings.accessibility.uiScale)
 
         // Appearance
         assertEquals(true, settings.appearance.adaptiveDisplay)
@@ -110,6 +114,9 @@ class SettingsDataTest {
         }
 
         val original = SettingsData(
+            accessibility = AccessibilitySettings(
+                uiScale = 1.25f
+            ),
             appearance = AppearanceSettings(
                 adaptiveDisplay = false,
                 appTheme = AppTheme.TEAL,
@@ -179,6 +186,9 @@ class SettingsDataTest {
 
         val serialized = json.encodeToString(SettingsData.serializer(), original)
         val deserialized = json.decodeFromString(SettingsData.serializer(), serialized)
+
+        // Accessibility
+        assertEquals(1.25f, deserialized.accessibility.uiScale)
 
         // Appearance
         assertEquals(false, deserialized.appearance.adaptiveDisplay)
@@ -285,6 +295,9 @@ class SettingsDataTest {
 
         viewModel.setAppTheme(AppTheme.BLUE)
         assertEquals(AppTheme.BLUE, viewModel.settings.value.appearance.appTheme)
+
+        viewModel.setUiScale(1.5f)
+        assertEquals(1.5f, viewModel.settings.value.accessibility.uiScale)
 
         viewModel.setBodyTextSize(FontSizePreference.LARGE)
         assertEquals(FontSizePreference.LARGE, viewModel.settings.value.appearance.bodyTextSize)

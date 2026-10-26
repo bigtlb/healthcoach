@@ -16,6 +16,8 @@ updates:
       - "dependencies"
       - "chore"
     ignore:
+      - dependency-name: "org.gradle:gradle"
+        update-types: ["version-update:semver-major", "version-update:semver-minor", "version-update:semver-patch"]
       - dependency-name: "org.jetbrains.kotlinx:kotlinx-coroutines*"
         versions: [">= 1.12.0"]
       - dependency-name: "org.jetbrains.compose.material3*"

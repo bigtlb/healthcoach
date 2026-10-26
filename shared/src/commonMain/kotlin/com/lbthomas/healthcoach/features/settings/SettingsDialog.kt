@@ -29,6 +29,7 @@ import org.koin.dsl.koinConfiguration
 
 internal enum class SettingsTab(val title: String, val icon: ImageVector) {
     APPEARANCE("Theme", Icons.Default.Palette),
+    ACCESSIBILITY("Display", Icons.Default.Visibility),
     WEIGHT("Weight", Icons.Default.Scale),
     BLOOD_PRESSURE("BP", Icons.Default.Favorite),
     SYNC("Sync", Icons.Default.Sync),
@@ -80,8 +81,8 @@ fun SettingsDialog(
                 val sidebarWidth = if (isCompact) 68.dp else 88.dp
                 val contentHorizontalPadding = if (isCompact) 12.dp else 24.dp
                 val contentVerticalPadding = if (isCompact) 12.dp else 16.dp
-                val dialogMinHeight = if (isCompact) 420.dp else 900.dp
-                val dialogMaxHeight = if (isCompact) 580.dp else 1200.dp
+                val dialogMinHeight = if (isCompact) 420.dp else 480.dp
+                val dialogMaxHeight = if (isCompact) 600.dp else 850.dp
 
                 Column(
                     modifier = if (isWide) {
@@ -175,6 +176,7 @@ fun SettingsDialog(
                             ) {
                                 when (selectedTab) {
                                     SettingsTab.APPEARANCE -> AppearanceTabContent(settings, settingsViewModel)
+                                    SettingsTab.ACCESSIBILITY -> AccessibilityTabContent(settings, settingsViewModel)
                                     SettingsTab.WEIGHT -> WeightTabContent(settings, settingsViewModel)
                                     SettingsTab.BLOOD_PRESSURE -> BloodPressureTabContent(settings, settingsViewModel)
                                     SettingsTab.SYNC -> SyncTabContent(settings, settingsViewModel)

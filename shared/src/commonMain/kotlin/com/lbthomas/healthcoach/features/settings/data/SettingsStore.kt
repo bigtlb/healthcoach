@@ -1,12 +1,7 @@
 package com.lbthomas.healthcoach.features.settings.data
 
-import com.lbthomas.healthcoach.core.enums.GraphTimeFrame
-import com.lbthomas.healthcoach.core.enums.SelectedPage
-import com.lbthomas.healthcoach.core.enums.ThemeMode
-import com.lbthomas.healthcoach.core.enums.WeightUnit
 import com.lbthomas.healthcoach.core.getDefaultDeviceName
 import com.lbthomas.healthcoach.core.sync.p2p.PeerClientRecord
-import com.lbthomas.healthcoach.core.theme.AppTheme
 import com.lbthomas.healthcoach.core.utils.generateUuid
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -60,44 +55,8 @@ open class SettingsStore(private val settingsFile: File) {
         saveSettings(updated)
     }
 
-    fun setDeviceName(name: String) {
-        updateSettings { it.copy(peerSync = it.peerSync.copy(deviceName = name)) }
-    }
-
-    fun setPeerServerPort(port: Int) {
-        updateSettings { it.copy(peerSync = it.peerSync.copy(localServerPort = port)) }
-    }
-
-    fun setPeerServerEnabled(enabled: Boolean) {
-        updateSettings { it.copy(peerSync = it.peerSync.copy(localServerEnabled = enabled)) }
-    }
-
-    fun setPeerIsServerMode(isServer: Boolean) {
-        updateSettings { it.copy(peerSync = it.peerSync.copy(isServerMode = isServer)) }
-    }
-
     fun setPeerServerPin(pin: String) {
         updateSettings { it.copy(peerSync = it.peerSync.copy(localServerPin = pin)) }
-    }
-
-    fun setPeerClientTarget(
-        instanceId: String?,
-        host: String,
-        port: Int,
-        token: String,
-        name: String
-    ) {
-        updateSettings {
-            it.copy(
-                peerSync = it.peerSync.copy(
-                    serverInstanceId = instanceId,
-                    serverHost = host,
-                    serverPort = port,
-                    serverToken = token,
-                    serverName = name
-                )
-            )
-        }
     }
 
     fun addServerHistoryRecord(record: PeerClientRecord) {
@@ -112,82 +71,6 @@ open class SettingsStore(private val settingsFile: File) {
 
     fun clearServerHistory() {
         updateSettings { it.copy(peerSync = it.peerSync.copy(localServerHistory = emptyList())) }
-    }
-
-    fun setSelectedPage(page: SelectedPage) {
-        updateSettings { it.copy(ui = it.ui.copy(selectedPage = page)) }
-    }
-
-    fun setSelectedGraphTimeFrame(timeFrame: GraphTimeFrame) {
-        updateSettings { it.copy(ui = it.ui.copy(selectedGraphTimeFrame = timeFrame)) }
-    }
-
-    fun setWeightUnit(unit: WeightUnit) {
-        updateSettings { it.copy(weight = it.weight.copy(unit = unit)) }
-    }
-
-    fun setThemeMode(themeMode: ThemeMode) {
-        updateSettings { it.copy(appearance = it.appearance.copy(themeMode = themeMode)) }
-    }
-
-    fun setAppTheme(theme: AppTheme) {
-        updateSettings { it.copy(appearance = it.appearance.copy(appTheme = theme)) }
-    }
-
-    fun setWindowState(x: Int, y: Int, width: Int, height: Int, maximized: Boolean) {
-        updateSettings {
-            it.copy(
-                ui = it.ui.copy(
-                    windowX = x,
-                    windowY = y,
-                    windowWidth = width,
-                    windowHeight = height,
-                    windowMaximized = maximized
-                )
-            )
-        }
-    }
-
-    fun setAdaptiveDisplay(adaptiveDisplay: Boolean) {
-        updateSettings { it.copy(appearance = it.appearance.copy(adaptiveDisplay = adaptiveDisplay)) }
-    }
-
-    fun setSplitterPosition(position: Float) {
-        updateSettings { it.copy(ui = it.ui.copy(splitterPosition = position)) }
-    }
-
-    fun setShowWeightInGraph(show: Boolean) {
-        updateSettings { it.copy(weight = it.weight.copy(showInGraph = show)) }
-    }
-
-    fun setShowBloodPressureInGraph(show: Boolean) {
-        updateSettings { it.copy(bloodPressure = it.bloodPressure.copy(showInGraph = show)) }
-    }
-
-    fun setShowPulseInGraph(show: Boolean) {
-        updateSettings { it.copy(bloodPressure = it.bloodPressure.copy(showPulseInGraph = show)) }
-    }
-
-    fun setShowFoodJournalInGraph(show: Boolean) {
-        updateSettings { it.copy(foodJournal = it.foodJournal.copy(showInGraph = show)) }
-    }
-
-    fun setBloodPressureDisplaySettings(
-        showDailyAverages: Boolean,
-        showMonthlyAverages: Boolean,
-        showDailyChanges: Boolean,
-        showMonthlyChanges: Boolean
-    ) {
-        updateSettings {
-            it.copy(
-                bloodPressure = it.bloodPressure.copy(
-                    showDailyAverages = showDailyAverages,
-                    showMonthlyAverages = showMonthlyAverages,
-                    showDailyChanges = showDailyChanges,
-                    showMonthlyChanges = showMonthlyChanges
-                )
-            )
-        }
     }
 
     fun resetSettings() {

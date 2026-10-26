@@ -62,7 +62,9 @@ fun ProfileDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false),
         modifier = (
             if (isWide) {
-                Modifier.width(760.dp)
+                Modifier
+                    .fillMaxWidth(0.85f)
+                    .widthIn(max = 800.dp)
             } else {
                 Modifier.fillMaxSize()
             }
@@ -94,7 +96,7 @@ fun ProfileDialog(
                     modifier = if (isWide) {
                         Modifier
                             .fillMaxWidth()
-                            .heightIn(min = 450.dp, max = 900.dp)
+                            .heightIn(min = 450.dp, max = 850.dp)
                     } else {
                         Modifier.fillMaxSize()
                     }

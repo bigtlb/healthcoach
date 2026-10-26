@@ -59,10 +59,12 @@ fun App() {
         theme = settings.appearance.appTheme,
         themeMode = settings.appearance.themeMode,
         bodyTextSize = settings.appearance.bodyTextSize,
-        labelTextSize = settings.appearance.labelTextSize
+        labelTextSize = settings.appearance.labelTextSize,
+        uiScale = settings.accessibility.uiScale
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val isWideLayout = settings.appearance.adaptiveDisplay && maxWidth >= 1200.dp
+            val effectiveScale = settings.accessibility.uiScale.coerceIn(0.5f, 2.5f)
+            val isWideLayout = settings.appearance.adaptiveDisplay && (maxWidth * effectiveScale) >= 1200.dp
             val focusRequester = remember { FocusRequester() }
 
             LaunchedEffect(selectedPage, showSettings, showProfile, showAddWeightEntry, showAddBloodPressureEntry, showLogFood) {

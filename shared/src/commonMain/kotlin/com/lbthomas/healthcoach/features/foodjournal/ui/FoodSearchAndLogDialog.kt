@@ -65,7 +65,9 @@ fun FoodSearchAndLogDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false),
         modifier = (
             if (isWide) {
-                Modifier.width(800.dp)
+                Modifier
+                    .fillMaxWidth(0.85f)
+                    .widthIn(max = 800.dp)
             } else {
                 Modifier.fillMaxSize()
             }

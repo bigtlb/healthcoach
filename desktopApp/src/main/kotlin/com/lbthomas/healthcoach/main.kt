@@ -6,7 +6,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.*
@@ -23,6 +25,15 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.jetbrains.compose.resources.painterResource
 import org.koin.core.context.GlobalContext
 import org.koin.core.context.startKoin
+import java.awt.Component
+import java.awt.GraphicsConfiguration
+import java.awt.GraphicsEnvironment
+import java.awt.Toolkit
+import java.awt.event.ComponentAdapter
+import java.awt.event.ComponentEvent
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import kotlin.math.max
 import kotlin.time.Duration.Companion.milliseconds
 
 
@@ -112,37 +123,40 @@ fun main() {
                 })
             }
 
-            Box(modifier = Modifier.fillMaxSize()) {
-            App()
+            ProvideDynamicDensity(window) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    App()
 
-            if (isShuttingDown) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.45f)
-                ) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Card(
-                            shape = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                    if (isShuttingDown) {
+                        Surface(
+                            modifier = Modifier.fillMaxSize(),
+                            color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.45f)
                         ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 20.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
                             ) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                    strokeWidth = 2.5.dp
-                                )
-                                Text(
-                                    text = shutdownMessage.ifBlank { "Shutting down..." },
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = FontWeight.Medium
-                                )
+                                Card(
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 20.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                    ) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(24.dp),
+                                            strokeWidth = 2.5.dp
+                                        )
+                                        Text(
+                                            text = shutdownMessage.ifBlank { "Shutting down..." },
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -151,6 +165,96 @@ fun main() {
         }
     }
 }
+
+private object ScaleResolver {
+    fun getScaleForComponent(component: Component?): Float {
+        val config = component?.graphicsConfiguration ?: getDefaultConfiguration()
+        return calculateConfigScale(config)
+    }
+
+    private fun getDefaultConfiguration(): GraphicsConfiguration {
+        return GraphicsEnvironment.getLocalGraphicsEnvironment()
+            .defaultScreenDevice
+            .defaultConfiguration
+    }
+
+    fun calculateConfigScale(config: GraphicsConfiguration): Float {
+        val transformScale = config.defaultTransform.scaleX.toFloat()
+        val toolkitDpi = Toolkit.getDefaultToolkit().screenResolution
+        val toolkitScale = toolkitDpi.toFloat() / 96.0f
+        val xrdbScale = getXrdbScale()
+
+        return if (transformScale > 1.0f) {
+            transformScale
+        } else {
+            max(1.0f, max(toolkitScale, xrdbScale))
+        }
+    }
+
+    private fun getXrdbScale(): Float {
+        return try {
+            val process = ProcessBuilder("xrdb", "-query").start()
+            val output = BufferedReader(InputStreamReader(process.inputStream)).use { it.readText() }
+            val dpiLine = output.lines().firstOrNull { it.startsWith("Xft.dpi:") }
+            val dpi = dpiLine?.substringAfter(":")?.trim()?.toFloatOrNull() ?: 96.0f
+            dpi / 96.0f
+        } catch (_: Exception) {
+            1.0f
+        }
+    }
+}
+
+@Composable
+private fun rememberWindowScale(window: java.awt.Window): MutableState<Float> {
+    val scaleState = remember { mutableStateOf(ScaleResolver.getScaleForComponent(window)) }
+
+    DisposableEffect(window) {
+        val listener = object : ComponentAdapter() {
+            override fun componentMoved(e: ComponentEvent?) {
+                updateScale()
+            }
+
+            override fun componentResized(e: ComponentEvent?) {
+                updateScale()
+            }
+
+            private fun updateScale() {
+                val newScale = ScaleResolver.getScaleForComponent(window)
+                if (scaleState.value != newScale) {
+                    scaleState.value = newScale
+                }
+            }
+        }
+
+        window.addComponentListener(listener)
+        scaleState.value = ScaleResolver.getScaleForComponent(window)
+
+        onDispose {
+            window.removeComponentListener(listener)
+        }
+    }
+
+    return scaleState
+}
+
+@Composable
+private fun ProvideDynamicDensity(window: java.awt.Window, content: @Composable () -> Unit) {
+    val detectedScale by rememberWindowScale(window)
+    val currentDensity = LocalDensity.current
+
+    val effectiveDensity = if (currentDensity.density <= 1.0f && detectedScale > 1.0f) {
+        detectedScale
+    } else {
+        currentDensity.density
+    }
+
+    val customDensity = remember(effectiveDensity, currentDensity.fontScale) {
+        Density(density = effectiveDensity, fontScale = currentDensity.fontScale)
+    }
+
+    CompositionLocalProvider(LocalDensity provides customDensity) {
+        content()
+    }
 }
 
 private fun saveWindowState(

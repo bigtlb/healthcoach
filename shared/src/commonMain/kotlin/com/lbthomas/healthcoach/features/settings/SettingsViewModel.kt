@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 
 class SettingsViewModel {
@@ -138,6 +139,10 @@ class SettingsViewModel {
 
     fun setAppTheme(theme: AppTheme) {
         updateSettings { it.copy(appearance = it.appearance.copy(appTheme = theme)) }
+    }
+
+    fun setUiScale(scale: Float) {
+        updateSettings { it.copy(accessibility = it.accessibility.copy(uiScale = scale)) }
     }
 
     fun setBodyTextSize(size: FontSizePreference) {
@@ -331,14 +336,6 @@ class SettingsViewModel {
         updateSettings { it.copy(sync = it.sync.copy(googleAccountEmail = email)) }
     }
 
-    fun setRemoteFileName(name: String) {
-        val prev = settings.value.sync.remoteFileName
-        if (prev != name) {
-            syncEngine?.clearLocalSyncCache(settings.value.sync.syncProvider)
-        }
-        updateSettings { it.copy(sync = it.sync.copy(remoteFileName = name)) }
-    }
-
     fun setAutoSyncOnClose(enabled: Boolean) {
         updateSettings { it.copy(sync = it.sync.copy(autoSyncOnClose = enabled)) }
     }
@@ -348,9 +345,7 @@ class SettingsViewModel {
     }
 
     fun setPeerServerEnabled(enabled: Boolean) {
-        persistence?.setPeerServerEnabled(enabled) ?: updateSettings {
-            it.copy(peerSync = it.peerSync.copy(localServerEnabled = enabled))
-        }
+        updateSettings { it.copy(peerSync = it.peerSync.copy(localServerEnabled = enabled)) }
         val current = settings.value
         if (isPeerServerEligible(current)) {
             viewModelScope.launch {
@@ -371,9 +366,7 @@ class SettingsViewModel {
     }
 
     fun setPeerIsServerMode(isServer: Boolean) {
-        persistence?.setPeerIsServerMode(isServer) ?: updateSettings {
-            it.copy(peerSync = it.peerSync.copy(isServerMode = isServer))
-        }
+        updateSettings { it.copy(peerSync = it.peerSync.copy(isServerMode = isServer)) }
         val current = settings.value
         if (isPeerServerEligible(current)) {
             viewModelScope.launch {
@@ -434,10 +427,6 @@ class SettingsViewModel {
         discoveryBrowser?.stopBrowsing()
     }
 
-    fun clearDiscoveredPeers() {
-        discoveryBrowser?.clearPeers()
-    }
-
     fun refreshDiscovery() {
         discoveryBrowser?.stopBrowsing()
         discoveryBrowser?.clearPeers()
@@ -474,9 +463,7 @@ class SettingsViewModel {
 
     fun clearServerHistory() {
         peerServerManager?.clearAllSessions()
-        persistence?.clearServerHistory() ?: updateSettings {
-            it.copy(peerSync = it.peerSync.copy(localServerHistory = emptyList()))
-        }
+        updateSettings { it.copy(peerSync = it.peerSync.copy(localServerHistory = emptyList())) }
     }
 
     suspend fun requestPairingPin(
@@ -671,23 +658,25 @@ class SettingsViewModel {
      */
     suspend fun resetDatabaseAndSettings(resetFoodDefinitions: Boolean = false): Result<Unit> {
         return try {
-            if (driverFactory != null) {
-                val driver = driverFactory.createDriver()
-                try {
-                    driver.execute(null, "DELETE FROM weightEntry", 0, null)
-                    driver.execute(null, "DELETE FROM bloodPressureEntry", 0, null)
-                    driver.execute(null, "DELETE FROM mealEntry", 0, null)
-                    if (resetFoodDefinitions) {
-                        driver.execute(null, "DELETE FROM foodItem", 0, null)
-                        driver.execute(null, "DELETE FROM foodUnit", 0, null)
-                    }
-                    driver.execute(null, "DELETE FROM profileSetting", 0, null)
+            withContext(Dispatchers.IO) {
+                if (driverFactory != null) {
+                    val driver = driverFactory.createDriver()
+                    try {
+                        driver.execute(null, "DELETE FROM weightEntry", 0, null)
+                        driver.execute(null, "DELETE FROM bloodPressureEntry", 0, null)
+                        driver.execute(null, "DELETE FROM mealEntry", 0, null)
+                        if (resetFoodDefinitions) {
+                            driver.execute(null, "DELETE FROM foodItem", 0, null)
+                            driver.execute(null, "DELETE FROM foodUnit", 0, null)
+                        }
+                        driver.execute(null, "DELETE FROM profileSetting", 0, null)
 
-                    val db = createDatabaseForDriver(driver)
-                    DefaultFoodData.ensureDefaultFoodData(db)
-                    driver.notifyListeners("weightEntry", "bloodPressureEntry", "foodUnit", "foodItem", "mealEntry", "profileSetting")
-                } finally {
-                    try { driver.close() } catch (_: Exception) {}
+                        val db = createDatabaseForDriver(driver)
+                        DefaultFoodData.ensureDefaultFoodData(db)
+                        driver.notifyListeners("weightEntry", "bloodPressureEntry", "foodUnit", "foodItem", "mealEntry", "profileSetting")
+                    } finally {
+                        try { driver.close() } catch (_: Exception) {}
+                    }
                 }
             }
 

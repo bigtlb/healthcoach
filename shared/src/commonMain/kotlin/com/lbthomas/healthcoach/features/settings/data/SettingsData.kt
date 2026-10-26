@@ -12,6 +12,11 @@ import com.lbthomas.healthcoach.core.theme.AppTheme
 import kotlinx.serialization.Serializable
 
 @Serializable
+data class AccessibilitySettings(
+    val uiScale: Float = 1.0f
+)
+
+@Serializable
 data class AppearanceSettings(
     val adaptiveDisplay: Boolean = true,
     val appTheme: AppTheme = AppTheme.DEFAULT,
@@ -93,6 +98,7 @@ data class WeightSettings(
 
 @Serializable
 data class SettingsData(
+    val accessibility: AccessibilitySettings = AccessibilitySettings(),
     val appearance: AppearanceSettings = AppearanceSettings(),
     val bloodPressure: BloodPressureSettings = BloodPressureSettings(),
     val foodJournal: FoodJournalSettings = FoodJournalSettings(),
