@@ -40,6 +40,18 @@
         </screenshot>
     </screenshots>
     <releases>
+        <release version="0.9.14" date="2026-10-26">
+            <description>
+                <ul>
+                    <li>feat(settings, ui): add accessibility controls for UI scaling and update dialog layouts</li>
+                    <li>chore(deps)(deps): bump gradle-wrapper from 9.5.1 to 9.8.1</li>
+                    <li>chore(ci)(deps): bump actions/upload-artifact from 4 to 7</li>
+                    <li>chore(deps)(deps): bump co.touchlab:kermit from 2.1.0 to 2.2.0</li>
+                    <li>chore(ci)(deps): bump softprops/action-gh-release from 2 to 3</li>
+                    <li>chore(deps)(deps): bump org.slf4j:slf4j-simple from 2.0.18 to 2.0.20</li>
+                </ul>
+            </description>
+        </release>
         <release version="0.9.13" date="2026-10-19">
             <description>
                 <ul>
@@ -67,16 +79,6 @@
                     <li>feat(docs, ci): add contribution guidelines, templates, and Dependabot config</li>
                     <li>Update issue templates</li>
                     <li>Add Contributor Covenant Code of Conduct</li>
-                </ul>
-            </description>
-        </release>
-        <release version="0.9.11" date="2026-10-15">
-            <description>
-                <ul>
-                    <li>feat(ui, tests): enhance food journal UI layout and add timeout handling in peer resolution tests (closes #21)</li>
-                    <li>feat(sync, packaging): add dynamic peer resolution and enhance Flatpak config (closes #22)</li>
-                    <li>feat(packaging, ci): enhance Flatpak manifest with architecture constraints, automate SHA256 updates during release</li>
-                    <li>fix(packaging): reorder Flatpak finish-args for consistency and readability, remove wayland</li>
                 </ul>
             </description>
         </release>

@@ -26,8 +26,8 @@ modules:
       - install -D -m 0644 com.lbthomas.healthcoach.metainfo.xml /app/share/metainfo/com.lbthomas.healthcoach.metainfo.xml
     sources:
       - type: archive
-        url: https://github.com/bigtlb/healthcoach/releases/download/v0.9.13/HealthCoach-0.9.13-linux-x64.tar.gz
-        sha256: 029d0d0e045931b99219c0661493449a8fc93eb539cf5a83c736245be742666a
+        url: https://github.com/bigtlb/healthcoach/releases/download/v0.9.14/HealthCoach-0.9.14-linux-x64.tar.gz
+        sha256: dfa7a7c6c786b0181416ee36651d2b9f1a7118f0bef967bbcb61a44879d5d684
         only-arches:
           - x86_64
 
