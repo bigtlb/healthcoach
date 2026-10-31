@@ -1,11 +1,16 @@
 package com.lbthomas.healthcoach
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.core.content.ContextCompat
 import com.lbthomas.healthcoach.core.di.appModule
 import com.lbthomas.healthcoach.core.di.configurePlatformContext
 import kotlinx.coroutines.launch
@@ -13,6 +18,16 @@ import org.koin.core.context.GlobalContext
 import org.koin.core.context.startKoin
 
 class MainActivity : ComponentActivity() {
+
+    private val requestLocalNetworkPermission = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        val settingsViewModel = runCatching { GlobalContext.get().get<com.lbthomas.healthcoach.features.settings.SettingsViewModel>() }.getOrNull()
+        if (granted) {
+            settingsViewModel?.initializeServerIfEnabled()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
@@ -24,8 +39,19 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        val settingsViewModel = runCatching { GlobalContext.get().get<com.lbthomas.healthcoach.features.settings.SettingsViewModel>() }.getOrNull()
-        settingsViewModel?.initializeServerIfEnabled()
+        // Request ACCESS_LOCAL_NETWORK permission on Android 17+ before starting P2P server
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_LOCAL_NETWORK)
+                == PackageManager.PERMISSION_GRANTED) {
+                val settingsViewModel = runCatching { GlobalContext.get().get<com.lbthomas.healthcoach.features.settings.SettingsViewModel>() }.getOrNull()
+                settingsViewModel?.initializeServerIfEnabled()
+            } else {
+                requestLocalNetworkPermission.launch(Manifest.permission.ACCESS_LOCAL_NETWORK)
+            }
+        } else {
+            val settingsViewModel = runCatching { GlobalContext.get().get<com.lbthomas.healthcoach.features.settings.SettingsViewModel>() }.getOrNull()
+            settingsViewModel?.initializeServerIfEnabled()
+        }
 
         setContent {
             App()
