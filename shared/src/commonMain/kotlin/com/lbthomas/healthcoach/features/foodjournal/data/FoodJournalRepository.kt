@@ -148,7 +148,7 @@ class FoodJournalRepository(private val database: Database) {
                 stat.foodId to FoodUsageStats(
                     foodId = stat.foodId,
                     usageCount = stat.usageCount,
-                    lastUsedAt = stat.lastUsedAt ?: 0L
+                    lastUsedAt = stat.lastUsedAt
                 )
             }
         }
@@ -211,7 +211,7 @@ class FoodJournalRepository(private val database: Database) {
         .mapToList(Dispatchers.IO)
         .map { rows ->
             rows.associate { row ->
-                LocalDate.parse(row.date) to (row.totalCalories ?: 0.0)
+                LocalDate.parse(row.date) to (row.totalCalories )
             }
         }
 
