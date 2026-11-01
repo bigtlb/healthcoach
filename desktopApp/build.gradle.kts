@@ -46,6 +46,7 @@ compose.desktop {
                 "jdk.accessibility",
                 "jdk.unsupported",
                 "java.desktop",
+                "java.net.http",
                 "java.sql",
                 "java.management",
                 "java.naming",
