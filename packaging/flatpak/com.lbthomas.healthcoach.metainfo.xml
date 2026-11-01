@@ -40,6 +40,13 @@
         </screenshot>
     </screenshots>
     <releases>
+        <release version="0.9.17" date="2026-11-01">
+            <description>
+                <ul>
+                    <li>feat(sync, mdns): add mDNS heartbeat for service re-registration and IP change detection</li>
+                </ul>
+            </description>
+        </release>
         <release version="0.9.16" date="2026-11-01">
             <description>
                 <ul>
@@ -55,18 +62,6 @@
                     <li>chore(deps)(deps): bump com.google.android.gms:play-services-auth</li>
                     <li>chore(deps)(deps): bump the android-and-androidx group across 1 directory with 4 updates (#43)</li>
                     <li>chore(deps)(deps): bump org.jetbrains.kotlinx:kotlinx-serialization-json from 1.11.0 to 1.12.0 in the kotlin-ecosystem group across 1 directory (#42)</li>
-                </ul>
-            </description>
-        </release>
-        <release version="0.9.14" date="2026-10-26">
-            <description>
-                <ul>
-                    <li>feat(settings, ui): add accessibility controls for UI scaling and update dialog layouts</li>
-                    <li>chore(deps)(deps): bump gradle-wrapper from 9.5.1 to 9.8.1</li>
-                    <li>chore(ci)(deps): bump actions/upload-artifact from 4 to 7</li>
-                    <li>chore(deps)(deps): bump co.touchlab:kermit from 2.1.0 to 2.2.0</li>
-                    <li>chore(ci)(deps): bump softprops/action-gh-release from 2 to 3</li>
-                    <li>chore(deps)(deps): bump org.slf4j:slf4j-simple from 2.0.18 to 2.0.20</li>
                 </ul>
             </description>
         </release>
