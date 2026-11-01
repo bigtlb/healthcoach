@@ -40,6 +40,13 @@
         </screenshot>
     </screenshots>
     <releases>
+        <release version="0.9.16" date="2026-11-01">
+            <description>
+                <ul>
+                    <li>chore(desktop, build): include java.net.http module</li>
+                </ul>
+            </description>
+        </release>
         <release version="0.9.15" date="2026-11-01">
             <description>
                 <ul>
@@ -60,14 +67,6 @@
                     <li>chore(deps)(deps): bump co.touchlab:kermit from 2.1.0 to 2.2.0</li>
                     <li>chore(ci)(deps): bump softprops/action-gh-release from 2 to 3</li>
                     <li>chore(deps)(deps): bump org.slf4j:slf4j-simple from 2.0.18 to 2.0.20</li>
-                </ul>
-            </description>
-        </release>
-        <release version="0.9.13" date="2026-10-19">
-            <description>
-                <ul>
-                    <li>chore(proguard): add rules for kotlinx-coroutines</li>
-                    <li>chore(deps): align kotlinx-coroutines and add kotlin-reflect dependencies</li>
                 </ul>
             </description>
         </release>
