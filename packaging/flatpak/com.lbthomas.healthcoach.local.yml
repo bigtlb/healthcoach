@@ -10,6 +10,7 @@ finish-args:
   - --device=dri
 
   - --share=network
+  - --system-talk-name=org.freedesktop.Avahi
 
   - --filesystem=xdg-documents
   - --filesystem=xdg-download

@@ -85,13 +85,18 @@ actual open class PeerDiscoveryAdvertiser {
     }
 
     /**
-     * Background heartbeat that periodically checks the mDNS service health.
+     * Background heartbeat that periodically refreshes the mDNS service registration.
      *
      * In sandboxed environments (Flatpak, containers), the multicast UDP socket may become
      * stale after hours of operation — the socket remains open but multicast group membership
-     * is silently dropped by the network stack or sandbox. The heartbeat detects this by
-     * querying the service registration status, and only re-registers when the service is
-     * no longer found, avoiding unnecessary multicast traffic during normal operation.
+     * is silently dropped by the network stack or sandbox. The heartbeat keeps the socket
+     * alive by re-registering the service periodically, ensuring multicast announcements
+     * continue to reach the network.
+     *
+     * Note: we cannot rely on [JmDNS.getServiceInfo] to detect stale sockets, because it
+     * checks the local JmDNS registry cache, which always returns the service info for
+     * locally-registered services even when the underlying multicast socket is stale.
+     * The only reliable fix is to re-register unconditionally at regular intervals.
      *
      * Additionally, the heartbeat detects DHCP IP address changes and restarts advertising
      * on the new address, so the service remains discoverable after lease renewals.
@@ -119,16 +124,16 @@ actual open class PeerDiscoveryAdvertiser {
                         continue
                     }
 
-                    // Check-then-fix: verify the service is still registered before re-registering
+                    // Unconditionally re-register the service to keep the multicast socket alive.
+                    // In sandboxed environments (Flatpak), multicast group membership may be
+                    // silently dropped after extended idle periods. Re-registering sends new
+                    // multicast DNS-SD announcements that refresh the socket and group membership.
+                    // We cannot use getServiceInfo() to check first, because it queries the local
+                    // JmDNS registry cache, which always returns the service for locally-registered
+                    // services even when the multicast socket is stale.
                     val serviceName = "${PeerDiscoveryConstants.SERVICE_NAME_PREFIX} - ${advertisingInstanceId.take(8)}"
-                    val existingService = dns.getServiceInfo(PeerDiscoveryConstants.SERVICE_TYPE_JMDNS, serviceName)
-
-                    if (existingService == null) {
-                        // Service is no longer registered — re-register it
-                        LoggingConfig.discoveryLogger.d("mDNS heartbeat: service not found, re-registering for '$serviceName' on ${currentAddress.hostAddress}")
-                        reRegisterService(dns)
-                    }
-                    // Service is still registered — no action needed, socket is healthy
+                    LoggingConfig.discoveryLogger.d("mDNS heartbeat: refreshing service registration for '$serviceName' on ${currentAddress.hostAddress}")
+                    reRegisterService(dns)
                 } catch (e: InterruptedException) {
                     // Thread is being interrupted (likely stopAdvertising)
                     break
