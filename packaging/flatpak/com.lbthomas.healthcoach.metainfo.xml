@@ -40,6 +40,17 @@
         </screenshot>
     </screenshots>
     <releases>
+        <release version="0.9.15" date="2026-11-01">
+            <description>
+                <ul>
+                    <li>feat(android, permissions): add runtime check and manifest declarations for local network access</li>
+                    <li>chore(deps)(deps): bump com.google.android.gms:play-services-auth (#44)</li>
+                    <li>chore(deps)(deps): bump com.google.android.gms:play-services-auth</li>
+                    <li>chore(deps)(deps): bump the android-and-androidx group across 1 directory with 4 updates (#43)</li>
+                    <li>chore(deps)(deps): bump org.jetbrains.kotlinx:kotlinx-serialization-json from 1.11.0 to 1.12.0 in the kotlin-ecosystem group across 1 directory (#42)</li>
+                </ul>
+            </description>
+        </release>
         <release version="0.9.14" date="2026-10-26">
             <description>
                 <ul>
@@ -57,28 +68,6 @@
                 <ul>
                     <li>chore(proguard): add rules for kotlinx-coroutines</li>
                     <li>chore(deps): align kotlinx-coroutines and add kotlin-reflect dependencies</li>
-                </ul>
-            </description>
-        </release>
-        <release version="0.9.12" date="2026-10-18">
-            <description>
-                <ul>
-                    <li>feat(settings): add reset option for preserving or purging custom food definitions (closes #24)</li>
-                    <li>feat(settings): add reset option for preserving or purging custom food definitions (closes #24)</li>
-                    <li>chore(build): add opt-in flag for ExperimentalMaterial3Api in compiler options</li>
-                    <li>chore(deps)(deps): bump org.jmdns:jmdns from 3.5.9 to 3.6.4</li>
-                    <li>chore(deps)(deps): bump sqlDelightVersion from 2.3.2 to 2.4.1</li>
-                    <li>chore(ci)(deps): bump actions/download-artifact from 4 to 8</li>
-                    <li>chore(ci)(deps): bump actions/setup-java from 4 to 6</li>
-                    <li>chore(deps)(deps): bump the compose-multiplatform group with 8 updates</li>
-                    <li>chore(deps): update compose-multiplatform and align material3</li>
-                    <li>chore(deps)(deps): bump the ktor-and-networking group with 9 updates</li>
-                    <li>chore(deps)(deps): bump the kotlin-ecosystem group with 6 updates</li>
-                    <li>chore(ci)(deps): bump actions/checkout from 4 to 7</li>
-                    <li>chore(ci)(deps): bump gradle/actions from 4 to 6</li>
-                    <li>feat(docs, ci): add contribution guidelines, templates, and Dependabot config</li>
-                    <li>Update issue templates</li>
-                    <li>Add Contributor Covenant Code of Conduct</li>
                 </ul>
             </description>
         </release>
