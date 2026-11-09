@@ -72,7 +72,9 @@
 # ============================================================================
 # Ktor Network, Server & Client
 # ============================================================================
--keep class io.ktor.** { *; }
+# Do NOT keep all io.ktor.** classes — R8 can safely obfuscate most of them.
+# Ktor uses reflection for server routing, but R8 default rules handle the
+# essential classes.  Only suppress warnings for optional dependencies.
 -dontwarn io.ktor.**
 -dontwarn kotlinx.atomicfu.**
 -dontwarn com.typesafe.config.**
@@ -93,7 +95,10 @@
 # ============================================================================
 # AndroidX and Android framework
 # ============================================================================
--keep class androidx.** { *; }
+# R8 default rules handle AndroidX correctly.  The Compose-specific keep
+# rules above cover the only AndroidX classes that need explicit protection.
+# Do NOT add `-keep class androidx.** { *; }` — it prevents ~30,000+ classes
+# from being obfuscated and keeps the obfuscation score well below 25%.
 -dontwarn androidx.**
 
 # ============================================================================
