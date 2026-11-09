@@ -1,21 +1,105 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# ============================================================================
+# HealthCoach Android ProGuard Rules
+# ============================================================================
+# Keeps all application code and dependencies that must not be obfuscated.
+# Adapted from desktopApp/proguard-rules.pro with Android Compose additions.
+# ============================================================================
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Keep attributes needed for reflection and serialization
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod,SourceFile,LineNumberTable
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# ============================================================================
+# Compose Multiplatform UI
+# ============================================================================
+# Keep all Compose runtime classes and annotations
+-keep class androidx.compose.runtime.** { *; }
+-keep class androidx.compose.ui.** { *; }
+-keep class androidx.compose.foundation.** { *; }
+-keep class androidx.compose.material3.** { *; }
+-keep class androidx.compose.animation.** { *; }
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Keep @Composable functions and their metadata
+-keepclassmembers class ** {
+    @androidx.compose.runtime.Composable <methods>;
+}
+-keepclassmembers class ** {
+    @androidx.compose.runtime.Stable <methods>;
+}
+-keepclassmembers class ** {
+    @androidx.compose.runtime.Immutable <methods>;
+}
+
+# Keep Compose preview classes
+-keepclassmembers class ** {
+    @androidx.compose.ui.tooling.preview.Preview <methods>;
+}
+
+# ============================================================================
+# Coroutines
+# ============================================================================
+-keep class kotlinx.coroutines.** { *; }
+-dontwarn kotlinx.coroutines.**
+
+# ============================================================================
+# SQLDelight
+# ============================================================================
+-keep class app.cash.sqldelight.** { *; }
+-dontwarn app.cash.sqldelight.**
+
+# ============================================================================
+# Kermit Logging
+# ============================================================================
+-keep class co.touchlab.kermit.** { *; }
+-dontwarn co.touchlab.kermit.**
+
+# ============================================================================
+# Koin DI
+# ============================================================================
+-keep class io.insert.koin.** { *; }
+-dontwarn io.insert.koin.**
+
+# ============================================================================
+# Application code - all HealthCoach classes must be preserved
+# ============================================================================
+-keep class com.lbthomas.healthcoach.** { *; }
+
+# ============================================================================
+# Vico Charts
+# ============================================================================
+-keep class com.patrykandpatrick.vico.** { *; }
+-dontwarn com.patrykandpatrick.vico.**
+
+# ============================================================================
+# Ktor Network, Server & Client
+# ============================================================================
+-keep class io.ktor.** { *; }
+-dontwarn io.ktor.**
+-dontwarn kotlinx.atomicfu.**
+-dontwarn com.typesafe.config.**
+-dontwarn org.fusesource.jansi.**
+
+# ============================================================================
+# JmDNS / Zeroconf
+# ============================================================================
+-keep class javax.jmdns.** { *; }
+-dontwarn javax.jmdns.**
+
+# ============================================================================
+# kotlinx.serialization
+# ============================================================================
+-keep class kotlinx.serialization.** { *; }
+-dontwarn kotlinx.serialization.**
+
+# ============================================================================
+# AndroidX and Android framework
+# ============================================================================
+-keep class androidx.** { *; }
+-dontwarn androidx.**
+
+# ============================================================================
+# OkHttp (used by Ktor on Android)
+# ============================================================================
+-keep class okhttp3.** { *; }
+-dontwarn okhttp3.**
+-keep class okio.** { *; }
+-dontwarn okio.**
