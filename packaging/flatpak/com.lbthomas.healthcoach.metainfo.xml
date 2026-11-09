@@ -40,6 +40,14 @@
         </screenshot>
     </screenshots>
     <releases>
+        <release version="0.9.18" date="2026-11-09">
+            <description>
+                <ul>
+                    <li>build(android): enable minification and add ProGuard rules</li>
+                    <li>fix(sync, flatpak): unconditionally refresh mDNS registration and grant Avahi D-Bus access</li>
+                </ul>
+            </description>
+        </release>
         <release version="0.9.17" date="2026-11-01">
             <description>
                 <ul>
@@ -51,17 +59,6 @@
             <description>
                 <ul>
                     <li>chore(desktop, build): include java.net.http module</li>
-                </ul>
-            </description>
-        </release>
-        <release version="0.9.15" date="2026-11-01">
-            <description>
-                <ul>
-                    <li>feat(android, permissions): add runtime check and manifest declarations for local network access</li>
-                    <li>chore(deps)(deps): bump com.google.android.gms:play-services-auth (#44)</li>
-                    <li>chore(deps)(deps): bump com.google.android.gms:play-services-auth</li>
-                    <li>chore(deps)(deps): bump the android-and-androidx group across 1 directory with 4 updates (#43)</li>
-                    <li>chore(deps)(deps): bump org.jetbrains.kotlinx:kotlinx-serialization-json from 1.11.0 to 1.12.0 in the kotlin-ecosystem group across 1 directory (#42)</li>
                 </ul>
             </description>
         </release>
