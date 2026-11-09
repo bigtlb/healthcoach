@@ -17,6 +17,14 @@ finish-args:
   - --filesystem=xdg-download
 
 modules:
+  - name: avahi-publish
+    buildsystem: simple
+    build-commands:
+      - install -D avahi-publish /app/bin/avahi-publish
+    sources:
+      - type: file
+        path: /usr/bin/avahi-publish
+
   - name: healthcoach
     buildsystem: simple
     build-commands:

@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withTimeoutOrNull
+import java.io.File
 import java.net.InetAddress
 import java.net.NetworkInterface
 import javax.jmdns.JmDNS
@@ -22,12 +23,42 @@ actual open class PeerDiscoveryAdvertiser {
         // This counters sandbox environments (Flatpak, containers) where multicast group
         // membership may be silently dropped after extended idle periods.
         private const val HEARTBEAT_INTERVAL_MS = 5 * 60 * 1000L
+
+        /**
+         * Detects if we're running on a Linux environment where avahi-publish is available.
+         * On Linux, we prefer avahi-publish because it registers services via D-Bus through
+         * the Avahi daemon, bypassing multicast socket issues caused by systemd-resolved
+         * conflicts or Flatpak sandbox restrictions.
+         */
+        private fun isLinuxWithAvahiPublish(): Boolean {
+            val osName = System.getProperty("os.name", "").lowercase()
+            if (!osName.contains("linux")) {
+                LoggingConfig.discoveryLogger.d("mDNS advertising: not Linux (os.name=$osName), skipping avahi-publish detection")
+                return false
+            }
+
+            // Check common locations for avahi-publish binary:
+            // - /usr/bin/avahi-publish (standard Linux install)
+            // - /bin/avahi-publish (some distributions)
+            // - /app/bin/avahi-publish (Flatpak sandbox, bundled from SDK)
+            val paths = listOf("/usr/bin/avahi-publish", "/bin/avahi-publish", "/app/bin/avahi-publish")
+            for (path in paths) {
+                if (File(path).exists()) {
+                    LoggingConfig.discoveryLogger.d("mDNS advertising: avahi-publish found at $path, will use D-Bus registration")
+                    return true
+                }
+            }
+            LoggingConfig.discoveryLogger.d("mDNS advertising: avahi-publish not found, falling back to JmDNS")
+            return false
+        }
+
     }
 
     private var jmdns: JmDNS? = null
     private var registeredService: ServiceInfo? = null
     private var _isAdvertising = false
     private var heartbeatThread: Thread? = null
+    private var avahiPublishProcess: Process? = null
 
     // Stored advertising parameters for heartbeat re-registration
     private var advertisingInstanceId: String = ""
@@ -41,44 +72,130 @@ actual open class PeerDiscoveryAdvertiser {
     actual open fun startAdvertising(instanceId: String, deviceName: String, port: Int): Result<Unit> {
         return try {
             stopAdvertising()
-            val hostAddress = getLocalNonLoopbackAddress() ?: InetAddress.getLocalHost()
-            val dns = JmDNS.create(hostAddress, "HealthCoach-${instanceId.take(8)}")
-            jmdns = dns
 
             // Store parameters for heartbeat re-registration
             advertisingInstanceId = instanceId
             advertisingDeviceName = deviceName
             advertisingPort = port
-            advertisingHostAddress = hostAddress
-
-            val properties = mapOf(
-                "instanceId" to instanceId,
-                "deviceName" to deviceName,
-                "interfaceVersion" to PeerDiscoveryConstants.INTERFACE_VERSION,
-                "port" to port.toString()
-            )
 
             val serviceName = "${PeerDiscoveryConstants.SERVICE_NAME_PREFIX} - ${instanceId.take(8)}"
-            val serviceInfo = ServiceInfo.create(
-                PeerDiscoveryConstants.SERVICE_TYPE_JMDNS,
-                serviceName,
-                port,
-                0,
-                0,
-                properties
+
+            // On Linux with avahi-publish, use D-Bus registration instead of raw multicast.
+            // This bypasses systemd-resolved conflicts and Flatpak sandbox multicast restrictions.
+            if (isLinuxWithAvahiPublish()) {
+                val hostAddress = getLocalNonLoopbackAddress() ?: InetAddress.getLocalHost()
+                advertisingHostAddress = hostAddress
+                return startAvahiPublishAdvertising(serviceName, instanceId, deviceName, port, hostAddress)
+            } else {
+                // Non-Linux: use JmDNS with raw multicast
+                val hostAddress = getLocalNonLoopbackAddress() ?: InetAddress.getLocalHost()
+                advertisingHostAddress = hostAddress
+                val dns = JmDNS.create(hostAddress, "HealthCoach-${instanceId.take(8)}")
+                jmdns = dns
+
+                val properties = mapOf(
+                    "instanceId" to instanceId,
+                    "deviceName" to deviceName,
+                    "interfaceVersion" to PeerDiscoveryConstants.INTERFACE_VERSION,
+                    "port" to port.toString()
+                )
+
+                val serviceInfo = ServiceInfo.create(
+                    PeerDiscoveryConstants.SERVICE_TYPE_JMDNS,
+                    serviceName,
+                    port,
+                    0,
+                    0,
+                    properties
+                )
+
+                dns.registerService(serviceInfo)
+                registeredService = serviceInfo
+                _isAdvertising = true
+                LoggingConfig.discoveryLogger.i("mDNS advertising registered for '$serviceName' on $hostAddress:$port")
+
+                // Start heartbeat thread to keep the multicast socket alive
+                startHeartbeat(dns)
+
+                Result.success(Unit)
+            }
+        } catch (e: Throwable) {
+            LoggingConfig.discoveryLogger.e("Failed to start mDNS advertising: ${e.message}", e)
+            _isAdvertising = false
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Starts mDNS advertising using avahi-publish via D-Bus on Linux.
+     *
+     * This approach registers the service through the Avahi daemon, which handles all
+     * multicast traffic. It bypasses the common issues with raw multicast UDP:
+     * - systemd-resolved conflicts on port 5353
+     * - Flatpak sandbox silently dropping multicast packets
+     * - Network interface changes and stale socket membership
+     *
+     * The avahi-publish process runs in the background until stopped.
+     */
+    private fun startAvahiPublishAdvertising(
+        serviceName: String,
+        instanceId: String,
+        deviceName: String,
+        port: Int,
+        hostAddress: InetAddress
+    ): Result<Unit> {
+        return try {
+            // avahi-publish -s <name> <type> <port> [<txt ...>]
+            // The service type should not include ".local." suffix for avahi-publish
+            val serviceType = PeerDiscoveryConstants.SERVICE_TYPE_JMDNS.removeSuffix(".local.")
+
+            val txtProps = listOf(
+                "instanceId=$instanceId",
+                "deviceName=$deviceName",
+                "interfaceVersion=${PeerDiscoveryConstants.INTERFACE_VERSION}",
+                "port=$port"
             )
 
-            dns.registerService(serviceInfo)
-            registeredService = serviceInfo
-            _isAdvertising = true
-            LoggingConfig.discoveryLogger.i("mDNS advertising registered for '$serviceName' on $hostAddress:$port")
+            val command = listOf(
+                "avahi-publish",
+                "-s",
+                serviceName,
+                serviceType,
+                port.toString(),
+            ) + txtProps
 
-            // Start heartbeat thread to keep the multicast socket alive
-            startHeartbeat(dns)
+            val process = ProcessBuilder(command).redirectOutput(ProcessBuilder.Redirect.PIPE).redirectError(ProcessBuilder.Redirect.PIPE).start()
+            avahiPublishProcess = process
+            _isAdvertising = true
+            LoggingConfig.discoveryLogger.i("mDNS advertising registered via avahi-publish (D-Bus) for '$serviceName' on $hostAddress:$port")
+
+            // Monitor the process in a background thread
+            Thread {
+                try {
+                    val exitCode = process.waitFor()
+                    if (_isAdvertising) {
+                        LoggingConfig.discoveryLogger.w("avahi-publish process exited with code $exitCode, restarting after 1s delay")
+                        Thread.sleep(1000)
+                        if (_isAdvertising) {
+                            val result = startAvahiPublishAdvertising(serviceName, instanceId, deviceName, port, hostAddress)
+                            if (result.isFailure) {
+                                LoggingConfig.discoveryLogger.e("Failed to restart avahi-publish: ${result.exceptionOrNull()?.message}")
+                                _isAdvertising = false
+                            }
+                        }
+                    }
+                } catch (e: InterruptedException) {
+                    // Expected when we stop advertising
+                }
+            }.apply {
+                isDaemon = true
+                name = "HealthCoach-avahi-publish-monitor"
+                start()
+            }
 
             Result.success(Unit)
         } catch (e: Throwable) {
-            LoggingConfig.discoveryLogger.e("Failed to start mDNS advertising: ${e.message}", e)
+            LoggingConfig.discoveryLogger.e("Failed to start avahi-publish advertising: ${e.message}", e)
             _isAdvertising = false
             Result.failure(e)
         }
@@ -199,6 +316,12 @@ actual open class PeerDiscoveryAdvertiser {
     actual open fun stopAdvertising(): Result<Unit> {
         return try {
             _isAdvertising = false
+
+            // Stop avahi-publish process if running
+            avahiPublishProcess?.destroy()
+            avahiPublishProcess = null
+
+            // Stop JmDNS if running
             heartbeatThread?.interrupt()
             heartbeatThread = null
             registeredService?.let {
@@ -207,6 +330,7 @@ actual open class PeerDiscoveryAdvertiser {
             }
             jmdns?.close()
             jmdns = null
+
             advertisingInstanceId = ""
             advertisingDeviceName = ""
             advertisingPort = 0
