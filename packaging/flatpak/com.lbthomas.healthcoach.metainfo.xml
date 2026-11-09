@@ -43,6 +43,7 @@
         <release version="0.9.18" date="2026-11-09">
             <description>
                 <ul>
+                    <li>build(android): tighten ProGuard rules to reach 25% obfuscation threshold</li>
                     <li>build(android): enable minification and add ProGuard rules</li>
                     <li>fix(sync, flatpak): unconditionally refresh mDNS registration and grant Avahi D-Bus access</li>
                 </ul>

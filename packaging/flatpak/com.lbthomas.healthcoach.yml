@@ -28,7 +28,7 @@ modules:
     sources:
       - type: archive
         url: https://github.com/bigtlb/healthcoach/releases/download/v0.9.18/HealthCoach-0.9.18-linux-x64.tar.gz
-        sha256: 034576cb52a757b0bf180e7ec1dcd8e407b9616bc5c73d13001f5a79f3b91040
+        sha256: 0569711f3c6bccb33ab580c4c2c7c1ee81f5ba61c46b8c0aeb1aa89676768ab5
         only-arches:
           - x86_64
 
