@@ -9,7 +9,6 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withTimeoutOrNull
-import java.io.File
 import java.net.InetAddress
 import java.net.NetworkInterface
 import javax.jmdns.JmDNS
@@ -38,12 +37,11 @@ actual open class PeerDiscoveryAdvertiser {
             }
 
             // Check common locations for avahi-publish binary:
-            // - /usr/bin/avahi-publish (standard Linux install)
+            // - /usr/bin/avahi-publish (standard Linux install, DEB/RPM packages)
             // - /bin/avahi-publish (some distributions)
-            // - /app/bin/avahi-publish (Flatpak sandbox, bundled from SDK)
-            val paths = listOf("/usr/bin/avahi-publish", "/bin/avahi-publish", "/app/bin/avahi-publish")
+            val paths = listOf("/usr/bin/avahi-publish", "/bin/avahi-publish")
             for (path in paths) {
-                if (File(path).exists()) {
+                if (java.io.File(path).exists()) {
                     LoggingConfig.discoveryLogger.d("mDNS advertising: avahi-publish found at $path, will use D-Bus registration")
                     return true
                 }
@@ -79,17 +77,15 @@ actual open class PeerDiscoveryAdvertiser {
             advertisingPort = port
 
             val serviceName = "${PeerDiscoveryConstants.SERVICE_NAME_PREFIX} - ${instanceId.take(8)}"
+            val hostAddress = getLocalNonLoopbackAddress() ?: InetAddress.getLocalHost()
+            advertisingHostAddress = hostAddress
 
             // On Linux with avahi-publish, use D-Bus registration instead of raw multicast.
             // This bypasses systemd-resolved conflicts and Flatpak sandbox multicast restrictions.
             if (isLinuxWithAvahiPublish()) {
-                val hostAddress = getLocalNonLoopbackAddress() ?: InetAddress.getLocalHost()
-                advertisingHostAddress = hostAddress
                 return startAvahiPublishAdvertising(serviceName, instanceId, deviceName, port, hostAddress)
             } else {
-                // Non-Linux: use JmDNS with raw multicast
-                val hostAddress = getLocalNonLoopbackAddress() ?: InetAddress.getLocalHost()
-                advertisingHostAddress = hostAddress
+                // Non-Linux or no Avahi: use JmDNS with raw multicast
                 val dns = JmDNS.create(hostAddress, "HealthCoach-${instanceId.take(8)}")
                 jmdns = dns
 
@@ -164,7 +160,10 @@ actual open class PeerDiscoveryAdvertiser {
                 port.toString(),
             ) + txtProps
 
-            val process = ProcessBuilder(command).redirectOutput(ProcessBuilder.Redirect.PIPE).redirectError(ProcessBuilder.Redirect.PIPE).start()
+            val process = ProcessBuilder(command)
+                .redirectOutput(ProcessBuilder.Redirect.PIPE)
+                .redirectError(ProcessBuilder.Redirect.PIPE)
+                .start()
             avahiPublishProcess = process
             _isAdvertising = true
             LoggingConfig.discoveryLogger.i("mDNS advertising registered via avahi-publish (D-Bus) for '$serviceName' on $hostAddress:$port")
