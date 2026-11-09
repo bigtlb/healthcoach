@@ -40,6 +40,16 @@
         </screenshot>
     </screenshots>
     <releases>
+        <release version="0.9.20" date="2026-11-09">
+            <description>
+                <ul>
+                    <li>fix(sync, packaging): remove bundled avahi-publish from Flatpak and clean up peer discovery</li>
+                    <li>chore(deps)(deps): bump the android-and-androidx group with 2 updates (#54)</li>
+                    <li>chore(deps)(deps): bump gradle-wrapper from 9.6.0 to 9.8.2 (#51)</li>
+                    <li>chore(deps)(deps): bump the ktor-and-networking group across 1 directory with 9 updates (#50)</li>
+                </ul>
+            </description>
+        </release>
         <release version="0.9.18" date="2026-11-09">
             <description>
                 <ul>
@@ -53,13 +63,6 @@
             <description>
                 <ul>
                     <li>feat(sync, mdns): add mDNS heartbeat for service re-registration and IP change detection</li>
-                </ul>
-            </description>
-        </release>
-        <release version="0.9.16" date="2026-11-01">
-            <description>
-                <ul>
-                    <li>chore(desktop, build): include java.net.http module</li>
                 </ul>
             </description>
         </release>
