@@ -4,6 +4,7 @@ import co.touchlab.kermit.Logger
 import com.lbthomas.healthcoach.core.sync.SyncEngine
 import com.lbthomas.healthcoach.core.sync.SyncProviderType
 import com.lbthomas.healthcoach.core.sync.SyncResult
+import com.lbthomas.healthcoach.core.sync.auth.GoogleOAuthManager
 import com.lbthomas.healthcoach.features.settings.data.SettingsData
 import com.lbthomas.healthcoach.features.settings.data.SettingsStore
 import kotlinx.coroutines.*
@@ -92,11 +93,11 @@ class SyncViewModel {
         val engine = syncEngine ?: return
         if (_syncState.value is SyncState.Syncing) return
 
-        val config = settings.value.toSyncConfig()
-        if (!settings.value.sync.syncEnabled) return
+        val currentSettings = settings.value
+        if (!currentSettings.sync.syncEnabled) return
 
-        val isServerHost = settings.value.sync.syncProvider == SyncProviderType.PEER_TO_PEER &&
-            settings.value.peerSync.isServerMode
+        val isServerHost = currentSettings.sync.syncProvider == SyncProviderType.PEER_TO_PEER &&
+            currentSettings.peerSync.isServerMode
         if (isServerHost) return
 
         syncJob = scope.launch {
@@ -104,6 +105,39 @@ class SyncViewModel {
             if (showNotifications) {
                 SyncNotificationManager.postNotification("Syncing health records...", isError = false)
             }
+
+            // Pre-refresh Google Drive access token on Android before sync.
+            // Android OAuth tokens are short-lived (~1 hour) with no server-side refresh token.
+            // This silent refresh obtains a fresh token via Google Identity Services.
+            val effectiveSettings = if (currentSettings.sync.syncProvider == SyncProviderType.GOOGLE_DRIVE &&
+                currentSettings.sync.googleAccessToken.isNotBlank()) {
+                try {
+                    val refreshResult = GoogleOAuthManager.trySilentTokenRefresh(
+                        GoogleOAuthManager.getResolvedClientId()
+                    )
+                    if (refreshResult.isSuccess) {
+                        val session = refreshResult.getOrThrow()
+                        Logger.i("SyncViewModel: Pre-sync Google token refreshed successfully")
+                        val updated = currentSettings.copy(
+                            sync = currentSettings.sync.copy(
+                                googleAccessToken = session.accessToken
+                            )
+                        )
+                        settingsStore?.updateSettings { updated }
+                        updated
+                    } else {
+                        Logger.w("SyncViewModel: Pre-sync Google token refresh failed: ${refreshResult.exceptionOrNull()?.message}")
+                        currentSettings
+                    }
+                } catch (e: Exception) {
+                    Logger.w("SyncViewModel: Pre-sync Google token refresh exception: ${e.message}")
+                    currentSettings
+                }
+            } else {
+                currentSettings
+            }
+
+            val config = effectiveSettings.toSyncConfig()
 
             when (val result = engine.sync(config)) {
                 is SyncResult.Success -> {

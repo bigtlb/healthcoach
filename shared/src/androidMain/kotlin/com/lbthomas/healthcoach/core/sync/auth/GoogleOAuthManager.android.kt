@@ -187,6 +187,11 @@ actual object GoogleOAuthManager {
         clientId: String,
         refreshToken: String
     ): Result<GoogleAuthSession> = withContext(Dispatchers.IO) {
+        // On Android, refresh token is not used; delegate to silent refresh via Identity Services
+        trySilentTokenRefresh(clientId)
+    }
+
+    actual suspend fun trySilentTokenRefresh(clientId: String): Result<GoogleAuthSession> = withContext(Dispatchers.IO) {
         val context = appContext
             ?: return@withContext Result.failure(IllegalStateException("Android Application Context not initialized"))
 
@@ -196,11 +201,12 @@ actual object GoogleOAuthManager {
                 .build()
 
             val authorizationClient = Identity.getAuthorizationClient(context)
-            val authResult = Tasks.await(authorizationClient.authorize(authRequest), 5, TimeUnit.SECONDS)
+            // Use 15-second timeout for silent refresh to allow for Google Play Services cold start
+            val authResult = Tasks.await(authorizationClient.authorize(authRequest), 15, TimeUnit.SECONDS)
 
             if (!authResult.hasResolution() && !authResult.accessToken.isNullOrBlank()) {
                 val token = authResult.accessToken!!
-                Logger.i("GoogleOAuthManager: Successfully refreshed Google OAuth token via Identity Services")
+                Logger.i("GoogleOAuthManager: Successfully refreshed Google OAuth token via Identity Services (silent)")
                 val validation = validateToken(token, "", "")
                 val email = validation.getOrNull()?.email ?: ""
                 val expiresIn = validation.getOrNull()?.expiresInSeconds ?: 3600L
@@ -213,10 +219,10 @@ actual object GoogleOAuthManager {
                     )
                 )
             } else {
-                Result.failure(IllegalStateException("Token refresh requires user interaction"))
+                Result.failure(IllegalStateException("Silent token refresh requires user interaction"))
             }
         } catch (e: Exception) {
-            Logger.e("GoogleOAuthManager: Failed to refresh token via Identity Services: ${e.message}", e)
+            Logger.e("GoogleOAuthManager: Failed to refresh token silently via Identity Services: ${e.message}", e)
             Result.failure(e)
         }
     }

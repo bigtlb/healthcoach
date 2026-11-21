@@ -110,10 +110,14 @@ data class SettingsData(
     val graphTimeFrame: GraphTimeFrame get() = ui.selectedGraphTimeFrame
 
     fun toSyncConfig(): SyncConfig {
+        val localPath = when (sync.syncProvider) {
+            SyncProviderType.LOCAL_FOLDER -> sync.localSyncPath
+            else -> ""
+        }
         return SyncConfig(
             providerType = sync.syncProvider,
             remoteFileName = sync.remoteFileName.ifBlank { SyncConfig.DEFAULT_REMOTE_DB_NAME },
-            localFolderPath = sync.localSyncPath,
+            localFolderPath = localPath,
             googleAccountEmail = sync.googleAccountEmail,
             googleAccessToken = sync.googleAccessToken,
             googleRefreshToken = sync.googleRefreshToken,

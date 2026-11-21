@@ -565,6 +565,12 @@ actual object GoogleOAuthManager {
         }
     }
 
+    actual suspend fun trySilentTokenRefresh(clientId: String): Result<GoogleAuthSession> = withContext(Dispatchers.IO) {
+        // Desktop/JVM has no silent refresh mechanism — only server-side refresh tokens work
+        Logger.d("GoogleOAuthManager: Silent token refresh not available on Desktop/JVM")
+        Result.failure(UnsupportedOperationException("Silent token refresh is not supported on Desktop/JVM"))
+    }
+
     actual suspend fun revokeToken(token: String): Result<Unit> = withContext(Dispatchers.IO) {
         if (token.isBlank()) {
             Logger.d("Google OAuth: Revoke called with blank token")

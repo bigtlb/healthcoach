@@ -34,4 +34,12 @@ expect object GoogleOAuthManager {
         refreshToken: String
     ): Result<GoogleAuthSession>
     suspend fun revokeToken(token: String): Result<Unit>
+
+    /**
+     * Attempts a silent token refresh without requiring user interaction.
+     * On Android, this uses Google Identity Services to obtain a fresh access token.
+     * On JVM/Desktop, this returns failure (no silent refresh available).
+     * Returns success with a new [GoogleAuthSession] if the silent refresh succeeds.
+     */
+    suspend fun trySilentTokenRefresh(clientId: String): Result<GoogleAuthSession>
 }
