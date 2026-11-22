@@ -178,6 +178,7 @@ fun previewAppModuleWith(settings: SettingsData = SettingsData()) = module {
             )
         )
     }
+
 }
 
 val previewAppModule = previewAppModuleWith()

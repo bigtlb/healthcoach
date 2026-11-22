@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -29,6 +30,7 @@ fun AppTopBar(
     onSelection: (SelectedPage) -> Unit,
     onShowProfile: () -> Unit = {},
     onShowSettings: () -> Unit,
+    onShowShare: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     TopAppBar(
@@ -70,13 +72,15 @@ fun AppTopBar(
                     isWideLayout = true,
                     syncViewModel = syncViewModel,
                     onShowProfile = onShowProfile,
-                    onShowSettings = onShowSettings
+                    onShowSettings = onShowSettings,
+                    onShowShare = onShowShare
                 )
             } else {
                 ProfileButton(onShowProfile)
                 if (syncViewModel != null) {
                     SyncActionButton(syncViewModel = syncViewModel)
                 }
+                ShareButton(onShowShare)
                 SettingsButton(onShowSettings)
             }
         }
@@ -90,7 +94,8 @@ internal fun AppActionButtons(
     isWideLayout: Boolean = false,
     syncViewModel: SyncViewModel? = null,
     onShowProfile: () -> Unit = {},
-    onShowSettings: () -> Unit
+    onShowSettings: () -> Unit,
+    onShowShare: () -> Unit = {}
 ) {
     val tabs = if (isWideLayout) {
         AppNavigationDefaults.Tabs.filter { it.page != SelectedPage.GraphsView }
@@ -111,6 +116,7 @@ internal fun AppActionButtons(
     if (syncViewModel != null) {
         SyncActionButton(syncViewModel = syncViewModel)
     }
+    ShareButton(onShowShare)
     SettingsButton(onShowSettings)
 }
 
@@ -126,6 +132,23 @@ internal fun ProfileButton(onShowProfile: () -> Unit) {
             Icon(
                 imageVector = Icons.Default.AccountCircle,
                 contentDescription = "User Profile"
+            )
+        }
+    }
+}
+
+@Composable
+internal fun ShareButton(onShowShare: () -> Unit) {
+    Tooltip("Share weight progress") {
+        IconButton(
+            onClick = { onShowShare() },
+            colors = IconButtonDefaults.iconButtonColors(
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        ) {
+            Icon(
+                imageVector = Icons.Default.Share,
+                contentDescription = "Share weight progress"
             )
         }
     }
@@ -184,7 +207,8 @@ private fun AppTopBarPreview() {
             syncViewModel = null,
             onSelection = {},
             onShowProfile = {},
-            onShowSettings = {}
+            onShowSettings = {},
+            onShowShare = {}
         )
     }
 }
@@ -199,7 +223,8 @@ private fun AppTopBarWidePreview() {
             syncViewModel = null,
             onSelection = {},
             onShowProfile = {},
-            onShowSettings = {}
+            onShowSettings = {},
+            onShowShare = {}
         )
     }
 }

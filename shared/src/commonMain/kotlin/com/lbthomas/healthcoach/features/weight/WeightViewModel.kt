@@ -16,7 +16,7 @@ open class WeightViewModel : ViewModel {
     constructor(repository: WeightRepository) : super() {
         entries = repository
             .observeAllEntries()
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(60_000), emptyList())
         this.repository = repository
     }
 

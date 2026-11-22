@@ -15,6 +15,7 @@ import com.lbthomas.healthcoach.features.profile.ProfileViewModel
 import com.lbthomas.healthcoach.features.profile.data.ProfileRepository
 import com.lbthomas.healthcoach.features.settings.SettingsViewModel
 import com.lbthomas.healthcoach.features.settings.data.SettingsStore
+import com.lbthomas.healthcoach.features.share.ShareViewModel
 import com.lbthomas.healthcoach.features.sync.SyncViewModel
 import com.lbthomas.healthcoach.features.weight.WeightViewModel
 import com.lbthomas.healthcoach.features.weight.data.WeightRepository
@@ -58,6 +59,7 @@ val appModule = module {
 
     single { SyncEngine(localDatabase = get(), driverFactory = get(), settingsStore = get(), discoveryBrowser = getOrNull()) }
     single { SyncViewModel(syncEngine = get(), settingsStore = get()) }
+    single { ShareViewModel(weightViewModel = get(), settingsViewModel = get()) }
     single {
         val driver: SqlDriver = get()
         PeerServerManager(driverFactory = get(), settingsStore = get()).apply {

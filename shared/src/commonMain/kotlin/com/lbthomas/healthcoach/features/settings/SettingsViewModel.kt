@@ -4,6 +4,7 @@ import app.cash.sqldelight.db.SqlDriver
 import com.lbthomas.healthcoach.core.database.DriverFactory
 import com.lbthomas.healthcoach.core.database.createDatabaseForDriver
 import com.lbthomas.healthcoach.core.enums.*
+import com.lbthomas.healthcoach.core.enums.ShareImageType
 import com.lbthomas.healthcoach.core.logging.LoggingConfig
 import com.lbthomas.healthcoach.core.sync.StorageAdapterFactory
 import com.lbthomas.healthcoach.core.sync.SyncConfig
@@ -193,6 +194,41 @@ class SettingsViewModel {
 
     fun setShowFoodJournalInGraph(show: Boolean) {
         updateSettings { it.copy(foodJournal = it.foodJournal.copy(showInGraph = show)) }
+    }
+
+    // Sharing settings
+    fun setShareTimeFrame(timeFrame: GraphTimeFrame) {
+        updateSettings { it.copy(sharing = it.sharing.copy(selectedTimeFrame = timeFrame)) }
+    }
+
+    fun setShowAbsoluteWeight(show: Boolean) {
+        updateSettings { it.copy(sharing = it.sharing.copy(showAbsoluteWeight = show)) }
+    }
+
+    fun setShareImageType(imageType: ShareImageType) {
+        updateSettings { it.copy(sharing = it.sharing.copy(imageType = imageType)) }
+    }
+
+    fun setMastodonInstance(instance: String) {
+        updateSettings { it.copy(sharing = it.sharing.copy(mastodonInstance = instance)) }
+    }
+
+    fun updateSharingSettings(
+        timeFrame: GraphTimeFrame? = null,
+        showAbsoluteWeight: Boolean? = null,
+        imageType: ShareImageType? = null,
+        mastodonInstance: String? = null
+    ) {
+        updateSettings {
+            it.copy(
+                sharing = it.sharing.copy(
+                    selectedTimeFrame = timeFrame ?: it.sharing.selectedTimeFrame,
+                    showAbsoluteWeight = showAbsoluteWeight ?: it.sharing.showAbsoluteWeight,
+                    imageType = imageType ?: it.sharing.imageType,
+                    mastodonInstance = mastodonInstance ?: it.sharing.mastodonInstance
+                )
+            )
+        }
     }
 
     fun setBloodPressureDisplaySettings(

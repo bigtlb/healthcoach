@@ -22,12 +22,15 @@ import com.lbthomas.healthcoach.features.profile.ProfileViewModel
 import com.lbthomas.healthcoach.features.profile.ProfileDialog
 import com.lbthomas.healthcoach.features.settings.SettingsDialog
 import com.lbthomas.healthcoach.features.settings.SettingsViewModel
+import com.lbthomas.healthcoach.features.share.ShareDialog
+import com.lbthomas.healthcoach.features.share.ShareViewModel
 import com.lbthomas.healthcoach.features.sync.SyncNotificationManager
 import com.lbthomas.healthcoach.features.sync.SyncViewModel
 import com.lbthomas.healthcoach.ui.navigation.AppBottomBar
 import com.lbthomas.healthcoach.ui.navigation.AppContent
 import com.lbthomas.healthcoach.ui.navigation.AppTopBar
 import kotlinx.coroutines.yield
+import kotlinx.coroutines.launch as coroutineLaunch
 import org.koin.compose.KoinApplication
 import org.koin.compose.koinInject
 import org.koin.dsl.koinConfiguration
@@ -37,14 +40,17 @@ fun App() {
     val settingsViewModel = koinInject<SettingsViewModel>()
     val syncViewModel = koinInject<SyncViewModel>()
     val profileViewModel = koinInject<ProfileViewModel>()
+    val shareViewModel = koinInject<ShareViewModel>()
     val settings by settingsViewModel.settings.collectAsState()
     val selectedPage = settings.ui.selectedPage
     var showSettings by remember { mutableStateOf(false) }
     var showProfile by remember { mutableStateOf(false) }
+    var showShare by remember { mutableStateOf(false) }
     var showAddWeightEntry by remember { mutableStateOf(false) }
     var showAddBloodPressureEntry by remember { mutableStateOf(false) }
     var showLogFood by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         SyncNotificationManager.notifications.collect { notification ->
@@ -130,7 +136,8 @@ fun App() {
                         syncViewModel = syncViewModel,
                         onSelection = { settingsViewModel.setSelectedPage(it) },
                         onShowProfile = { showProfile = true },
-                        onShowSettings = { showSettings = true }
+                        onShowSettings = { showSettings = true },
+                        onShowShare = { showShare = true }
                     )
                 },
                 bottomBar = {
@@ -216,6 +223,31 @@ fun App() {
                     onDismiss = {
                         showProfile = false
                         runCatching { focusRequester.requestFocus() }
+                    }
+                )
+            }
+
+            // Refresh share data when dialog opens
+            LaunchedEffect(showShare) {
+                if (showShare) {
+                    shareViewModel.refreshData()
+                }
+            }
+
+            if (showShare) {
+                ShareDialog(
+                    viewModel = shareViewModel,
+                    onDismiss = {
+                        showShare = false
+                        runCatching { focusRequester.requestFocus() }
+                    },
+                    onShareFeedback = { message ->
+                        coroutineScope.coroutineLaunch {
+                            snackbarHostState.showSnackbar(
+                                message = message,
+                                duration = SnackbarDuration.Short
+                            )
+                        }
                     }
                 )
             }

@@ -13,6 +13,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.ContextCompat
 import com.lbthomas.healthcoach.core.di.appModule
 import com.lbthomas.healthcoach.core.di.configurePlatformContext
+import com.lbthomas.healthcoach.core.share.ShareApi
 import kotlinx.coroutines.launch
 import org.koin.core.context.GlobalContext
 import org.koin.core.context.startKoin
@@ -38,6 +39,9 @@ class MainActivity : ComponentActivity() {
                 modules(appModule)
             }
         }
+
+        // Initialize ShareApi with application context
+        ShareApi.init(applicationContext)
 
         // Request ACCESS_LOCAL_NETWORK permission on Android 17+ before starting P2P server
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {

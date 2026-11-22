@@ -3,6 +3,7 @@ package com.lbthomas.healthcoach.features.settings.data
 import com.lbthomas.healthcoach.core.enums.FontSizePreference
 import com.lbthomas.healthcoach.core.enums.GraphTimeFrame
 import com.lbthomas.healthcoach.core.enums.SelectedPage
+import com.lbthomas.healthcoach.core.enums.ShareImageType
 import com.lbthomas.healthcoach.core.enums.ThemeMode
 import com.lbthomas.healthcoach.core.enums.WeightUnit
 import com.lbthomas.healthcoach.core.sync.SyncConfig
@@ -91,6 +92,14 @@ data class UiSettings(
 )
 
 @Serializable
+data class SharingSettings(
+    val selectedTimeFrame: GraphTimeFrame = GraphTimeFrame.ONE_MONTH,
+    val showAbsoluteWeight: Boolean = true,
+    val imageType: ShareImageType = ShareImageType.CHART,
+    val mastodonInstance: String = "mastodon.social"
+)
+
+@Serializable
 data class WeightSettings(
     val showInGraph: Boolean = true,
     val unit: WeightUnit = WeightUnit.US
@@ -103,6 +112,7 @@ data class SettingsData(
     val bloodPressure: BloodPressureSettings = BloodPressureSettings(),
     val foodJournal: FoodJournalSettings = FoodJournalSettings(),
     val peerSync: PeerSyncSettings = PeerSyncSettings(),
+    val sharing: SharingSettings = SharingSettings(),
     val sync: SyncSettings = SyncSettings(),
     val ui: UiSettings = UiSettings(),
     val weight: WeightSettings = WeightSettings()
