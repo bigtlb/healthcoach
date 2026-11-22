@@ -40,6 +40,13 @@
         </screenshot>
     </screenshots>
     <releases>
+        <release version="0.9.22" date="2026-11-22">
+            <description>
+                <ul>
+                    <li>fix(android): mark android.hardware.wifi as optional to expand device availability (#60) Google Play Store rejected the v0.9.21 release because WiFi permissions implicitly declared android.hardware.wifi as required, restricting app availability on devices without WiFi (phones, tablets, desktops, Android XR). Added explicit uses-feature declaration with android:required="false" to override the implicit requirement. WiFi is only used for optional companion device sync, so marking it as optional restores Play Store availability without any functional change. (CLoses #60)</li>
+                </ul>
+            </description>
+        </release>
         <release version="0.9.21" date="2026-11-22">
             <description>
                 <ul>
@@ -59,15 +66,6 @@
                     <li>chore(deps)(deps): bump the android-and-androidx group with 2 updates (#54)</li>
                     <li>chore(deps)(deps): bump gradle-wrapper from 9.6.0 to 9.8.2 (#51)</li>
                     <li>chore(deps)(deps): bump the ktor-and-networking group across 1 directory with 9 updates (#50)</li>
-                </ul>
-            </description>
-        </release>
-        <release version="0.9.18" date="2026-11-09">
-            <description>
-                <ul>
-                    <li>build(android): tighten ProGuard rules to reach 25% obfuscation threshold</li>
-                    <li>build(android): enable minification and add ProGuard rules</li>
-                    <li>fix(sync, flatpak): unconditionally refresh mDNS registration and grant Avahi D-Bus access</li>
                 </ul>
             </description>
         </release>
