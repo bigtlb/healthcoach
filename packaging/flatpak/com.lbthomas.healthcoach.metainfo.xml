@@ -40,6 +40,18 @@
         </screenshot>
     </screenshots>
     <releases>
+        <release version="0.9.21" date="2026-11-22">
+            <description>
+                <ul>
+                    <li>feat(share): add social media sharing for weight progress Add one-tap sharing of weight progress via social media platforms, clipboard, or native share sheet on both Desktop and Android. Features: - Share button in app top bar with icon share dialog - Time frame notch slider (1 day to All, 12 options) - Three share formats: text only, icon image, or chart image - Privacy toggle to hide absolute weight values - Date range line on all share outputs - Weight extrapolation when time frame boundary has no data point - Desktop: clipboard copy and browser sharing (X, Facebook, Reddit, Mastodon) - Android: native ACTION_SEND share sheet with combined text and image</li>
+                    <li>chore(deps)(deps): bump org.jmdns:jmdns from 3.6.4 to 3.6.5 (#56)</li>
+                    <li>chore(deps)(deps): bump org.jetbrains.kotlinx:kotlinx-serialization-json (#55)</li>
+                    <li>chore(deps)(deps): bump gradle-wrapper from 9.8.2 to 9.9.1 (#57)</li>
+                    <li>fix(android): fix Google Drive sync failure from token expiration and local path leak Desktop Google Drive sync is unaffected (JVM silent refresh is a no-op). Closes #58</li>
+                    <li>docs: update Google Play Store link on landing page</li>
+                </ul>
+            </description>
+        </release>
         <release version="0.9.20" date="2026-11-09">
             <description>
                 <ul>
@@ -56,13 +68,6 @@
                     <li>build(android): tighten ProGuard rules to reach 25% obfuscation threshold</li>
                     <li>build(android): enable minification and add ProGuard rules</li>
                     <li>fix(sync, flatpak): unconditionally refresh mDNS registration and grant Avahi D-Bus access</li>
-                </ul>
-            </description>
-        </release>
-        <release version="0.9.17" date="2026-11-01">
-            <description>
-                <ul>
-                    <li>feat(sync, mdns): add mDNS heartbeat for service re-registration and IP change detection</li>
                 </ul>
             </description>
         </release>
