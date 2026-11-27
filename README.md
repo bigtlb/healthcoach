@@ -44,9 +44,21 @@ HealthCoach provides a tailored user experience across both desktop workstations
 | [<img src="docs/images/theming-desktop.png" alt="HealthCoach Desktop Showcase" height="200" />](docs/images/theming-desktop.png) | [<img src="docs/images/theming-mobile.png" alt="HealthCoach Mobile Showcase" height="200" />](docs/images/theming-mobile.png) |
 | *Side-by-side data tables and live charts with custom themes* | *Responsive navigation and touch-first logging workflows* |
 
-👉 **[Explore the Complete Visual Feature Gallery (24 Screenshots across Desktop & Mobile)](docs/GALLERY.md)**
+### Weight Progress Sharing
 
-*(Detailed visual walkthrough covering Weight Analytics, Blood Pressure classifications, Food Journaling & Portion Scaling, Metabolic Profiling, Multi-Axis Compound Graphs, and P2P Wi-Fi Sync.)*
+Choose a timeframe and share weight progress as text, a chart, or an icon, with control over whether exact weights appear.
+
+| Desktop Share Dialog | Mobile Share Dialog |
+| :---: | :---: |
+| [<img src="docs/images/Share_Desktop.png" alt="Desktop weight progress sharing dialog" height="300" />](docs/images/Share_Desktop.png) | [<img src="docs/images/Share_Phone.png" alt="Mobile weight progress sharing dialog" height="300" />](docs/images/Share_Phone.png) |
+
+| Chart with Weight Values | Chart without Weight Values | Icon Summary |
+| :---: | :---: | :---: |
+| [<img src="docs/images/Share_With_Graph_And_Weight.png" alt="Weight progress chart with exact values" height="180" />](docs/images/Share_With_Graph_And_Weight.png) | [<img src="docs/images/Share_With_Graph_No_Weight.png" alt="Weight progress chart without exact values" height="180" />](docs/images/Share_With_Graph_No_Weight.png) | [<img src="docs/images/Share_With_Icon.png" alt="Weight progress icon summary" height="180" />](docs/images/Share_With_Icon.png) |
+
+👉 **[Explore the Complete Visual Feature Gallery (29 Screenshots across Desktop & Mobile)](docs/GALLERY.md)**
+
+*(Detailed visual walkthrough covering Weight Analytics and Sharing, Blood Pressure classifications, Food Journaling & Portion Scaling, Metabolic Profiling, Multi-Axis Compound Graphs, and P2P Wi-Fi Sync.)*
 
 ---
 

@@ -17,6 +17,20 @@ Chronological weigh-in log featuring automatic unit conversion (`lbs` / `kg`), c
 
 ---
 
+## 📤 Weight Progress Sharing
+
+Choose a timeframe and share weight progress as a chart or icon, with control over whether exact weight values are shown.
+
+| View | Screenshot (Click to enlarge) | Highlights |
+| :--- | :---: | :--- |
+| **Desktop Dialog** | [<img src="images/Share_Desktop.png" alt="Desktop weight progress sharing dialog" height="180" />](images/Share_Desktop.png) | • Preview the selected share image<br>• Copy progress or share via browser |
+| **Mobile Dialog** | [<img src="images/Share_Phone.png" alt="Mobile weight progress sharing dialog" height="180" />](images/Share_Phone.png) | • Select a timeframe and image type<br>• Use Android's native sharing options |
+| **Chart with Weight Values** | [<img src="images/Share_With_Graph_And_Weight.png" alt="Weight progress chart with exact values" height="180" />](images/Share_With_Graph_And_Weight.png) | • Trend chart includes exact weights and progress summary |
+| **Chart without Weight Values** | [<img src="images/Share_With_Graph_No_Weight.png" alt="Weight progress chart without exact values" height="180" />](images/Share_With_Graph_No_Weight.png) | • Share the trend without exposing exact weights |
+| **Icon Summary** | [<img src="images/Share_With_Icon.png" alt="Weight progress icon summary" height="180" />](images/Share_With_Icon.png) | • Branded icon with progress summary and timeframe |
+
+---
+
 ## 🩺 Blood Pressure & AHA Classifications
 
 Tri-metric recording (Systolic, Diastolic, Pulse) with real-time American Heart Association clinical classifications and diagnostic guidance.
