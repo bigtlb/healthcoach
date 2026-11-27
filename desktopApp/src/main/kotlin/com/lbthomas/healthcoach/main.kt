@@ -123,38 +123,40 @@ fun main() {
                 })
             }
 
-            ProvideDynamicDensity(window) {
-                Box(modifier = Modifier.fillMaxSize()) {
-                    App()
+            ReusableContentHost(active = !windowState.isMinimized) {
+                ProvideDynamicDensity(window) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        App()
 
-                    if (isShuttingDown) {
-                        Surface(
-                            modifier = Modifier.fillMaxSize(),
-                            color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.45f)
-                        ) {
-                            Box(
+                        if (isShuttingDown) {
+                            Surface(
                                 modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
+                                color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.45f)
                             ) {
-                                Card(
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 20.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                    Card(
+                                        shape = RoundedCornerShape(12.dp),
+                                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
                                     ) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(24.dp),
-                                            strokeWidth = 2.5.dp
-                                        )
-                                        Text(
-                                            text = shutdownMessage.ifBlank { "Shutting down..." },
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            fontWeight = FontWeight.Medium
-                                        )
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 24.dp, vertical = 20.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                        ) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(24.dp),
+                                                strokeWidth = 2.5.dp
+                                            )
+                                            Text(
+                                                text = shutdownMessage.ifBlank { "Shutting down..." },
+                                                style = MaterialTheme.typography.bodyLarge,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
                                     }
                                 }
                             }
