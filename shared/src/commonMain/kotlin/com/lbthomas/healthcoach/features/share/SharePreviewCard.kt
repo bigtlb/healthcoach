@@ -1,6 +1,7 @@
 package com.lbthomas.healthcoach.features.share
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
@@ -9,7 +10,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -30,7 +33,7 @@ fun SharePreviewCard(
     dateRange: String,
     imageType: ShareImageType,
     hasData: Boolean,
-    entries: List<WeightEntryData>,
+    imageBitmap: ImageBitmap? = null,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -50,38 +53,50 @@ fun SharePreviewCard(
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 if (hasData && shareText.isNotEmpty()) {
-                    // Show the actual image preview thumbnail
                     when (imageType) {
                         ShareImageType.CHART -> {
-                            MiniChartPreview(entries = entries)
+                            imageBitmap?.let { ShareImagePreview(it, "Weight progress chart") }
                         }
                         ShareImageType.ICON -> {
-                            MiniIconPreview()
+                            imageBitmap?.let { ShareImagePreview(it, "Weight progress icon") }
                         }
                         ShareImageType.NONE -> {
-                            // Text only — no image preview needed
+                            val summaryParts = shareText.split(':', limit = 2)
+                            if (summaryParts.size > 1) {
+                                Text(
+                                    text = "${summaryParts[0]}:",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Text(
+                                    text = summaryParts[1].trim(),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            } else {
+                                Text(
+                                    text = shareText,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                            if (dateRange.isNotEmpty()) {
+                                Text(
+                                    text = dateRange,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
                         }
-                    }
-                    Text(
-                        text = shareText,
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    if (dateRange.isNotEmpty()) {
-                        Text(
-                            text = dateRange,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    if (imageType != ShareImageType.NONE) {
-                        Text(
-                            text = "Image: ${imageType.label}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
                     }
                 } else {
                     Text(
@@ -92,6 +107,25 @@ fun SharePreviewCard(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ShareImagePreview(imageBitmap: ImageBitmap, contentDescription: String) {
+    BoxWithConstraints(
+        modifier = Modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center
+    ) {
+        val aspectRatio = imageBitmap.width.toFloat() / imageBitmap.height
+        val imageWidth = minOf(maxWidth, 300.dp * aspectRatio)
+        Image(
+            bitmap = imageBitmap,
+            contentDescription = contentDescription,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier
+                .width(imageWidth)
+                .aspectRatio(aspectRatio)
+        )
     }
 }
 
@@ -256,11 +290,10 @@ fun SharePreviewCardWithWeightsChart() {
     HealthCoachTheme {
         Surface {
             SharePreviewCard(
-                shareText = "My 30-day weight progress: 185.2 → 178.6 lbs",
+                shareText = "My 30-day weight progress:\n185.2 → 178.6 lbs",
                 dateRange = "Oct 22, 2023 - Nov 21, 2023",
                 imageType = ShareImageType.CHART,
                 hasData = true,
-                entries = previewWeightEntries,
                 modifier = Modifier.padding(16.dp)
             )
         }
@@ -273,11 +306,10 @@ fun SharePreviewCardWithWeightsIcon() {
     HealthCoachTheme {
         Surface {
             SharePreviewCard(
-                shareText = "My 30-day weight progress: 185.2 → 178.6 lbs",
+                shareText = "My 30-day weight progress:\n185.2 → 178.6 lbs",
                 dateRange = "Oct 22, 2023 - Nov 21, 2023",
                 imageType = ShareImageType.ICON,
                 hasData = true,
-                entries = previewWeightEntries,
                 modifier = Modifier.padding(16.dp)
             )
         }
@@ -290,11 +322,10 @@ fun SharePreviewCardWithWeightsTextOnly() {
     HealthCoachTheme {
         Surface {
             SharePreviewCard(
-                shareText = "My 30-day weight progress: 185.2 → 178.6 lbs",
+                shareText = "My 30-day weight progress:\n185.2 → 178.6 lbs",
                 dateRange = "Oct 22, 2023 - Nov 21, 2023",
                 imageType = ShareImageType.NONE,
                 hasData = true,
-                entries = previewWeightEntries,
                 modifier = Modifier.padding(16.dp)
             )
         }
@@ -307,11 +338,10 @@ fun SharePreviewCardPrivacyMode() {
     HealthCoachTheme {
         Surface {
             SharePreviewCard(
-                shareText = "My 30-day weight progress: -6.6 lbs",
+                shareText = "My 30-day weight progress:\n-6.6 lbs",
                 dateRange = "Oct 22, 2023 - Nov 21, 2023",
                 imageType = ShareImageType.CHART,
                 hasData = true,
-                entries = previewWeightEntries,
                 modifier = Modifier.padding(16.dp)
             )
         }
@@ -324,11 +354,10 @@ fun SharePreviewCardWeightGain() {
     HealthCoachTheme {
         Surface {
             SharePreviewCard(
-                shareText = "My 7-day weight progress: +2.4 lbs",
+                shareText = "My 7-day weight progress:\n+2.4 lbs",
                 dateRange = "Nov 14, 2023 - Nov 21, 2023",
                 imageType = ShareImageType.CHART,
                 hasData = true,
-                entries = previewWeightGainEntries,
                 modifier = Modifier.padding(16.dp)
             )
         }
@@ -341,11 +370,10 @@ fun SharePreviewCardKilograms() {
     HealthCoachTheme {
         Surface {
             SharePreviewCard(
-                shareText = "My 30-day weight progress: -3.0 kg",
+                shareText = "My 30-day weight progress:\n-3.0 kg",
                 dateRange = "Oct 22, 2023 - Nov 21, 2023",
                 imageType = ShareImageType.CHART,
                 hasData = true,
-                entries = previewWeightEntries,
                 modifier = Modifier.padding(16.dp)
             )
         }
@@ -362,7 +390,6 @@ fun SharePreviewCardNoData() {
                 dateRange = "",
                 imageType = ShareImageType.CHART,
                 hasData = false,
-                entries = emptyList(),
                 modifier = Modifier.padding(16.dp)
             )
         }

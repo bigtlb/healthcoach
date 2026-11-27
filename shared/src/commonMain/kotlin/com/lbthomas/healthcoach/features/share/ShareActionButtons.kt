@@ -3,6 +3,7 @@ package com.lbthomas.healthcoach.features.share
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -16,6 +17,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.lbthomas.healthcoach.core.enums.ShareImageType
+import com.lbthomas.healthcoach.core.getPlatform
 import com.lbthomas.healthcoach.core.share.ShareApi
 import com.lbthomas.healthcoach.core.share.buildXUrl
 import com.lbthomas.healthcoach.core.share.buildFacebookUrl
@@ -33,7 +35,7 @@ data class SharePlatform(
 )
 
 /**
- * Combine progress text with date range on a second line.
+ * Combine progress text with the date range on a separate line.
  */
 private fun buildFullShareText(shareText: String, dateRange: String): String {
     return if (dateRange.isNotEmpty()) {
@@ -61,6 +63,18 @@ fun ShareActionButtons(
     modifier: Modifier = Modifier
 ) {
     var selectedPlatform by remember { mutableStateOf<String?>(null) }
+    val browserOptionsState = rememberLazyListState()
+    val showBrowserSharing = getPlatform().name != "Android"
+    val copySelectedContent: () -> Unit = {
+        if (viewModel.imageType != ShareImageType.NONE) {
+            viewModel.renderImage()?.let { image ->
+                ShareApi.copyImageToClipboard(image)?.let(onShareFeedback)
+            }
+        } else {
+            val fullText = buildFullShareText(viewModel.shareText, viewModel.dateRange)
+            ShareApi.copyTextToClipboard(fullText)?.let(onShareFeedback)
+        }
+    }
 
     Column(
         modifier = modifier
@@ -73,56 +87,47 @@ fun ShareActionButtons(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            // Share button (primary action) — opens native share sheet on Android,
-            // copies to clipboard on desktop
-            Button(
-                onClick = {
-                    val image = viewModel.renderImage()
-                    val fullText = buildFullShareText(viewModel.shareText, viewModel.dateRange)
-                    val message = if (image != null) {
-                        ShareApi.shareTextAndImage(fullText, image)
-                    } else {
-                        ShareApi.shareText(fullText)
-                    }
-                    message?.let(onShareFeedback)
-                },
-                enabled = hasData,
-                modifier = Modifier.weight(1f)
-            ) {
-                Text("Share")
-            }
-
-            // Copy Text button
-            OutlinedButton(
-                onClick = {
-                    val fullText = buildFullShareText(viewModel.shareText, viewModel.dateRange)
-                    ShareApi.copyTextToClipboard(fullText)?.let(onShareFeedback)
-                },
-                enabled = hasData,
-                modifier = Modifier.weight(1f)
-            ) {
-                Text("Copy Text")
-            }
-
-            // Copy Image button (only if not Text Only)
-            if (viewModel.imageType != ShareImageType.NONE) {
-                OutlinedButton(
+            // The desktop ShareApi copies to the clipboard, just like Copy.
+            if (!showBrowserSharing) {
+                Button(
                     onClick = {
-                        val image = viewModel.renderImage()
-                        if (image != null) {
-                            ShareApi.copyImageToClipboard(image)?.let(onShareFeedback)
+                        val fullText = buildFullShareText(viewModel.shareText, viewModel.dateRange)
+                        val message = if (viewModel.imageType != ShareImageType.NONE) {
+                            viewModel.renderImage()?.let { ShareApi.shareImage(it) }
+                        } else {
+                            ShareApi.shareText(fullText)
                         }
+                        message?.let(onShareFeedback)
                     },
                     enabled = hasData,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Copy Image")
+                    Text("Share")
+                }
+            }
+
+            // Copy selected content
+            if (showBrowserSharing) {
+                Button(
+                    onClick = copySelectedContent,
+                    enabled = hasData,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Copy")
+                }
+            } else {
+                OutlinedButton(
+                    onClick = copySelectedContent,
+                    enabled = hasData,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Copy")
                 }
             }
         }
 
-        // Browser share section — horizontally scrollable chips
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        // Browser share section — not available on Android
+        if (showBrowserSharing) Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -133,14 +138,17 @@ fun ShareActionButtons(
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Icon(
-                    imageVector = Icons.AutoMirrored.Default.ArrowForward,
-                    contentDescription = "Scroll for more options",
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                if (browserOptionsState.canScrollForward) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Default.ArrowForward,
+                        contentDescription = "Scroll for more options",
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
             LazyRow(
+                state = browserOptionsState,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -221,7 +229,7 @@ private object PreviewShareActionViewModel : ShareDialogViewModel {
     override var showAbsoluteWeight: Boolean = true
     override var imageType: ShareImageType = ShareImageType.CHART
     override var mastodonInstance: String = "mastodon.social"
-    override var shareText: String = "My 30-day weight progress: 185.2 → 178.6 lbs"
+    override var shareText: String = "My 30-day weight progress:\n185.2 → 178.6 lbs"
     override var dateRange: String = "Oct 22, 2023 - Nov 21, 2023"
     override var filteredEntries: List<com.lbthomas.healthcoach.features.weight.data.WeightEntryData> = emptyList()
     override var hasData: Boolean = true
@@ -238,7 +246,7 @@ private object PreviewShareActionViewModelNoImage : ShareDialogViewModel {
     override var showAbsoluteWeight: Boolean = true
     override var imageType: ShareImageType = ShareImageType.NONE
     override var mastodonInstance: String = "mastodon.social"
-    override var shareText: String = "My 30-day weight progress: 185.2 → 178.6 lbs"
+    override var shareText: String = "My 30-day weight progress:\n185.2 → 178.6 lbs"
     override var dateRange: String = "Oct 22, 2023 - Nov 21, 2023"
     override var filteredEntries: List<com.lbthomas.healthcoach.features.weight.data.WeightEntryData> = emptyList()
     override var hasData: Boolean = true

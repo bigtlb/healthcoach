@@ -37,19 +37,35 @@ fun ShareTimeFrameSlider(
 ) {
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
-        Text(
-            text = "Time Frame",
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Bold
-        )
-
         val selectedIndex = sliderTimeFrames.indexOf(selectedTimeFrame)
         var sliderPosition by remember { mutableFloatStateOf(selectedIndex.toFloat()) }
 
         LaunchedEffect(selectedIndex) {
             sliderPosition = selectedIndex.toFloat()
+        }
+
+        // Compute the current label from the live slider position, not the parent's state,
+        // so the label updates in real-time while dragging.
+        val currentIndex = sliderPosition.toInt().coerceIn(0, sliderTimeFrames.size - 1)
+        val currentLabel = sliderTimeFrames[currentIndex].label
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Time Frame",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = currentLabel,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary
+            )
         }
 
         Slider(
@@ -63,18 +79,6 @@ fun ShareTimeFrameSlider(
             },
             valueRange = 0f..(sliderTimeFrames.size - 1).toFloat(),
             steps = sliderTimeFrames.size - 2
-        )
-
-        // Compute the current label from the live slider position, not the parent's state,
-        // so the label updates in real-time while dragging.
-        val currentIndex = sliderPosition.toInt().coerceIn(0, sliderTimeFrames.size - 1)
-        val currentLabel = sliderTimeFrames[currentIndex].label
-
-        Text(
-            text = currentLabel,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.align(Alignment.CenterHorizontally)
         )
     }
 }

@@ -16,13 +16,13 @@ fun ShowWeightValuesToggle(
     modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = "Show weight values",
-            style = MaterialTheme.typography.bodyLarge
+            text = "Weight",
+            style = MaterialTheme.typography.bodyMedium
         )
         Switch(
             checked = showAbsoluteWeight,

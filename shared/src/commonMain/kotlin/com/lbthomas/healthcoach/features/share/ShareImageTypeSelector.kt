@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.lbthomas.healthcoach.core.enums.ShareImageType
@@ -16,31 +15,20 @@ fun ShareImageTypeSelector(
     onImageTypeChanged: (ShareImageType) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Text(
-            text = "Image Type",
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Bold
+    SingleChoiceSegmentedButtonRow(modifier = modifier) {
+        val types = listOf(
+            ShareImageType.NONE to "Text",
+            ShareImageType.ICON to "Icon",
+            ShareImageType.CHART to "Chart"
         )
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            val types = listOf(
-                ShareImageType.NONE to "Text Only",
-                ShareImageType.ICON to "Icon",
-                ShareImageType.CHART to "Chart"
-            )
-            types.forEach { (type, label) ->
-                FilterChip(
-                    selected = imageType == type,
-                    onClick = { onImageTypeChanged(type) },
-                    label = { Text(label) },
-                    modifier = Modifier.weight(1f)
-                )
+        types.forEachIndexed { index, (type, label) ->
+            SegmentedButton(
+                selected = imageType == type,
+                onClick = { onImageTypeChanged(type) },
+                shape = SegmentedButtonDefaults.itemShape(index = index, count = types.size),
+                contentPadding = PaddingValues(horizontal = 4.dp)
+            ) {
+                Text(label, style = MaterialTheme.typography.labelSmall)
             }
         }
     }

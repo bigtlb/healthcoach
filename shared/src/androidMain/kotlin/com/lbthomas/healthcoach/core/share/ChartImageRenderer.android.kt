@@ -5,6 +5,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.RectF
 import android.graphics.Typeface
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -19,6 +20,7 @@ actual object ChartImageRenderer {
 
     private const val IMAGE_WIDTH = 600
     private const val IMAGE_HEIGHT = 400
+    private const val RENDER_SCALE = 2
     private const val CHART_MARGIN_TOP = 50
     private const val CHART_MARGIN_BOTTOM = 80
     private const val CHART_MARGIN_LEFT = 70
@@ -79,11 +81,17 @@ actual object ChartImageRenderer {
         val paddedMax = if (weightRange > 0) maxWeight + weightRange * 0.1 else maxWeight + 2.0
         val paddedRange = paddedMax - paddedMin
 
-        val chartWidth = IMAGE_WIDTH - CHART_MARGIN_LEFT - CHART_MARGIN_RIGHT
+        val chartMarginLeft = if (showAbsoluteWeight) CHART_MARGIN_LEFT else CHART_MARGIN_RIGHT
+        val chartWidth = IMAGE_WIDTH - chartMarginLeft - CHART_MARGIN_RIGHT
         val chartHeight = IMAGE_HEIGHT - CHART_MARGIN_TOP - CHART_MARGIN_BOTTOM - BRANDING_HEIGHT
 
-        val bitmap = Bitmap.createBitmap(IMAGE_WIDTH, IMAGE_HEIGHT, Bitmap.Config.ARGB_8888)
+        val bitmap = Bitmap.createBitmap(
+            IMAGE_WIDTH * RENDER_SCALE,
+            IMAGE_HEIGHT * RENDER_SCALE,
+            Bitmap.Config.ARGB_8888
+        )
         val canvas = Canvas(bitmap)
+        canvas.scale(RENDER_SCALE.toFloat(), RENDER_SCALE.toFloat())
 
         // Background
         canvas.drawColor(BG_COLOR)
@@ -117,12 +125,12 @@ actual object ChartImageRenderer {
         val gridLines = 5
         for (i in 0..gridLines) {
             val y = CHART_MARGIN_TOP + (chartHeight * i / gridLines).toInt()
-            canvas.drawLine(CHART_MARGIN_LEFT.toFloat(), y.toFloat(), (IMAGE_WIDTH - CHART_MARGIN_RIGHT).toFloat(), y.toFloat(), gridPaint)
+            canvas.drawLine(chartMarginLeft.toFloat(), y.toFloat(), (IMAGE_WIDTH - CHART_MARGIN_RIGHT).toFloat(), y.toFloat(), gridPaint)
 
             if (showAbsoluteWeight) {
                 val value = paddedMax - (paddedRange * i.toDouble() / gridLines)
                 val label = String.format("%.1f", value)
-                canvas.drawText(label, CHART_MARGIN_LEFT - axisLabelPaint.measureText(label) - 5f, y + 4f, axisLabelPaint)
+                canvas.drawText(label, chartMarginLeft - axisLabelPaint.measureText(label) - 5f, y + 4f, axisLabelPaint)
             }
         }
 
@@ -155,10 +163,10 @@ actual object ChartImageRenderer {
             for (i in 0 until sorted.size - 1) {
                 val entry1 = sorted[i]
                 val entry2 = sorted[i + 1]
-                val x1 = (CHART_MARGIN_LEFT + ((entry1.date.toEpochDays() - firstDate).toDouble() / dateRange * chartWidth)).toFloat()
+                val x1 = (chartMarginLeft + ((entry1.date.toEpochDays() - firstDate).toDouble() / dateRange * chartWidth)).toFloat()
                 val w1 = entry1.getWeightInCurrentUnits(weightUnit)
                 val y1 = (CHART_MARGIN_TOP + chartHeight - ((w1 - paddedMin) / paddedRange * chartHeight)).toFloat()
-                val x2 = (CHART_MARGIN_LEFT + ((entry2.date.toEpochDays() - firstDate).toDouble() / dateRange * chartWidth)).toFloat()
+                val x2 = (chartMarginLeft + ((entry2.date.toEpochDays() - firstDate).toDouble() / dateRange * chartWidth)).toFloat()
                 val w2 = entry2.getWeightInCurrentUnits(weightUnit)
                 val y2 = (CHART_MARGIN_TOP + chartHeight - ((w2 - paddedMin) / paddedRange * chartHeight)).toFloat()
                 canvas.drawLine(x1, y1, x2, y2, linePaint)
@@ -172,14 +180,14 @@ actual object ChartImageRenderer {
                 isAntiAlias = true
             }
             for (entry in sorted) {
-                val x = (CHART_MARGIN_LEFT + ((entry.date.toEpochDays() - firstDate).toDouble() / dateRange * chartWidth)).toFloat()
+                val x = (chartMarginLeft + ((entry.date.toEpochDays() - firstDate).toDouble() / dateRange * chartWidth)).toFloat()
                 val weight = entry.getWeightInCurrentUnits(weightUnit)
                 val y = (CHART_MARGIN_TOP + chartHeight - ((weight - paddedMin) / paddedRange * chartHeight)).toFloat()
                 canvas.drawCircle(x, y, 3f, pointPaint)
             }
         } else if (sorted.size == 1) {
             val entry = sorted.first()
-            val x = (CHART_MARGIN_LEFT + chartWidth / 2).toFloat()
+            val x = (chartMarginLeft + chartWidth / 2).toFloat()
             val weight = entry.getWeightInCurrentUnits(weightUnit)
             val y = (CHART_MARGIN_TOP + chartHeight - ((weight - paddedMin) / paddedRange * chartHeight)).toFloat()
             val pointPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -207,9 +215,9 @@ actual object ChartImageRenderer {
                 val firstDate = sorted.first().date.toEpochDays()
                 val lastDate = sorted.last().date.toEpochDays()
                 val dateRange = (lastDate - firstDate).coerceAtLeast(1)
-                (CHART_MARGIN_LEFT + ((entry.date.toEpochDays() - firstDate).toDouble() / dateRange * chartWidth)).toFloat()
+                (chartMarginLeft + ((entry.date.toEpochDays() - firstDate).toDouble() / dateRange * chartWidth)).toFloat()
             } else {
-                (CHART_MARGIN_LEFT + chartWidth / 2).toFloat()
+                (chartMarginLeft + chartWidth / 2).toFloat()
             }
             val centerX = x - datePaint.measureText(dateStr) / 2f
             val y = (CHART_MARGIN_TOP + chartHeight + 15).toFloat()
@@ -227,8 +235,22 @@ actual object ChartImageRenderer {
         val formatted = ShareTextFormatter.format(entries, allEntries, timeFrame, weightUnit, showAbsoluteWeight)
         val summaryText = formatted.first
         val dateRangeText = formatted.second
-        val summaryWidth = summaryPaint.measureText(summaryText)
-        canvas.drawText(summaryText, (IMAGE_WIDTH - summaryWidth) / 2f, summaryY, summaryPaint)
+        val summaryParts = summaryText.split(':', limit = 2)
+        val summaryLabel = if (summaryParts.size > 1) "${summaryParts[0]}:" else summaryText
+        val summaryValue = summaryParts.getOrNull(1)?.trim()?.takeIf { it.isNotEmpty() }
+        val summaryLabelWidth = summaryPaint.measureText(summaryLabel)
+        canvas.drawText(summaryLabel, (IMAGE_WIDTH - summaryLabelWidth) / 2f, summaryY, summaryPaint)
+        if (summaryValue != null) {
+            val summaryValuePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = TEXT_COLOR
+                textSize = 13f
+                typeface = Typeface.DEFAULT_BOLD
+                isDither = true
+                isAntiAlias = true
+            }
+            val summaryValueWidth = summaryValuePaint.measureText(summaryValue)
+            canvas.drawText(summaryValue, (IMAGE_WIDTH - summaryValueWidth) / 2f, summaryY + 18f, summaryValuePaint)
+        }
 
         // Date range line
         if (dateRangeText.isNotEmpty()) {
@@ -239,7 +261,7 @@ actual object ChartImageRenderer {
                 isAntiAlias = true
             }
             val dateRangeWidth = dateRangePaint.measureText(dateRangeText)
-            canvas.drawText(dateRangeText, (IMAGE_WIDTH - dateRangeWidth) / 2f, summaryY + 18f, dateRangePaint)
+            canvas.drawText(dateRangeText, (IMAGE_WIDTH - dateRangeWidth) / 2f, summaryY + if (summaryValue != null) 36f else 18f, dateRangePaint)
         }
 
         // Branding
@@ -256,15 +278,18 @@ actual object ChartImageRenderer {
         // Draw small icon next to branding
         val iconBitmap = loadIconBitmap()
         if (iconBitmap != null) {
-            val iconSize = 20
+            val iconSize = 24
             val iconX = IMAGE_WIDTH - brandingWidth - iconSize - 30
-            val iconY = IMAGE_HEIGHT - BRANDING_HEIGHT + 5
-            val scaledIcon = Bitmap.createScaledBitmap(iconBitmap, iconSize, iconSize, false)
+            val iconY = IMAGE_HEIGHT - BRANDING_HEIGHT + (BRANDING_HEIGHT - iconSize) / 2
             val iconPaint = Paint(Paint.FILTER_BITMAP_FLAG).apply {
                 isAntiAlias = true
             }
-            canvas.drawBitmap(scaledIcon, iconX.toFloat(), iconY.toFloat(), iconPaint)
-            scaledIcon.recycle()
+            canvas.drawBitmap(
+                iconBitmap,
+                null,
+                RectF(iconX.toFloat(), iconY.toFloat(), (iconX + iconSize).toFloat(), (iconY + iconSize).toFloat()),
+                iconPaint
+            )
         }
 
         return bitmap.asImageBitmap()
@@ -279,7 +304,7 @@ actual object ChartImageRenderer {
     ): ImageBitmap? {
         if (entries.isEmpty()) return null
 
-        // Smaller square image for icon type
+        // Square image for icon type
         val width = 500
         val height = 500
 
@@ -292,10 +317,10 @@ actual object ChartImageRenderer {
         // Draw large app icon (centered vertically with text below)
         val iconBitmap = loadIconBitmap()
         val iconSize = 200
-        val iconY = 80
+        val iconY = 40
         if (iconBitmap != null) {
             val iconX = (width - iconSize) / 2
-            val scaledIcon = Bitmap.createScaledBitmap(iconBitmap, iconSize, iconSize, false)
+            val scaledIcon = Bitmap.createScaledBitmap(iconBitmap, iconSize, iconSize, true)
             val iconPaint = Paint(Paint.FILTER_BITMAP_FLAG).apply {
                 isAntiAlias = true
             }
@@ -303,43 +328,56 @@ actual object ChartImageRenderer {
             scaledIcon.recycle()
         }
 
-        // Summary text (includes the full progress phrase, so no separate title needed)
-        val summaryY = (iconY + iconSize + 30).toFloat()
+        // Summary text
+        val summaryY = (iconY + iconSize + 60).toFloat()
         val formatted = ShareTextFormatter.format(entries, allEntries, timeFrame, weightUnit, showAbsoluteWeight)
         val summaryText = formatted.first
         val dateRangeText = formatted.second
+        val summaryParts = summaryText.split(':', limit = 2)
+        val summaryLabel = if (summaryParts.size > 1) "${summaryParts[0]}:" else summaryText
+        val summaryValue = summaryParts.getOrNull(1)?.trim()?.takeIf { it.isNotEmpty() }
         val summaryPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = TEXT_COLOR
-            textSize = 16f
-            typeface = Typeface.DEFAULT_BOLD
+            textSize = 32f
             isDither = true
             isAntiAlias = true
         }
-        val summaryWidth = summaryPaint.measureText(summaryText)
-        canvas.drawText(summaryText, (width - summaryWidth) / 2f, summaryY, summaryPaint)
+        val summaryLabelWidth = summaryPaint.measureText(summaryLabel)
+        canvas.drawText(summaryLabel, (width - summaryLabelWidth) / 2f, summaryY, summaryPaint)
+        if (summaryValue != null) {
+            val summaryValuePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = TEXT_COLOR
+                textSize = 32f
+                typeface = Typeface.DEFAULT_BOLD
+                isDither = true
+                isAntiAlias = true
+            }
+            val summaryValueWidth = summaryValuePaint.measureText(summaryValue)
+            canvas.drawText(summaryValue, (width - summaryValueWidth) / 2f, summaryY + 44f, summaryValuePaint)
+        }
 
         // Date range line
         if (dateRangeText.isNotEmpty()) {
             val dateRangePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = AXIS_COLOR
-                textSize = 13f
+                textSize = 26f
                 isDither = true
                 isAntiAlias = true
             }
             val dateRangeWidth = dateRangePaint.measureText(dateRangeText)
-            canvas.drawText(dateRangeText, (width - dateRangeWidth) / 2f, summaryY + 25f, dateRangePaint)
+            canvas.drawText(dateRangeText, (width - dateRangeWidth) / 2f, summaryY + if (summaryValue != null) 88f else 50f, dateRangePaint)
         }
 
         // Branding
         val brandingPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = BRANDING_COLOR
-            textSize = 10f
+            textSize = 20f
             isDither = true
             isAntiAlias = true
         }
         val branding = "Powered by HealthCoach"
         val brandingWidth = brandingPaint.measureText(branding)
-        canvas.drawText(branding, (width - brandingWidth) / 2f, height - 15f, brandingPaint)
+        canvas.drawText(branding, (width - brandingWidth) / 2f, height - 30f, brandingPaint)
 
         return bitmap.asImageBitmap()
     }

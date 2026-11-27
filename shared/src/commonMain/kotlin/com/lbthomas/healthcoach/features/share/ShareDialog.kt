@@ -3,6 +3,11 @@ package com.lbthomas.healthcoach.features.share
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
@@ -15,7 +20,9 @@ import androidx.compose.ui.unit.dp
 import com.lbthomas.healthcoach.core.enums.GraphTimeFrame
 import com.lbthomas.healthcoach.core.enums.ShareImageType
 import com.lbthomas.healthcoach.core.enums.WeightUnit
+import com.lbthomas.healthcoach.core.share.ChartImageRenderer
 import com.lbthomas.healthcoach.core.theme.HealthCoachTheme
+import com.lbthomas.healthcoach.core.ui.VerticalScrollbarBox
 import com.lbthomas.healthcoach.features.weight.data.WeightEntryData
 import kotlinx.datetime.LocalDate
 
@@ -24,8 +31,7 @@ import kotlinx.datetime.LocalDate
  *
  * Assembles the following component composables (each in its own file with @Preview functions):
  * - [ShareTimeFrameSlider] — time period notch slider
- * - [ShareImageTypeSelector] — Text Only / Icon / Chart filter chips
- * - [ShowWeightValuesToggle] — privacy toggle switch
+ * - [ShareImageTypeSelector] — Text / Icon / Chart selector with weight privacy toggle
  * - [SharePreviewCard] — live text preview card
  * - [ShareWarningCard] — no-data warning
  * - [ShareActionButtons] — footer action buttons (Share, Copy, browser links, Mastodon config)
@@ -40,86 +46,18 @@ fun ShareDialog(
     BasicAlertDialog(
         onDismissRequest = onDismiss,
         properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
-        modifier = Modifier.width(800.dp)
+        modifier = Modifier.widthIn(max = 800.dp).fillMaxWidth()
     ) {
         Surface(
             shape = AlertDialogDefaults.shape,
             color = AlertDialogDefaults.containerColor,
             tonalElevation = AlertDialogDefaults.TonalElevation
         ) {
-            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 400.dp, max = 700.dp)
-                ) {
-                    // Header with title and close button
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 24.dp, vertical = 16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Share Weight Progress",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        IconButton(onClick = onDismiss) {
-                            Icon(imageVector = Icons.Default.Close, contentDescription = "Close")
-                        }
-                    }
-
-                    HorizontalDivider()
-
-                    // Scrollable body
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
-                            .verticalScroll(rememberScrollState())
-                            .padding(24.dp),
-                        verticalArrangement = Arrangement.spacedBy(20.dp)
-                    ) {
-                        ShareTimeFrameSlider(
-                            selectedTimeFrame = viewModel.selectedTimeFrame,
-                            onTimeFrameChanged = viewModel::onTimeFrameChanged
-                        )
-
-                        ShareImageTypeSelector(
-                            imageType = viewModel.imageType,
-                            onImageTypeChanged = viewModel::onImageTypeChanged
-                        )
-
-                        ShowWeightValuesToggle(
-                            showAbsoluteWeight = viewModel.showAbsoluteWeight,
-                            onShowAbsoluteWeightChanged = viewModel::onShowAbsoluteWeightChanged
-                        )
-
-                        SharePreviewCard(
-                            shareText = viewModel.shareText,
-                            dateRange = viewModel.dateRange,
-                            imageType = viewModel.imageType,
-                            hasData = viewModel.hasData,
-                            entries = viewModel.filteredEntries
-                        )
-
-                        if (!viewModel.hasData) {
-                            ShareWarningCard("No weight data available for the selected time period.")
-                        }
-                    }
-
-                    HorizontalDivider()
-
-                    // Footer — action buttons (always visible)
-                    ShareActionButtons(
-                        viewModel = viewModel,
-                        hasData = viewModel.hasData,
-                        onShareFeedback = onShareFeedback
-                    )
-                }
-            }
+            ShareDialogContent(
+                viewModel = viewModel,
+                onDismiss = onDismiss,
+                onShareFeedback = onShareFeedback
+            )
         }
     }
 }
@@ -134,16 +72,16 @@ fun ShareDialog(
 // --- Text Format Examples ---
 //
 // With absolute weights (showAbsoluteWeight = true):
-//   "My 30-day weight progress: 185.2 → 178.6 lbs"
+//   "My 30-day weight progress:\n185.2 → 178.6 lbs"
 //
 // Without absolute weights (showAbsoluteWeight = false):
-//   "My 30-day weight progress: -6.6 lbs"
+//   "My 30-day weight progress:\n-6.6 lbs"
 //
 // Weight gain (positive change):
-//   "My 7-day weight progress: +2.4 lbs"
+//   "My 7-day weight progress:\n+2.4 lbs"
 //
 // Kilogram units:
-//   "My 30-day weight progress: -3.0 kg"
+//   "My 30-day weight progress:\n-3.0 kg"
 //
 // --- 1. TWITTER/X SHARE (Browser) ---
 // Opens: https://twitter.com/intent/tweet?text=<encoded_text>
@@ -238,7 +176,14 @@ private class PreviewShareViewModel(
     override fun onMastodonInstanceChanged(instance: String) {
         mastodonInstance = instance
     }
-    override fun renderImage(): androidx.compose.ui.graphics.ImageBitmap? = null
+    override fun renderImage(): androidx.compose.ui.graphics.ImageBitmap? = ChartImageRenderer.render(
+        entries = filteredEntries,
+        allEntries = filteredEntries,
+        timeFrame = selectedTimeFrame,
+        weightUnit = WeightUnit.US,
+        imageType = imageType,
+        showAbsoluteWeight = showAbsoluteWeight
+    )
 }
 
 private fun createPreviewViewModel(
@@ -276,61 +221,124 @@ fun ShareDialogContent(
     onDismiss: () -> Unit,
     onShareFeedback: (String) -> Unit = {}
 ) {
+    val scrollState = rememberScrollState()
+    val surfaceColor = MaterialTheme.colorScheme.surface
+    val shadowColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+
+    val previewImage = remember(
+        viewModel.selectedTimeFrame,
+        viewModel.showAbsoluteWeight,
+        viewModel.imageType,
+        viewModel.shareText,
+        viewModel.dateRange,
+        viewModel.filteredEntries,
+        viewModel.hasData
+    ) {
+        if (viewModel.hasData && viewModel.imageType != ShareImageType.NONE) {
+            viewModel.renderImage()
+        } else {
+            null
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 400.dp, max = 600.dp)
+            .heightIn(max = 850.dp)
     ) {
-        // Header
-        Row(
+        VerticalScrollbarBox(
+            state = scrollState,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .weight(1f, fill = false)
         ) {
-            Text(
-                text = "Share Weight Progress",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-            IconButton(onClick = onDismiss) {
-                Icon(imageVector = Icons.Default.Close, contentDescription = "Close")
-            }
-        }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .drawWithContent {
+                        drawContent()
+                        val edgeHeight = minOf(28.dp.toPx(), size.height)
+                        if (scrollState.value > 0) {
+                            drawRect(
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(shadowColor, Color.Transparent),
+                                    startY = 0f,
+                                    endY = edgeHeight
+                                ),
+                                size = Size(size.width, edgeHeight)
+                            )
+                        }
+                        if (scrollState.value < scrollState.maxValue) {
+                            drawRect(
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(Color.Transparent, surfaceColor),
+                                    startY = size.height - edgeHeight,
+                                    endY = size.height
+                                ),
+                                topLeft = Offset(0f, size.height - edgeHeight),
+                                size = Size(size.width, edgeHeight)
+                            )
+                        }
+                    }
+                    .verticalScroll(scrollState)
+            ) {
+                // Header
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Share Weight Progress",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    IconButton(onClick = onDismiss) {
+                        Icon(imageVector = Icons.Default.Close, contentDescription = "Close")
+                    }
+                }
 
-        HorizontalDivider()
+                HorizontalDivider()
 
-        // Scrollable body
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-            ShareTimeFrameSlider(
-                selectedTimeFrame = viewModel.selectedTimeFrame,
-                onTimeFrameChanged = viewModel::onTimeFrameChanged
-            )
-            ShareImageTypeSelector(
-                imageType = viewModel.imageType,
-                onImageTypeChanged = viewModel::onImageTypeChanged
-            )
-            ShowWeightValuesToggle(
-                showAbsoluteWeight = viewModel.showAbsoluteWeight,
-                onShowAbsoluteWeightChanged = viewModel::onShowAbsoluteWeightChanged
-            )
-            SharePreviewCard(
-                shareText = viewModel.shareText,
-                dateRange = viewModel.dateRange,
-                imageType = viewModel.imageType,
-                hasData = viewModel.hasData,
-                entries = viewModel.filteredEntries
-            )
-            if (!viewModel.hasData) {
-                ShareWarningCard("No weight data available for the selected time period.")
+                // Scrollable body
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    ShareTimeFrameSlider(
+                        selectedTimeFrame = viewModel.selectedTimeFrame,
+                        onTimeFrameChanged = viewModel::onTimeFrameChanged
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        ShareImageTypeSelector(
+                            imageType = viewModel.imageType,
+                            onImageTypeChanged = viewModel::onImageTypeChanged,
+                            modifier = Modifier.weight(1f)
+                        )
+                        ShowWeightValuesToggle(
+                            showAbsoluteWeight = viewModel.showAbsoluteWeight,
+                            onShowAbsoluteWeightChanged = viewModel::onShowAbsoluteWeightChanged
+                        )
+                    }
+                    SharePreviewCard(
+                        shareText = viewModel.shareText,
+                        dateRange = viewModel.dateRange,
+                        imageType = viewModel.imageType,
+                        hasData = viewModel.hasData,
+                        imageBitmap = previewImage
+                    )
+                    if (!viewModel.hasData) {
+                        ShareWarningCard("No weight data available for the selected time period.")
+                    }
+                }
             }
         }
 

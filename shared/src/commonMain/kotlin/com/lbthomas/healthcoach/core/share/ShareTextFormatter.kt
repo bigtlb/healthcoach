@@ -13,8 +13,8 @@ object ShareTextFormatter {
     /**
      * Build a formatted share text string from weight entries.
      *
-     * With weights: "My 30-day weight progress: 185.2 → 178.6 lbs"
-     * Without weights: "My 30-day weight progress: -6.6 lbs"
+     * With weights: "My 30-day weight progress:\n185.2 → 178.6 lbs"
+     * Without weights: "My 30-day weight progress:\n-6.6 lbs"
      *
      * If the start of the selected time frame has no data point, the starting weight is
      * extrapolated from the prior reading using linear interpolation, matching the chart
@@ -103,13 +103,14 @@ object ShareTextFormatter {
         // Build the date range line
         val dateRangeLine = formatDateRange(entriesInRange, timeFrame, allActualEntries)
 
-        val progressText = if (showAbsoluteWeight) {
+        val progressValue = if (showAbsoluteWeight) {
             val firstFormatted = formatWeight(firstWeight)
             val lastFormatted = formatWeight(lastWeight)
-            "My $timeLabel weight progress: $firstFormatted → $lastFormatted $unitLabel ($changeFormatted)"
+            "$firstFormatted → $lastFormatted $unitLabel ($changeFormatted)"
         } else {
-            "My $timeLabel weight progress: $changeFormatted"
+            changeFormatted
         }
+        val progressText = "My $timeLabel weight progress:\n$progressValue"
 
         return Pair(progressText, dateRangeLine)
     }

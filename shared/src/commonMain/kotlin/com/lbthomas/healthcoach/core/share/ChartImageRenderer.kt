@@ -30,7 +30,7 @@ expect object ChartImageRenderer {
     ): ImageBitmap?
 
     /**
-     * Render a weight line chart image (~800x500 pixels).
+     * Render a high-resolution weight line chart image (~1200x800 pixels).
      * @param entries filtered entries for the selected time frame (may include interpolated edge points)
      * @param allEntries all actual weight entries for extrapolation of the starting weight
      */

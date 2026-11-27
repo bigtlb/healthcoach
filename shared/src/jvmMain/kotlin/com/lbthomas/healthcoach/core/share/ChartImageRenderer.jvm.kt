@@ -21,6 +21,7 @@ actual object ChartImageRenderer {
 
     private const val IMAGE_WIDTH = 600
     private const val IMAGE_HEIGHT = 400
+    private const val RENDER_SCALE = 2
     private const val CHART_MARGIN_TOP = 50
     private const val CHART_MARGIN_BOTTOM = 80
     private const val CHART_MARGIN_LEFT = 70
@@ -79,13 +80,20 @@ actual object ChartImageRenderer {
         val paddedMax = if (weightRange > 0) maxWeight + weightRange * 0.1 else maxWeight + 2.0
         val paddedRange = paddedMax - paddedMin
 
-        val chartWidth = IMAGE_WIDTH - CHART_MARGIN_LEFT - CHART_MARGIN_RIGHT
+        val chartMarginLeft = if (showAbsoluteWeight) CHART_MARGIN_LEFT else CHART_MARGIN_RIGHT
+        val chartWidth = IMAGE_WIDTH - chartMarginLeft - CHART_MARGIN_RIGHT
         val chartHeight = IMAGE_HEIGHT - CHART_MARGIN_TOP - CHART_MARGIN_BOTTOM - BRANDING_HEIGHT
 
-        val image = BufferedImage(IMAGE_WIDTH, IMAGE_HEIGHT, BufferedImage.TYPE_INT_ARGB)
+        val image = BufferedImage(
+            IMAGE_WIDTH * RENDER_SCALE,
+            IMAGE_HEIGHT * RENDER_SCALE,
+            BufferedImage.TYPE_INT_ARGB
+        )
         val g = image.createGraphics() as Graphics2D
+        g.scale(RENDER_SCALE.toDouble(), RENDER_SCALE.toDouble())
         g.addRenderingHints(RenderingHints(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON))
         g.addRenderingHints(RenderingHints(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON))
+        g.addRenderingHints(RenderingHints(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC))
 
         // Background
         g.color = BG_COLOR
@@ -105,14 +113,14 @@ actual object ChartImageRenderer {
         val gridLines = 5
         for (i in 0..gridLines) {
             val y = CHART_MARGIN_TOP + (chartHeight * i / gridLines).toInt()
-            g.drawLine(CHART_MARGIN_LEFT, y, IMAGE_WIDTH - CHART_MARGIN_RIGHT, y)
+            g.drawLine(chartMarginLeft, y, IMAGE_WIDTH - CHART_MARGIN_RIGHT, y)
 
             if (showAbsoluteWeight) {
                 val value = paddedMax - (paddedRange * i.toDouble() / gridLines)
                 val label = "%.1f".format(value)
                 g.color = AXIS_COLOR
                 val labelMetrics = g.fontMetrics
-                g.drawString(label, CHART_MARGIN_LEFT - labelMetrics.stringWidth(label) - 5, y + 4)
+                g.drawString(label, chartMarginLeft - labelMetrics.stringWidth(label) - 5, y + 4)
                 g.color = GRID_COLOR
             }
         }
@@ -137,10 +145,10 @@ actual object ChartImageRenderer {
             for (i in 0 until sorted.size - 1) {
                 val entry1 = sorted[i]
                 val entry2 = sorted[i + 1]
-                val x1 = CHART_MARGIN_LEFT + ((entry1.date.toEpochDays() - firstDate).toDouble() / dateRange * chartWidth).toInt()
+                val x1 = chartMarginLeft + ((entry1.date.toEpochDays() - firstDate).toDouble() / dateRange * chartWidth).toInt()
                 val w1 = entry1.getWeightInCurrentUnits(weightUnit)
                 val y1 = CHART_MARGIN_TOP + chartHeight - ((w1 - paddedMin) / paddedRange * chartHeight).toInt()
-                val x2 = CHART_MARGIN_LEFT + ((entry2.date.toEpochDays() - firstDate).toDouble() / dateRange * chartWidth).toInt()
+                val x2 = chartMarginLeft + ((entry2.date.toEpochDays() - firstDate).toDouble() / dateRange * chartWidth).toInt()
                 val w2 = entry2.getWeightInCurrentUnits(weightUnit)
                 val y2 = CHART_MARGIN_TOP + chartHeight - ((w2 - paddedMin) / paddedRange * chartHeight).toInt()
                 g.drawLine(x1, y1, x2, y2)
@@ -149,7 +157,7 @@ actual object ChartImageRenderer {
             // Draw data points
             g.color = CHART_LINE_COLOR
             for (entry in sorted) {
-                val x = CHART_MARGIN_LEFT + ((entry.date.toEpochDays() - firstDate).toDouble() / dateRange * chartWidth).toInt()
+                val x = chartMarginLeft + ((entry.date.toEpochDays() - firstDate).toDouble() / dateRange * chartWidth).toInt()
                 val weight = entry.getWeightInCurrentUnits(weightUnit)
                 val y = CHART_MARGIN_TOP + chartHeight - ((weight - paddedMin) / paddedRange * chartHeight).toInt()
                 g.fillOval(x - 3, y - 3, 6, 6)
@@ -157,7 +165,7 @@ actual object ChartImageRenderer {
         } else if (sorted.size == 1) {
             // Single point
             val entry = sorted.first()
-            val x = CHART_MARGIN_LEFT + chartWidth / 2
+            val x = chartMarginLeft + chartWidth / 2
             val weight = entry.getWeightInCurrentUnits(weightUnit)
             val y = CHART_MARGIN_TOP + chartHeight - ((weight - paddedMin) / paddedRange * chartHeight).toInt()
             g.color = CHART_LINE_COLOR
@@ -176,9 +184,9 @@ actual object ChartImageRenderer {
                 val firstDate = sorted.first().date.toEpochDays()
                 val lastDate = sorted.last().date.toEpochDays()
                 val dateRange = (lastDate - firstDate).coerceAtLeast(1)
-                CHART_MARGIN_LEFT + ((entry.date.toEpochDays() - firstDate).toDouble() / dateRange * chartWidth).toInt()
+                chartMarginLeft + ((entry.date.toEpochDays() - firstDate).toDouble() / dateRange * chartWidth).toInt()
             } else {
-                CHART_MARGIN_LEFT + chartWidth / 2
+                chartMarginLeft + chartWidth / 2
             }
             val metrics = g.fontMetrics
             val centerX = x - metrics.stringWidth(dateStr) / 2
@@ -193,9 +201,16 @@ actual object ChartImageRenderer {
         val formatted = ShareTextFormatter.format(entries, allEntries, timeFrame, weightUnit, showAbsoluteWeight)
         val summaryText = formatted.first
         val dateRangeText = formatted.second
-        val summaryMetrics = g.fontMetrics
-        val summaryWidth = summaryMetrics.stringWidth(summaryText)
-        g.drawString(summaryText, (IMAGE_WIDTH - summaryWidth) / 2, summaryY)
+        val summaryParts = summaryText.split(':', limit = 2)
+        val summaryLabel = if (summaryParts.size > 1) "${summaryParts[0]}:" else summaryText
+        val summaryValue = summaryParts.getOrNull(1)?.trim()?.takeIf { it.isNotEmpty() }
+        val summaryLabelWidth = g.fontMetrics.stringWidth(summaryLabel)
+        g.drawString(summaryLabel, (IMAGE_WIDTH - summaryLabelWidth) / 2, summaryY)
+        if (summaryValue != null) {
+            g.font = Font("SansSerif", Font.BOLD, 13)
+            val summaryValueWidth = g.fontMetrics.stringWidth(summaryValue)
+            g.drawString(summaryValue, (IMAGE_WIDTH - summaryValueWidth) / 2, summaryY + 18)
+        }
 
         // Date range line
         if (dateRangeText.isNotEmpty()) {
@@ -203,7 +218,7 @@ actual object ChartImageRenderer {
             g.color = AXIS_COLOR
             val dateRangeMetrics = g.fontMetrics
             val dateRangeWidth = dateRangeMetrics.stringWidth(dateRangeText)
-            g.drawString(dateRangeText, (IMAGE_WIDTH - dateRangeWidth) / 2, summaryY + 18)
+            g.drawString(dateRangeText, (IMAGE_WIDTH - dateRangeWidth) / 2, summaryY + if (summaryValue != null) 36 else 18)
         }
 
         // Branding
@@ -217,9 +232,9 @@ actual object ChartImageRenderer {
         // Draw small icon next to branding
         val iconImage = loadIconImage()
         if (iconImage != null) {
-            val iconSize = 20
+            val iconSize = 24
             val iconX = IMAGE_WIDTH - brandingWidth - iconSize - 30
-            val iconY = IMAGE_HEIGHT - BRANDING_HEIGHT + 5
+            val iconY = IMAGE_HEIGHT - BRANDING_HEIGHT + (BRANDING_HEIGHT - iconSize) / 2
             g.drawImage(iconImage, iconX, iconY, iconSize, iconSize, null)
         }
 
@@ -236,7 +251,7 @@ actual object ChartImageRenderer {
     ): ImageBitmap? {
         if (entries.isEmpty()) return null
 
-        // Smaller square image for icon type
+        // Square image for icon type
         val width = 500
         val height = 500
 
@@ -244,6 +259,7 @@ actual object ChartImageRenderer {
         val g = image.createGraphics() as Graphics2D
         g.addRenderingHints(RenderingHints(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON))
         g.addRenderingHints(RenderingHints(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON))
+        g.addRenderingHints(RenderingHints(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC))
 
         // Background
         g.color = BG_COLOR
@@ -252,39 +268,46 @@ actual object ChartImageRenderer {
         // Draw large app icon (centered vertically with text below)
         val iconImage = loadIconImage()
         val iconSize = 200
-        val iconY = 80
+        val iconY = 40
         if (iconImage != null) {
             val iconX = (width - iconSize) / 2
             g.drawImage(iconImage, iconX, iconY, iconSize, iconSize, null)
         }
 
-        // Summary text (includes the full progress phrase, so no separate title needed)
-        val summaryY = iconY + iconSize + 30
+        // Summary text
+        val summaryY = iconY + iconSize + 60
         g.color = TEXT_COLOR
         val formatted = ShareTextFormatter.format(entries, allEntries, timeFrame, weightUnit, showAbsoluteWeight)
         val summaryText = formatted.first
         val dateRangeText = formatted.second
-        g.font = Font("SansSerif", Font.BOLD, 16)
-        val summaryMetrics = g.fontMetrics
-        val summaryWidth = summaryMetrics.stringWidth(summaryText)
-        g.drawString(summaryText, (width - summaryWidth) / 2, summaryY)
+        val summaryParts = summaryText.split(':', limit = 2)
+        val summaryLabel = if (summaryParts.size > 1) "${summaryParts[0]}:" else summaryText
+        val summaryValue = summaryParts.getOrNull(1)?.trim()?.takeIf { it.isNotEmpty() }
+        g.font = Font("SansSerif", Font.PLAIN, 32)
+        val summaryLabelWidth = g.fontMetrics.stringWidth(summaryLabel)
+        g.drawString(summaryLabel, (width - summaryLabelWidth) / 2, summaryY)
+        if (summaryValue != null) {
+            g.font = Font("SansSerif", Font.BOLD, 32)
+            val summaryValueWidth = g.fontMetrics.stringWidth(summaryValue)
+            g.drawString(summaryValue, (width - summaryValueWidth) / 2, summaryY + 44)
+        }
 
         // Date range line
         if (dateRangeText.isNotEmpty()) {
-            g.font = Font("SansSerif", Font.PLAIN, 13)
+            g.font = Font("SansSerif", Font.PLAIN, 26)
             g.color = AXIS_COLOR
             val dateRangeMetrics = g.fontMetrics
             val dateRangeWidth = dateRangeMetrics.stringWidth(dateRangeText)
-            g.drawString(dateRangeText, (width - dateRangeWidth) / 2, summaryY + 25)
+            g.drawString(dateRangeText, (width - dateRangeWidth) / 2, summaryY + if (summaryValue != null) 88 else 50)
         }
 
         // Branding
         g.color = BRANDING_COLOR
-        g.font = Font("SansSerif", Font.PLAIN, 10)
+        g.font = Font("SansSerif", Font.PLAIN, 20)
         val branding = "Powered by HealthCoach"
         val brandingMetrics = g.fontMetrics
         val brandingWidth = brandingMetrics.stringWidth(branding)
-        g.drawString(branding, (width - brandingWidth) / 2, height - 15)
+        g.drawString(branding, (width - brandingWidth) / 2, height - 30)
 
         g.dispose()
         return image.toComposeImageBitmap()
