@@ -112,7 +112,6 @@ fun main() {
         ) {
             LaunchedEffect(window) {
                 window.addWindowStateListener {
-                    window.revalidate()
                     window.repaint()
                 }
                 window.addWindowFocusListener(object : java.awt.event.WindowFocusListener {
