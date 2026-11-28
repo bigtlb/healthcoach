@@ -78,6 +78,77 @@ compose.desktop {
     }
 }
 
+tasks.configureEach {
+    if (name == "packageReleaseRpm") {
+        dependsOn("createReleaseDistributable")
+        notCompatibleWithConfigurationCache("Rebuilds the RPM with a custom jpackage spec after the standard package task")
+        outputs.upToDateWhen { false }
+
+        doLast {
+            val appImageSource = layout.buildDirectory.dir("compose/binaries/main-release/app/HealthCoach").get().asFile
+            val rpmAppImage = layout.buildDirectory.dir("compose/tmp/healthcoach-rpm-app/HealthCoach").get().asFile
+            val appStreamSource = rootProject.file("packaging/flatpak/com.lbthomas.healthcoach.metainfo.xml")
+            val flatpakDesktopSource = rootProject.file("packaging/flatpak/com.lbthomas.healthcoach.desktop")
+            val appStreamInImage = rpmAppImage.resolve("lib/app/.healthcoach-appstream.xml")
+            val rpmDesktopInImage = rpmAppImage.resolve("lib/app/.healthcoach-rpm.desktop")
+            val rpmOutputDir = layout.buildDirectory.dir("compose/tmp/healthcoach-rpm-output").get().asFile
+
+            delete(rpmAppImage.parentFile)
+            rpmAppImage.mkdirs()
+            val copyResult = ProcessBuilder("cp", "-a", "${appImageSource.absolutePath}/.", rpmAppImage.absolutePath)
+                .inheritIO()
+                .start()
+                .waitFor()
+            if (copyResult != 0) {
+                throw GradleException("Could not stage the RPM application image (cp exited with $copyResult)")
+            }
+
+            appStreamInImage.writeText(appStreamSource.readText())
+            val flatpakDesktopEntry = flatpakDesktopSource.readText()
+            val flatpakExec = "Exec=HealthCoach"
+            if (flatpakDesktopEntry.lines().count { it == flatpakExec } != 1) {
+                throw GradleException("Expected exactly one '$flatpakExec' line in $flatpakDesktopSource")
+            }
+            rpmDesktopInImage.writeText(
+                flatpakDesktopEntry.replace(flatpakExec, "Exec=/opt/healthcoach/bin/HealthCoach")
+            )
+
+            delete(rpmOutputDir)
+            rpmOutputDir.mkdirs()
+            val jpackageCommand = listOf(
+                File(System.getProperty("java.home"), "bin/jpackage").absolutePath,
+                "--type", "rpm",
+                "--app-image", rpmAppImage.absolutePath,
+                "--name", "HealthCoach",
+                "--linux-package-name", "healthcoach",
+                "--linux-app-category", "Utility;MedicalSoftware;",
+                "--linux-menu-group", "Utility",
+                "--icon", project.file("src/main/resources/scales.png").absolutePath,
+                "--app-version", appPackageVersion,
+                "--description", "Health and wellness tracking application",
+                "--vendor", "Thomas Baker",
+                "--linux-rpm-license-type", "Apache-2.0",
+                "--resource-dir", rootProject.file("packaging/rpm").absolutePath,
+                "--dest", rpmOutputDir.absolutePath
+            )
+            val jpackageResult = ProcessBuilder(jpackageCommand)
+                .directory(rootProject.projectDir)
+                .inheritIO()
+                .start()
+                .waitFor()
+            if (jpackageResult != 0) {
+                throw GradleException("jpackage could not rebuild the RPM with AppStream metadata (exit code $jpackageResult)")
+            }
+
+            val appStreamRpm = rpmOutputDir.listFiles()?.singleOrNull { it.extension == "rpm" }
+                ?: throw GradleException("jpackage did not produce exactly one RPM in $rpmOutputDir")
+            val rpmOutput = layout.buildDirectory.dir("compose/binaries/main-release/rpm").get().asFile
+                .resolve(appStreamRpm.name)
+            appStreamRpm.copyTo(rpmOutput, overwrite = true)
+        }
+    }
+}
+
 tasks.register<Exec>("packageFlatpak") {
     group = "compose desktop"
     description = "Packages the application into a local Flatpak repository"

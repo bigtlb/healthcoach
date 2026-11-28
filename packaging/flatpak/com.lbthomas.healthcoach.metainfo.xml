@@ -16,6 +16,11 @@
         </p>
     </description>
     <launchable type="desktop-id">com.lbthomas.healthcoach.desktop</launchable>
+    <icon type="stock">com.lbthomas.healthcoach</icon>
+    <categories>
+        <category>Utility</category>
+        <category>MedicalSoftware</category>
+    </categories>
     <url type="homepage">https://bigtlb.github.io/healthcoach/</url>
     <url type="bugtracker">https://github.com/bigtlb/healthcoach/issues</url>
     <provides>
