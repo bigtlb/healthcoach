@@ -40,6 +40,14 @@
         </screenshot>
     </screenshots>
     <releases>
+        <release version="0.9.24" date="2026-11-28">
+            <description>
+                <ul>
+                    <li>fix(desktop): avoid window revalidation on state changes</li>
+                    <li>build(android): include native debug symbols in release builds</li>
+                </ul>
+            </description>
+        </release>
         <release version="0.9.23" date="2026-11-27">
             <description>
                 <ul>
@@ -53,18 +61,6 @@
             <description>
                 <ul>
                     <li>fix(android): mark android.hardware.wifi as optional to expand device availability (#60) Google Play Store rejected the v0.9.21 release because WiFi permissions implicitly declared android.hardware.wifi as required, restricting app availability on devices without WiFi (phones, tablets, desktops, Android XR). Added explicit uses-feature declaration with android:required="false" to override the implicit requirement. WiFi is only used for optional companion device sync, so marking it as optional restores Play Store availability without any functional change. (CLoses #60)</li>
-                </ul>
-            </description>
-        </release>
-        <release version="0.9.21" date="2026-11-22">
-            <description>
-                <ul>
-                    <li>feat(share): add social media sharing for weight progress Add one-tap sharing of weight progress via social media platforms, clipboard, or native share sheet on both Desktop and Android. Features: - Share button in app top bar with icon share dialog - Time frame notch slider (1 day to All, 12 options) - Three share formats: text only, icon image, or chart image - Privacy toggle to hide absolute weight values - Date range line on all share outputs - Weight extrapolation when time frame boundary has no data point - Desktop: clipboard copy and browser sharing (X, Facebook, Reddit, Mastodon) - Android: native ACTION_SEND share sheet with combined text and image</li>
-                    <li>chore(deps)(deps): bump org.jmdns:jmdns from 3.6.4 to 3.6.5 (#56)</li>
-                    <li>chore(deps)(deps): bump org.jetbrains.kotlinx:kotlinx-serialization-json (#55)</li>
-                    <li>chore(deps)(deps): bump gradle-wrapper from 9.8.2 to 9.9.1 (#57)</li>
-                    <li>fix(android): fix Google Drive sync failure from token expiration and local path leak Desktop Google Drive sync is unaffected (JVM silent refresh is a no-op). Closes #58</li>
-                    <li>docs: update Google Play Store link on landing page</li>
                 </ul>
             </description>
         </release>
