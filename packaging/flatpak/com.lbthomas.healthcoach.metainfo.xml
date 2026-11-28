@@ -45,6 +45,14 @@
         </screenshot>
     </screenshots>
     <releases>
+        <release version="0.9.25" date="2026-11-28">
+            <description>
+                <ul>
+                    <li>build(generator): make sample database generator runnable</li>
+                    <li>fix(packaging): include AppStream metadata in RPM builds</li>
+                </ul>
+            </description>
+        </release>
         <release version="0.9.24" date="2026-11-28">
             <description>
                 <ul>
@@ -59,13 +67,6 @@
                     <li>docs: add weight progress sharing screenshots</li>
                     <li>fix(share): improve shared image rendering and previews</li>
                     <li>fix(desktop): suspend UI content while window is minimized</li>
-                </ul>
-            </description>
-        </release>
-        <release version="0.9.22" date="2026-11-22">
-            <description>
-                <ul>
-                    <li>fix(android): mark android.hardware.wifi as optional to expand device availability (#60) Google Play Store rejected the v0.9.21 release because WiFi permissions implicitly declared android.hardware.wifi as required, restricting app availability on devices without WiFi (phones, tablets, desktops, Android XR). Added explicit uses-feature declaration with android:required="false" to override the implicit requirement. WiFi is only used for optional companion device sync, so marking it as optional restores Play Store availability without any functional change. (CLoses #60)</li>
                 </ul>
             </description>
         </release>
