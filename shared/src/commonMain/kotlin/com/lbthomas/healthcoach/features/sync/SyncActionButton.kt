@@ -40,15 +40,18 @@ fun SyncActionButton(
     val hasError = !isServerHost && (syncState is SyncState.Error || settings.sync.lastSyncFailed)
     val hostDeviceName = settings.peerSync.deviceName.ifBlank { "HealthCoach Host" }
 
-    val infiniteTransition = rememberInfiniteTransition()
-    val rotation by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        )
-    )
+    val rotation = if (isSyncing) {
+        rememberInfiniteTransition().animateFloat(
+            initialValue = 0f,
+            targetValue = 360f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 1000, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart
+            )
+        ).value
+    } else {
+        0f
+    }
 
     Tooltip(
         tooltip = when {

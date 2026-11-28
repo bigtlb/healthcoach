@@ -1,3 +1,5 @@
+import org.gradle.api.tasks.JavaExec
+import org.gradle.api.tasks.testing.Test
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.util.Properties
 
@@ -217,6 +219,21 @@ kotlin {
             implementation(libs.kotlin.test)
         }
     }
+}
+
+val jvmTestTask = tasks.named<Test>("jvmTest")
+tasks.register<JavaExec>("generateSampleDatabase") {
+    group = "documentation"
+    description = "Generates the deterministic sample health tracking database."
+    dependsOn("jvmTestClasses")
+    classpath = jvmTestTask.get().classpath
+    mainClass.set("com.lbthomas.healthcoach.generator.SampleDatabaseGenerator")
+
+    val outputFile = providers.gradleProperty("sampleDatabaseOutput")
+        .map { rootProject.file(it) }
+        .orElse(rootProject.file("docs/healthcoach_sample.db"))
+    args(outputFile.get().absolutePath)
+    outputs.file(outputFile)
 }
 
 compose.resources {

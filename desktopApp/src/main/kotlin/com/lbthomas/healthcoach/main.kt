@@ -36,9 +36,7 @@ import java.io.InputStreamReader
 import kotlin.math.max
 import kotlin.time.Duration.Companion.milliseconds
 
-
 fun main() {
-    System.setProperty("skiko.vsync.enabled", "false")
     application {
         if (GlobalContext.getOrNull() == null) {
             startKoin {
@@ -118,6 +116,7 @@ fun main() {
                     override fun windowGainedFocus(e: java.awt.event.WindowEvent?) {
                         window.repaint()
                     }
+
                     override fun windowLostFocus(e: java.awt.event.WindowEvent?) {}
                 })
             }

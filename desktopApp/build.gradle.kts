@@ -29,7 +29,6 @@ val appPackageVersion = appVersionName.substringBefore('-')
 compose.desktop {
     application {
         mainClass = "com.lbthomas.healthcoach.MainKt"
-        jvmArgs += listOf("-Dskiko.vsync.enabled=false")
 
         buildTypes.release.proguard {
             configurationFiles.from(project.file("proguard-rules.pro"))

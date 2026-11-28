@@ -7,8 +7,6 @@ import com.lbthomas.healthcoach.core.utils.generateUuid
 import kotlinx.datetime.*
 import java.io.File
 import kotlin.random.Random
-import kotlin.test.Test
-import kotlin.test.assertTrue
 
 /**
  * Generates a realistic sample SQLite database (`docs/healthcoach_sample.db`)
@@ -16,20 +14,18 @@ import kotlin.test.assertTrue
  * starting at ~260 lbs who is pursuing healthy weight loss with blood pressure tracking
  * and food journaling.
  */
-class SampleDatabaseGeneratorTest {
+object SampleDatabaseGenerator {
 
-    @Test
-    fun generateSampleDatabase() {
-        val userDir = File(System.getProperty("user.dir"))
-        val projectRoot = if (userDir.name == "shared") userDir.parentFile else userDir
-        val docsDir = File(projectRoot, "docs")
-        if (!docsDir.exists()) {
-            docsDir.mkdirs()
-        }
+    @JvmStatic
+    fun main(args: Array<String>) {
+        require(args.size == 1) { "Expected exactly one output database path" }
+        generateSampleDatabase(File(args.single()))
+    }
 
-        val dbFile = File(docsDir, "healthcoach_sample.db")
-        if (dbFile.exists()) {
-            dbFile.delete()
+    private fun generateSampleDatabase(dbFile: File) {
+        dbFile.parentFile?.mkdirs()
+        if (dbFile.exists() && !dbFile.delete()) {
+            throw IllegalStateException("Could not replace existing sample database at ${dbFile.absolutePath}")
         }
 
         val driver = JdbcSqliteDriver("jdbc:sqlite:${dbFile.absolutePath}")
@@ -317,11 +313,11 @@ class SampleDatabaseGeneratorTest {
         println(" - Food Library items: $totalFoodItems")
         println(" - Meal entries: $totalMeals")
 
-        assertTrue(dbFile.exists(), "Database file must exist")
-        assertTrue(dbFile.length() > 0, "Database file must not be empty")
-        assertTrue(totalWeights >= 45, "Should have at least 45 weight readings")
-        assertTrue(totalBp >= 80, "Should have at least 80 blood pressure readings")
-        assertTrue(totalMeals >= 150, "Should have at least 150 meal entries")
-        assertTrue(totalFoodItems >= 20, "Should have at least 20 food items")
+        check(dbFile.exists()) { "Database file must exist" }
+        check(dbFile.length() > 0) { "Database file must not be empty" }
+        check(totalWeights >= 45) { "Should have at least 45 weight readings" }
+        check(totalBp >= 80) { "Should have at least 80 blood pressure readings" }
+        check(totalMeals >= 150) { "Should have at least 150 meal entries" }
+        check(totalFoodItems >= 20) { "Should have at least 20 food items" }
     }
 }
